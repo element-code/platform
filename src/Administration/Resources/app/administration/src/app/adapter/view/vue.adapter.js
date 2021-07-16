@@ -53,15 +53,15 @@ export default class VueAdapter extends ViewAdapter {
             router,
             store,
             i18n,
+            provide() {
+                return providers;
+            },
             components,
             data() {
                 return {
-                    initError: {}
+                    initError: {},
                 };
             },
-            provide() {
-                return providers;
-            }
         });
 
         return this.root;
@@ -143,6 +143,23 @@ export default class VueAdapter extends ViewAdapter {
         this.resolveMixins(componentConfig);
 
         const vueComponent = Vue.component(componentName, componentConfig);
+        this.vueComponents[componentName] = vueComponent;
+
+        return vueComponent;
+    }
+
+    /**
+     * Builds and creates a Vue component using the provided component configuration.
+     *
+     * @param {Object }componentConfig
+     * @memberOf module:app/adapter/view/vue
+     * @returns {Function}
+     */
+    buildAndCreateComponent(componentConfig) {
+        const componentName = componentConfig.name;
+        this.resolveMixins(componentConfig);
+
+        const vueComponent = Vue.component(componentConfig.name, componentConfig);
         this.vueComponents[componentName] = vueComponent;
 
         return vueComponent;
@@ -292,7 +309,7 @@ export default class VueAdapter extends ViewAdapter {
             fallbackLocale,
             silentFallbackWarn: true,
             sync: true,
-            messages
+            messages,
         });
 
         store.subscribe(({ type }, state) => {
@@ -358,7 +375,7 @@ export default class VueAdapter extends ViewAdapter {
      */
     resolveMixins(componentConfig) {
         // If the mixin is a string, use our mixin registry
-        if (componentConfig.mixins && componentConfig.mixins.length) {
+        if (componentConfig.mixins?.length) {
             componentConfig.mixins = componentConfig.mixins.map((mixin) => {
                 if (typeof mixin === 'string') {
                     return Mixin.getByName(mixin);

@@ -21,7 +21,7 @@ jobs:
             MYSQL_ROOT_PASSWORD: shopware
             MYSQL_DATABASE: shopware
       elasticsearch:
-        image: elastic/elasticsearch:7.3.0
+        image: elastic/elasticsearch:7.8.0
         env:
           discovery.type: single-node
 
@@ -33,11 +33,11 @@ jobs:
       uses: actions/checkout@v2
       with:
         path: development/platform
+        fetch-depth: '0'
 
     - name: Fix platform for composer
       run: |
         cd development/platform
-        git fetch --prune --unshallow
         git checkout trunk
         git checkout -
         cd ..

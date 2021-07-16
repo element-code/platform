@@ -9,11 +9,13 @@ use Shopware\Core\Checkout\Order\OrderEntity;
 use Shopware\Core\Content\Media\MediaEntity;
 use Shopware\Core\Content\Product\ProductEntity;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityCustomFieldsTrait;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityIdTrait;
 
 class OrderLineItemEntity extends Entity
 {
     use EntityIdTrait;
+    use EntityCustomFieldsTrait;
 
     /**
      * @var string
@@ -106,6 +108,11 @@ class OrderLineItemEntity extends Entity
     protected $parentId;
 
     /**
+     * @var OrderLineItemEntity|null
+     */
+    protected $parent;
+
+    /**
      * @var string|null
      */
     protected $type;
@@ -119,11 +126,6 @@ class OrderLineItemEntity extends Entity
      * @var OrderDeliveryPositionCollection|null
      */
     protected $orderDeliveryPositions;
-
-    /**
-     * @var array|null
-     */
-    protected $customFields;
 
     /**
      * @var MediaEntity|null
@@ -302,6 +304,16 @@ class OrderLineItemEntity extends Entity
         $this->parentId = $parentId;
     }
 
+    public function getParent(): ?OrderLineItemEntity
+    {
+        return $this->parent;
+    }
+
+    public function setParent(?OrderLineItemEntity $parent): void
+    {
+        $this->parent = $parent;
+    }
+
     public function getType(): ?string
     {
         return $this->type;
@@ -332,16 +344,6 @@ class OrderLineItemEntity extends Entity
         $this->orderDeliveryPositions = $orderDeliveryPositions;
     }
 
-    public function getCustomFields(): ?array
-    {
-        return $this->customFields;
-    }
-
-    public function setCustomFields(?array $customFields): void
-    {
-        $this->customFields = $customFields;
-    }
-
     public function getCoverId(): ?string
     {
         return $this->coverId;
@@ -367,7 +369,7 @@ class OrderLineItemEntity extends Entity
         return $this->children;
     }
 
-    public function setChildren(?OrderLineItemCollection $children): void
+    public function setChildren(OrderLineItemCollection $children): void
     {
         $this->children = $children;
     }

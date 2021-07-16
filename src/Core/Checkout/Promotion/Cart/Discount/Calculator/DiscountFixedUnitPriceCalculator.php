@@ -13,10 +13,7 @@ use Shopware\Core\System\SalesChannel\SalesChannelContext;
 
 class DiscountFixedUnitPriceCalculator
 {
-    /**
-     * @var AbsolutePriceCalculator
-     */
-    private $absolutePriceCalculator;
+    private AbsolutePriceCalculator $absolutePriceCalculator;
 
     public function __construct(AbsolutePriceCalculator $absolutePriceCalculator)
     {
@@ -26,8 +23,11 @@ class DiscountFixedUnitPriceCalculator
     /**
      * @throws InvalidPriceDefinitionException
      */
-    public function calculate(DiscountLineItem $discount, DiscountPackageCollection $packages, SalesChannelContext $context): DiscountCalculatorResult
-    {
+    public function calculate(
+        DiscountLineItem $discount,
+        DiscountPackageCollection $packages,
+        SalesChannelContext $context
+    ): DiscountCalculatorResult {
         /** @var AbsolutePriceDefinition|null $priceDefinition */
         $priceDefinition = $discount->getPriceDefinition();
 
@@ -35,7 +35,7 @@ class DiscountFixedUnitPriceCalculator
             throw new InvalidPriceDefinitionException($discount->getLabel(), $discount->getCode());
         }
 
-        $fixedUnitPrice = (float) abs($priceDefinition->getPrice());
+        $fixedUnitPrice = abs($priceDefinition->getPrice());
 
         $totalDiscountSum = 0.0;
 
@@ -43,8 +43,11 @@ class DiscountFixedUnitPriceCalculator
 
         foreach ($packages as $package) {
             foreach ($package->getCartItems() as $lineItem) {
-                $quantity = $lineItem->getQuantity();
+                if ($lineItem->getPrice() === null) {
+                    continue;
+                }
 
+                $quantity = $lineItem->getQuantity();
                 $itemUnitPrice = $lineItem->getPrice()->getUnitPrice();
 
                 if ($itemUnitPrice > $fixedUnitPrice) {

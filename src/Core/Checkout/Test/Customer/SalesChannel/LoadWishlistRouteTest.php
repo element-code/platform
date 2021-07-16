@@ -12,6 +12,9 @@ use Shopware\Core\Framework\Util\Random;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 
+/**
+ * @group store-api
+ */
 class LoadWishlistRouteTest extends TestCase
 {
     use IntegrationTestBehaviour;
@@ -58,7 +61,6 @@ class LoadWishlistRouteTest extends TestCase
         $this->assignSalesChannelContext($this->browser);
         $this->customerRepository = $this->getContainer()->get('customer.repository');
 
-        /* @var SystemConfigService $systemConfigService */
         $this->systemConfigService = $this->getContainer()->get(SystemConfigService::class);
         $this->systemConfigService->set('core.cart.wishlistEnabled', true);
 
@@ -149,7 +151,48 @@ class LoadWishlistRouteTest extends TestCase
         static::assertEquals('Wishlist for this customer was not found.', $errors['detail']);
     }
 
-    private function createProduct(Context $context): string
+    public function testLoadWithHideCloseoutProductsWhenOutOfStockEnabled(): void
+    {
+        // enable hideCloseoutProductsWhenOutOfStock filter
+        $this->getContainer()->get(SystemConfigService::class)
+            ->set('core.listing.hideCloseoutProductsWhenOutOfStock', true);
+
+        $productId = $this->createProduct($this->context, ['stock' => 0, 'isCloseout' => true]);
+        $this->createCustomerWishlist($this->context, $this->customerId, $productId);
+
+        $this->browser
+            ->request(
+                'POST',
+                '/store-api/customer/wishlist'
+            );
+        $response = json_decode($this->browser->getResponse()->getContent(), true);
+        $products = $response['products'];
+
+        static::assertEquals(0, $products['total']);
+    }
+
+    public function testLoadWithHideCloseoutProductsWhenOutOfStockDisabled(): void
+    {
+        // disabled hideCloseoutProductsWhenOutOfStock filter
+        $this->getContainer()->get(SystemConfigService::class)
+            ->set('core.listing.hideCloseoutProductsWhenOutOfStock', false);
+
+        $productId = $this->createProduct($this->context, ['stock' => 0, 'isCloseout' => true]);
+        $this->createCustomerWishlist($this->context, $this->customerId, $productId);
+
+        $this->browser
+            ->request(
+                'POST',
+                '/store-api/customer/wishlist'
+            );
+        $response = json_decode($this->browser->getResponse()->getContent(), true);
+        $products = $response['products'];
+
+        static::assertEquals(1, $products['total']);
+        static::assertNotNull($products['elements']);
+    }
+
+    private function createProduct(Context $context, array $attributes = []): string
     {
         $productId = Uuid::randomHex();
 
@@ -167,7 +210,8 @@ class LoadWishlistRouteTest extends TestCase
                 ['salesChannelId' => $this->getSalesChannelApiSalesChannelId(), 'visibility' => ProductVisibilityDefinition::VISIBILITY_ALL],
             ],
         ];
-        $this->getContainer()->get('product.repository')->create([$data], $context);
+
+        $this->getContainer()->get('product.repository')->create([array_merge($data, $attributes)], $context);
 
         return $productId;
     }

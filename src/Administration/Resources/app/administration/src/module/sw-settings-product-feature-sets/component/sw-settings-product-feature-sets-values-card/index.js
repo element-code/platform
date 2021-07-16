@@ -14,22 +14,22 @@ Component.register('sw-settings-product-feature-sets-values-card', {
     props: {
         productFeatureSet: {
             type: Object,
-            required: true
+            required: true,
         },
         isLoading: {
             type: Boolean,
-            required: true
+            required: true,
         },
         disabled: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
         allowEdit: {
             type: Boolean,
             required: false,
-            default: true
-        }
+            default: true,
+        },
     },
 
     data() {
@@ -42,7 +42,7 @@ Component.register('sw-settings-product-feature-sets-values-card', {
             term: '',
             showModal: false,
             currentValue: null,
-            translationService: null
+            translationService: null,
         };
     },
 
@@ -65,7 +65,7 @@ Component.register('sw-settings-product-feature-sets-values-card', {
 
         valuesCardClasses() {
             return {
-                'is--empty': this.valuesEmpty
+                'is--empty': this.valuesEmpty,
             };
         },
 
@@ -78,15 +78,16 @@ Component.register('sw-settings-product-feature-sets-values-card', {
 
         featureGridTranslationService() {
             if (this.translationService === null) {
+                // eslint-disable-next-line vue/no-side-effects-in-computed-properties
                 this.translationService = new FeatureGridTranslationService(
                     this,
                     this.propertyGroupRepository,
-                    this.customFieldRepository
+                    this.customFieldRepository,
                 );
             }
 
             return this.translationService;
-        }
+        },
     },
 
     created() {
@@ -134,7 +135,7 @@ Component.register('sw-settings-product-feature-sets-values-card', {
 
             Promise.all([
                 this.featureGridTranslationService.fetchPropertyGroupEntities(this.values),
-                this.featureGridTranslationService.fetchCustomFieldEntities(this.values)
+                this.featureGridTranslationService.fetchCustomFieldEntities(this.values),
             ]).then(() => {
                 this.valuesLoading = false;
             });
@@ -177,14 +178,14 @@ Component.register('sw-settings-product-feature-sets-values-card', {
             return [{
                 property: 'name',
                 label: 'sw-settings-product-feature-sets.valuesCard.labelValue',
-                primary: true
+                primary: true,
             }, {
                 property: 'type',
-                label: 'sw-settings-product-feature-sets.valuesCard.labelType'
+                label: 'sw-settings-product-feature-sets.valuesCard.labelType',
             }, {
                 property: 'position',
-                label: 'sw-settings-product-feature-sets.valuesCard.labelPosition'
+                label: 'sw-settings-product-feature-sets.valuesCard.labelPosition',
             }];
-        }
-    }
+        },
+    },
 });

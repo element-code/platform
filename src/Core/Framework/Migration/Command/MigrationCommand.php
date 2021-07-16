@@ -102,7 +102,7 @@ class MigrationCommand extends Command
             $this->io->writeln('cleared the shopware cache');
         }
 
-        return 0;
+        return self::SUCCESS;
     }
 
     protected function collectMigrations(InputInterface $input, string $identifier): MigrationCollection
@@ -140,7 +140,7 @@ class MigrationCommand extends Command
         } catch (UnknownMigrationSourceException $e) {
             $this->io->note(sprintf('No collection found for identifier: "%s", continuing', $identifier));
 
-            return 0;
+            return self::SUCCESS;
         }
 
         $collection->sync();
@@ -159,7 +159,7 @@ class MigrationCommand extends Command
         } catch (\Exception $e) {
             $this->finishProgress($migratedCounter, $migrationCount);
 
-            throw new MigrateException($e->getMessage() . PHP_EOL . 'Trace: ' . PHP_EOL . $e->getTraceAsString(), $e);
+            throw new MigrateException($e->getMessage() . \PHP_EOL . 'Trace: ' . \PHP_EOL . $e->getTraceAsString(), $e);
         }
 
         $this->finishProgress($migratedCounter, $migrationCount);

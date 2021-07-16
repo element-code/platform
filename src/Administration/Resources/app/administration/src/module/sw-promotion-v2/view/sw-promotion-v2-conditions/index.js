@@ -9,7 +9,7 @@ Component.register('sw-promotion-v2-conditions', {
 
     inject: [
         'repositoryFactory',
-        'acl'
+        'acl',
     ],
 
     props: {
@@ -18,8 +18,14 @@ Component.register('sw-promotion-v2-conditions', {
             required: false,
             default() {
                 return null;
-            }
-        }
+            },
+        },
+    },
+
+    data() {
+        return {
+            excludedPromotions: this.createPromotionCollection(),
+        };
     },
 
     computed: {
@@ -37,8 +43,8 @@ Component.register('sw-promotion-v2-conditions', {
                     'customerBillingCountry', 'customerBillingStreet', 'customerBillingZipCode', 'customerIsNewCustomer',
                     'customerCustomerGroup', 'customerCustomerNumber', 'customerDaysSinceLastOrder',
                     'customerDifferentAddresses', 'customerLastName', 'customerOrderCount', 'customerShippingCountry',
-                    'customerShippingStreet', 'customerShippingZipCode'
-                ])
+                    'customerShippingStreet', 'customerShippingZipCode',
+                ]),
             ]));
 
             criteria.addSorting(Criteria.sort('name', 'ASC', false));
@@ -50,7 +56,7 @@ Component.register('sw-promotion-v2-conditions', {
             const criteria = new Criteria();
 
             criteria.addFilter(
-                Criteria.not('AND', [Criteria.equalsAny('conditions.type', ['cartCartAmount'])])
+                Criteria.not('AND', [Criteria.equalsAny('conditions.type', ['cartCartAmount'])]),
             );
 
             criteria.addSorting(Criteria.sort('name', 'ASC', false));
@@ -67,21 +73,15 @@ Component.register('sw-promotion-v2-conditions', {
                     'customerBillingStreet', 'customerBillingZipCode', 'customerCustomerGroup',
                     'customerCustomerNumber', 'customerDifferentAddresses', 'customerIsNewCustomer',
                     'customerLastName', 'customerShippingCountry', 'customerShippingStreet',
-                    'customerShippingZipCode'
+                    'customerShippingZipCode',
                 ]),
-                Criteria.not('AND', [Criteria.equalsAny('conditions.type', ['cartCartAmount'])])
+                Criteria.not('AND', [Criteria.equalsAny('conditions.type', ['cartCartAmount'])]),
             ]));
 
             criteria.addSorting(Criteria.sort('name', 'ASC', false));
 
             return criteria;
-        }
-    },
-
-    data() {
-        return {
-            excludedPromotions: this.createPromotionCollection()
-        };
+        },
     },
 
     created() {
@@ -102,7 +102,7 @@ Component.register('sw-promotion-v2-conditions', {
             const promotionRepository = this.repositoryFactory.create('promotion');
             const criteria = (new Criteria()).addFilter(Criteria.equalsAny('id', this.promotion.exclusionIds));
 
-            promotionRepository.search(criteria, Shopware.Context.api).then((excluded) => {
+            promotionRepository.search(criteria).then((excluded) => {
                 this.excludedPromotions = excluded;
             });
         },
@@ -117,6 +117,6 @@ Component.register('sw-promotion-v2-conditions', {
 
         createPromotionCollection() {
             return new EntityCollection('/promotion', 'promotion', Shopware.Context.api, new Criteria());
-        }
-    }
+        },
+    },
 });

@@ -72,7 +72,7 @@ EOD;
 
             $playbook[] = sprintf(self::DROP_FOREIGN_KEY, $keyStructure['TABLE_NAME'], $constraintName);
 
-            if (\array_key_exists($constraintName, $indexes)) {
+            if (\array_key_exists(strtolower($constraintName), $indexes)) {
                 $playbook[] = sprintf(self::DROP_KEY, $keyStructure['TABLE_NAME'], $constraintName);
             }
         }
@@ -196,7 +196,9 @@ EOD;
         $pk = $this->schemaManager->listTableIndexes($tableName)['primary'];
 
         if (\count($pk->getColumns()) !== 1) {
-            throw new \RuntimeException('Tables with multi column primary keys not supported');
+            throw new \RuntimeException(
+                'Tables with multi column primary keys not supported. Maybe this migration did already run.'
+            );
         }
         $pkName = current($pk->getColumns());
 

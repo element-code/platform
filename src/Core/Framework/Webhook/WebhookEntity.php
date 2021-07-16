@@ -30,6 +30,10 @@ class WebhookEntity extends Entity
      */
     protected $appId;
 
+    protected bool $active;
+
+    protected int $errorCount;
+
     /**
      * @var AppEntity|null
      */
@@ -83,5 +87,25 @@ class WebhookEntity extends Entity
     public function setApp(?AppEntity $app): void
     {
         $this->app = $app;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->active;
+    }
+
+    public function setActive(bool $active): void
+    {
+        $this->active = $active;
+    }
+
+    public function getErrorCount(): int
+    {
+        return $this->errorCount;
+    }
+
+    public function setErrorCount(int $errorCount): void
+    {
+        $this->errorCount = $errorCount;
     }
 }

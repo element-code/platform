@@ -13,15 +13,15 @@ Shopware.Component.register('sw-import-export-edit-profile-modal-mapping', {
     inject: ['repositoryFactory'],
 
     mixins: [
-        Shopware.Mixin.getByName('notification')
+        Shopware.Mixin.getByName('notification'),
     ],
 
     props: {
         profile: {
             type: Object,
             required: false,
-            default: false
-        }
+            default: null,
+        },
     },
 
     data() {
@@ -30,17 +30,8 @@ Shopware.Component.register('sw-import-export-edit-profile-modal-mapping', {
             mappings: [],
             currencies: [],
             languages: [],
-            addMappingEnabled: false
+            addMappingEnabled: false,
         };
-    },
-
-    watch: {
-        profile: {
-            handler(profile) {
-                this.toggleAddMappingActionState(profile.sourceEntity);
-            },
-            deep: true
-        }
     },
 
     computed: {
@@ -68,16 +59,25 @@ Shopware.Component.register('sw-import-export-edit-profile-modal-mapping', {
                     property: 'csvName',
                     label: 'sw-import-export.profile.mapping.fileValueLabel',
                     allowResize: true,
-                    primary: true
+                    primary: true,
                 },
                 {
                     property: 'entry',
                     label: 'sw-import-export.profile.mapping.entityLabel',
                     allowResize: true,
-                    width: '300px'
-                }
+                    width: '300px',
+                },
             ];
-        }
+        },
+    },
+
+    watch: {
+        profile: {
+            handler(profile) {
+                this.toggleAddMappingActionState(profile.sourceEntity);
+            },
+            deep: true,
+        },
     },
 
     created() {
@@ -88,12 +88,12 @@ Shopware.Component.register('sw-import-export-edit-profile-modal-mapping', {
         createdComponent() {
             this.toggleAddMappingActionState(this.profile.sourceEntity);
 
-            this.languageRepository.search(this.languageCriteria, Shopware.Context.api).then(languages => {
+            this.languageRepository.search(this.languageCriteria).then(languages => {
                 this.languages = languages;
                 this.languages.push({ locale: { code: 'DEFAULT' } });
             });
 
-            this.currencyRepository.search(this.currencyCriteria, Shopware.Context.api).then(currencies => {
+            this.currencyRepository.search(this.currencyCriteria).then(currencies => {
                 this.currencies = currencies;
                 this.currencies.push({ isoCode: 'DEFAULT' });
             });
@@ -150,6 +150,6 @@ Shopware.Component.register('sw-import-export-edit-profile-modal-mapping', {
 
         debouncedSearch: debounce(function updateSearchTerm() {
             this.loadMappings();
-        }, 100)
-    }
+        }, 100),
+    },
 });

@@ -19,10 +19,7 @@ class SalesChannelListCommand extends Command
 {
     protected static $defaultName = 'sales-channel:list';
 
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $salesChannelRepository;
+    private EntityRepositoryInterface $salesChannelRepository;
 
     public function __construct(
         EntityRepositoryInterface $salesChannelRepository
@@ -60,7 +57,7 @@ class SalesChannelListCommand extends Command
         $criteria = new Criteria();
         $criteria->addAssociations(['language', 'languages', 'currency', 'currencies', 'domains']);
         /** @var SalesChannelCollection $salesChannels */
-        $salesChannels = $this->salesChannelRepository->search($criteria, Context::createDefaultContext());
+        $salesChannels = $this->salesChannelRepository->search($criteria, Context::createDefaultContext())->getEntities();
 
         $data = [];
         foreach ($salesChannels as $salesChannel) {
@@ -104,12 +101,12 @@ class SalesChannelListCommand extends Command
 
         $encoded = json_encode($json);
         if ($encoded === false) {
-            return 1;
+            return self::FAILURE;
         }
 
         $output->write($encoded);
 
-        return 0;
+        return self::SUCCESS;
     }
 
     private function renderTable(OutputInterface $output, array $headers, array $data): int
@@ -130,6 +127,6 @@ class SalesChannelListCommand extends Command
 
         $table->render();
 
-        return 0;
+        return self::SUCCESS;
     }
 }

@@ -92,14 +92,10 @@ export default class MediaPageObject {
 
     setThumbnailSize(size, position = 0) {
         cy.get('input[name=sw-field--width').type(size.width);
-        cy.get('input[name=sw-field--width').type('{enter}');
 
         if (size.height) {
             cy.get('.sw-media-add-thumbnail-form__lock').click();
-            cy.get('input[name=sw-field--height]').clear();
-            cy.get('input[name=sw-field--height]').clear();
-            cy.get('input[name=sw-field--height]').type(size.height);
-            cy.get('input[name=sw-field--height]').type('{enter}');
+            cy.get('input[name=sw-field--height]').type(`{selectall}${size.height}`);
             cy.get('.sw-media-folder-settings__add-thumbnail-size-action.is--disabled')
                 .should('not.exist');
             cy.get('.sw-media-folder-settings__add-thumbnail-size-action').click();
@@ -162,5 +158,38 @@ export default class MediaPageObject {
         // Verify dissolved folder and existing image
         cy.get(this.elements.mediaNameLabel).contains(fileName);
         cy.get('.sw-media-base-item__name[title="A thing to fold about"]').should('not.exist');
+    }
+
+    openCurrentFolderConfiguration() {
+        cy.get('.sw-media-sidebar__quickaction.quickaction--settings').click();
+
+        cy.wait('@getMediaFolderConfiguration');
+        cy.wait('@getThumbnailSizes');
+
+        cy.get('.sw-media-folder-settings__thumbnails-tab').click();
+    }
+
+    openChildConfiguration(name) {
+        cy.route({
+            url: `${Cypress.env('apiPath')}/search/media-folder-configuration`,
+            method: 'post'
+        }).as('getMediaFolderConfiguration');
+        cy.route({
+            url: `${Cypress.env('apiPath')}/search/media-folder-configuration/**/media-thumbnail-sizes`,
+            method: 'post'
+        }).as('getThumbnailSizes');
+
+        cy.get('.sw-media-folder-item')
+            .contains('.sw-media-base-item__name', name)
+            .parents('.sw-media-base-item')
+            .find('.sw-context-button__button')
+            .invoke('attr', 'style', 'visibility: visible')
+            .click();
+        cy.get('.sw-media-context-item__open-settings-action').click();
+
+        cy.wait('@getMediaFolderConfiguration');
+        cy.wait('@getThumbnailSizes');
+
+        cy.get('.sw-media-folder-settings__thumbnails-tab').click();
     }
 }

@@ -21,10 +21,7 @@ Component.extend('sw-mail-header-footer-create', 'sw-mail-header-footer-detail',
             }
 
             if (this.$route.params.id) {
-                this.mailHeaderFooter = this.mailHeaderFooterRepository.create(
-                    Shopware.Context.api,
-                    this.$route.params.id
-                );
+                this.mailHeaderFooter = this.mailHeaderFooterRepository.create(Shopware.Context.api, this.$route.params.id);
             }
 
             this.isLoading = false;
@@ -37,6 +34,6 @@ Component.extend('sw-mail-header-footer-create', 'sw-mail-header-footer-detail',
 
         onSave() {
             this.$super('onSave');
-        }
-    }
+        },
+    },
 });

@@ -15,6 +15,9 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 class PromotionIndexer extends EntityIndexer
 {
+    public const EXCLUSION_UPDATER = 'promotion.exclusion';
+    public const REDEMPTION_UPDATER = 'promotion.redemption';
+
     /**
      * @var IteratorFactory
      */
@@ -59,7 +62,12 @@ class PromotionIndexer extends EntityIndexer
         return 'promotion.indexer';
     }
 
-    public function iterate($offset): ?EntityIndexingMessage
+    /**
+     * @param array|null $offset
+     *
+     * @deprecated tag:v6.5.0 The parameter $offset will be native typed
+     */
+    public function iterate(/*?array */$offset): ?EntityIndexingMessage
     {
         $iterator = $this->iteratorFactory->createIterator($this->repository->getDefinition(), $offset);
 
@@ -96,11 +104,15 @@ class PromotionIndexer extends EntityIndexer
             return;
         }
 
-        $this->exclusionUpdater->update($ids);
+        if ($message->allow(self::EXCLUSION_UPDATER)) {
+            $this->exclusionUpdater->update($ids);
+        }
 
-        $this->redemptionUpdater->update($ids, $message->getContext());
+        if ($message->allow(self::REDEMPTION_UPDATER)) {
+            $this->redemptionUpdater->update($ids, $message->getContext());
+        }
 
-        $this->eventDispatcher->dispatch(new PromotionIndexerEvent($ids, $message->getContext()));
+        $this->eventDispatcher->dispatch(new PromotionIndexerEvent($ids, $message->getContext(), $message->getSkip()));
     }
 
     private function isGeneratingIndividualCode(EntityWrittenContainerEvent $event): bool

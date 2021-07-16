@@ -6,28 +6,34 @@ Shopware.Component.register('sw-settings-rule-detail-base', {
 
     inject: [
         'ruleConditionDataProviderService',
-        'acl'
+        'acl',
+        'customFieldDataProviderService',
     ],
 
     props: {
         rule: {
             type: Object,
-            required: true
+            required: true,
         },
         conditions: {
             type: Array,
             required: false,
-            default: null
+            default: null,
         },
         conditionRepository: {
             type: Object,
-            required: true
-        }
+            required: true,
+        },
+        isLoading: {
+            type: Boolean,
+            required: true,
+        },
     },
 
     data() {
         return {
-            currentConditions: null
+            currentConditions: null,
+            customFieldSets: null,
         };
     },
 
@@ -49,15 +55,33 @@ Shopware.Component.register('sw-settings-rule-detail-base', {
                     return;
                 }
                 this.rule.moduleTypes = { types: value };
-            }
+            },
         },
 
-        ...mapPropertyErrors('rule', ['name', 'priority'])
+        ...mapPropertyErrors('rule', ['name', 'priority']),
+
+        showCustomFields() {
+            return this.rule && this.customFieldSets && this.customFieldSets.length > 0;
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
+        createdComponent() {
+            this.loadCustomFieldSets();
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('rule').then((sets) => {
+                this.customFieldSets = sets;
+            });
+        },
+
         onConditionsChanged(event) {
             this.$emit('conditions-changed', event);
-        }
-    }
+        },
+    },
 });

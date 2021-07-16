@@ -7,13 +7,11 @@ use Shopware\Core\Checkout\Cart\LineItem\LineItem;
 use Shopware\Core\Content\Product\Aggregate\ProductFeatureSet\ProductFeatureSetDefinition;
 use Shopware\Core\Content\Product\SalesChannel\SalesChannelProductEntity;
 use Shopware\Core\Content\Property\Aggregate\PropertyGroupOption\PropertyGroupOptionEntity;
-use Shopware\Core\Content\Property\PropertyGroupEntity;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsAnyFilter;
-use Shopware\Core\System\CustomField\CustomFieldCollection;
 use Shopware\Core\System\CustomField\CustomFieldEntity;
 use Shopware\Core\System\Language\LanguageEntity;
 use Shopware\Core\System\Locale\LocaleEntity;
@@ -21,18 +19,14 @@ use Shopware\Core\System\SalesChannel\SalesChannelContext;
 
 class ProductFeatureBuilder
 {
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $languageRepository;
+    private EntityRepositoryInterface $languageRepository;
 
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $customFieldRepository;
+    private EntityRepositoryInterface $customFieldRepository;
 
-    public function __construct(EntityRepositoryInterface $languageRepository, EntityRepositoryInterface $customFieldRepository)
-    {
+    public function __construct(
+        EntityRepositoryInterface $languageRepository,
+        EntityRepositoryInterface $customFieldRepository
+    ) {
         $this->languageRepository = $languageRepository;
         $this->customFieldRepository = $customFieldRepository;
     }
@@ -40,13 +34,15 @@ class ProductFeatureBuilder
     public function prepare(iterable $lineItems, CartDataCollection $data, SalesChannelContext $context): void
     {
         $this->loadSystemLanguage($data, $context->getContext());
-        $this->loadCustomFields($lineItems, $data, $context->getContext());
+        $this->loadCustomFields($lineItems, $data, $context);
     }
 
     public function add(iterable $lineItems, CartDataCollection $data, SalesChannelContext $context): void
     {
         foreach ($lineItems as $lineItem) {
-            $product = $data->get('product-' . $lineItem->getReferencedId());
+            $product = $data->get(
+                $this->getDataKey($lineItem->getReferencedId())
+            );
 
             if (!($product instanceof SalesChannelProductEntity)) {
                 continue;
@@ -122,8 +118,9 @@ class ProductFeatureBuilder
             return;
         }
 
-        $criteria = (new Criteria([Defaults::LANGUAGE_SYSTEM]))
-            ->addAssociation('locale');
+        $criteria = new Criteria([Defaults::LANGUAGE_SYSTEM]);
+        $criteria->setTitle('cart::products::feature-builder');
+        $criteria->addAssociation('locale');
 
         $systemLanguage = $this
             ->languageRepository->search($criteria, $context)
@@ -137,12 +134,15 @@ class ProductFeatureBuilder
         $data->set($key, $systemLanguage);
     }
 
-    private function loadCustomFields(iterable $lineItems, CartDataCollection $data, Context $context): void
+    private function loadCustomFields(iterable $lineItems, CartDataCollection $data, SalesChannelContext $context): void
     {
         $required = [];
 
+        /** @var LineItem $lineItem */
         foreach ($lineItems as $lineItem) {
-            $product = $data->get('product-' . $lineItem->getReferencedId());
+            $product = $data->get(
+                $this->getDataKey((string) $lineItem->getReferencedId())
+            );
 
             if ($product === null || $product->getCustomFields() === null) {
                 continue;
@@ -172,9 +172,8 @@ class ProductFeatureBuilder
 
         $criteria = (new Criteria())->addFilter(new EqualsAnyFilter('name', $required));
 
-        $customFields = $this->customFieldRepository->search($criteria, $context)->getEntities();
+        $customFields = $this->customFieldRepository->search($criteria, $context->getContext())->getEntities();
 
-        /* @var CustomFieldCollection $customFields */
         foreach ($customFields as $field) {
             $key = 'custom-field-' . $field->getName();
             $data->set($key, $field);
@@ -229,7 +228,6 @@ class ProductFeatureBuilder
             return null;
         }
 
-        /* @var PropertyGroupEntity $group */
         $group = $product->getProperties()->getGroups()->get($id);
 
         if ($group === null) {
@@ -281,7 +279,6 @@ class ProductFeatureBuilder
             return null;
         }
 
-        /* @var CustomFieldEntity $customField */
         $customField = $data->get($fieldKey);
         $label = $this->getCustomFieldLabel($customField, $data);
 
@@ -348,5 +345,10 @@ class ProductFeatureBuilder
         }
 
         return $labels[$localeCode];
+    }
+
+    private function getDataKey(string $id): string
+    {
+        return 'product-' . $id;
     }
 }

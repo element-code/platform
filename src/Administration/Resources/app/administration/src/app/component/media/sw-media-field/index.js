@@ -18,25 +18,27 @@ Component.register('sw-media-field', {
 
     model: {
         prop: 'mediaId',
-        event: 'media-id-change'
+        event: 'media-id-change',
     },
 
     props: {
         disabled: {
             type: Boolean,
             default: false,
-            required: false
+            required: false,
         },
 
         mediaId: {
             type: String,
-            required: false
+            required: false,
+            default: null,
         },
 
         label: {
             type: String,
-            required: false
-        }
+            required: false,
+            default: null,
+        },
     },
 
     data() {
@@ -48,8 +50,25 @@ Component.register('sw-media-field', {
             suggestedItems: [],
             isLoadingSuggestions: false,
             pickerClasses: {},
-            uploadTag: Utils.createId()
+            uploadTag: Utils.createId(),
         };
+    },
+
+    computed: {
+        mediaRepository() {
+            return this.repositoryFactory.create('media');
+        },
+        mediaFieldClasses() {
+            return {
+                'is--active': this.showPicker,
+            };
+        },
+
+        toggleButtonLabel() {
+            return this.showUploadField ?
+                this.$tc('global.sw-media-field.labelToggleSearchExisting') :
+                this.$tc('global.sw-media-field.labelToggleUploadNew');
+        },
     },
 
     watch: {
@@ -60,24 +79,7 @@ Component.register('sw-media-field', {
 
         searchTerm() {
             this.fetchSuggestions();
-        }
-    },
-
-    computed: {
-        mediaRepository() {
-            return this.repositoryFactory.create('media');
         },
-        mediaFieldClasses() {
-            return {
-                'is--active': this.showPicker
-            };
-        },
-
-        toggleButtonLabel() {
-            return this.showUploadField ?
-                this.$tc('global.sw-media-field.labelToggleSearchExisting') :
-                this.$tc('global.sw-media-field.labelToggleUploadNew');
-        }
     },
 
     created() {
@@ -103,7 +105,7 @@ Component.register('sw-media-field', {
 
             criteria.addFilter(Criteria.not(
                 'AND',
-                [Criteria.equals('uploadedAt', null)]
+                [Criteria.equals('uploadedAt', null)],
             ));
 
             if (this.searchTerm) {
@@ -111,8 +113,8 @@ Component.register('sw-media-field', {
                     'OR',
                     [
                         Criteria.contains('fileName', this.searchTerm),
-                        Criteria.contains('fileExtension', this.searchTerm)
-                    ]
+                        Criteria.contains('fileExtension', this.searchTerm),
+                    ],
                 ));
             }
 
@@ -152,7 +154,7 @@ Component.register('sw-media-field', {
 
             const clientRect = this.$el.getBoundingClientRect();
             this.pickerClasses = {
-                top: `${clientRect.height + 5}px`
+                top: `${clientRect.height + 5}px`,
             };
         },
 
@@ -164,6 +166,6 @@ Component.register('sw-media-field', {
             this.$emit('media-id-change', targetId);
             this.showUploadField = false;
             this.showPicker = false;
-        }
-    }
+        },
+    },
 });

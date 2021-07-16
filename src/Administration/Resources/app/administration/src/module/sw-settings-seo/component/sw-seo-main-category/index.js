@@ -11,31 +11,36 @@ Component.register('sw-seo-main-category', {
         currentSalesChannelId: {
             type: String,
             required: false,
-            default: null
+            default: null,
         },
         categories: {
             type: Array,
-            required: true
+            required: true,
         },
         mainCategories: {
             type: Array,
-            required: true
+            required: true,
         },
         isLoading: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
         allowEdit: {
             type: Boolean,
             required: false,
-            default: true
-        }
+            default: true,
+        },
+        overwriteLabel: {
+            type: Boolean,
+            required: false,
+            default: false,
+        },
     },
 
     data() {
         return {
-            mainCategoryForSalesChannel: null
+            mainCategoryForSalesChannel: null,
         };
     },
 
@@ -59,7 +64,7 @@ Component.register('sw-seo-main-category', {
 
         selectedCategory() {
             return this.mainCategoryForSalesChannel !== null ? this.mainCategoryForSalesChannel.categoryId : null;
-        }
+        },
     },
 
     watch: {
@@ -68,7 +73,7 @@ Component.register('sw-seo-main-category', {
         },
         mainCategories() {
             this.refreshMainCategoryForSalesChannel();
-        }
+        },
     },
 
     created() {
@@ -94,7 +99,7 @@ Component.register('sw-seo-main-category', {
                 return;
             }
 
-            const mainCategory = this.mainCategoryRepository.create(Shopware.Context.api);
+            const mainCategory = this.mainCategoryRepository.create();
             mainCategory.salesChannelId = this.currentSalesChannelId;
             mainCategory.category = selectedCategory;
             mainCategory.categoryId = selectedCategory.id;
@@ -112,6 +117,6 @@ Component.register('sw-seo-main-category', {
             }
 
             this.mainCategoryForSalesChannel = mainCategory;
-        }
-    }
+        },
+    },
 });

@@ -17,15 +17,9 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class NavigationController extends StorefrontController
 {
-    /**
-     * @var NavigationPageLoaderInterface
-     */
-    private $navigationPageLoader;
+    private NavigationPageLoaderInterface $navigationPageLoader;
 
-    /**
-     * @var MenuOffcanvasPageletLoaderInterface
-     */
-    private $offcanvasLoader;
+    private MenuOffcanvasPageletLoaderInterface $offcanvasLoader;
 
     public function __construct(
         NavigationPageLoaderInterface $navigationPageLoader,
@@ -68,9 +62,13 @@ class NavigationController extends StorefrontController
     {
         $page = $this->offcanvasLoader->load($request, $context);
 
-        return $this->renderStorefront(
+        $response = $this->renderStorefront(
             '@Storefront/storefront/layout/navigation/offcanvas/navigation-pagelet.html.twig',
             ['page' => $page]
         );
+
+        $response->headers->set('x-robots-tag', 'noindex');
+
+        return $response;
     }
 }

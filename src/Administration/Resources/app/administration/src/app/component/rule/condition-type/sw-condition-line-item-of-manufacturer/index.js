@@ -10,13 +10,10 @@ Component.extend('sw-condition-line-item-of-manufacturer', 'sw-condition-base', 
 
     inject: ['repositoryFactory'],
 
-    created() {
-        this.createdComponent();
-    },
-
     data() {
         return {
-            manufacturers: null
+            manufacturers: null,
+            inputKey: 'manufacturerIds',
         };
     },
 
@@ -26,7 +23,9 @@ Component.extend('sw-condition-line-item-of-manufacturer', 'sw-condition-base', 
         },
 
         operators() {
-            return this.conditionDataProviderService.getOperatorSet('multiStore');
+            return this.conditionDataProviderService.addEmptyOperatorToOperatorSet(
+                this.conditionDataProviderService.getOperatorSet('multiStore'),
+            );
         },
 
         manufacturerIds: {
@@ -37,14 +36,18 @@ Component.extend('sw-condition-line-item-of-manufacturer', 'sw-condition-base', 
             set(manufacturerIds) {
                 this.ensureValueExist();
                 this.condition.value = { ...this.condition.value, manufacturerIds };
-            }
+            },
         },
 
         ...mapPropertyErrors('condition', ['value.operator', 'value.manufacturerIds']),
 
         currentError() {
             return this.conditionValueOperatorError || this.conditionValueManufacturerIdsError;
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -52,7 +55,7 @@ Component.extend('sw-condition-line-item-of-manufacturer', 'sw-condition-base', 
             this.manufacturers = new EntityCollection(
                 this.manufacturerRepository.route,
                 this.manufacturerRepository.entityName,
-                Context.api
+                Context.api,
             );
 
             if (this.manufacturerIds.length <= 0) {
@@ -70,6 +73,6 @@ Component.extend('sw-condition-line-item-of-manufacturer', 'sw-condition-base', 
         setManufacturerIds(manufacturers) {
             this.manufacturerIds = manufacturers.getIds();
             this.manufacturers = manufacturers;
-        }
-    }
+        },
+    },
 });

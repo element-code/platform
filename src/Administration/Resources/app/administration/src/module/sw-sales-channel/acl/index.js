@@ -13,7 +13,7 @@ Shopware.Service('privileges')
                 privileges: [
                     'sales_channel:read',
                     'sales_channel_type:read',
-                    'payment_method:read',
+                    Shopware.Service('privileges').getPrivileges('payment.viewer'),
                     'shipping_method:read',
                     'country:read',
                     'currency:read',
@@ -29,9 +29,13 @@ Shopware.Service('privileges')
                     'customer_group:read',
                     Shopware.Service('privileges').getPrivileges('media.viewer'),
                     'product_export:read',
-                    'product_stream:read'
+                    'product_stream:read',
+                    'product_visibility:read',
+                    'user_config:read',
+                    'user_config:create',
+                    'user_config:update',
                 ],
-                dependencies: []
+                dependencies: [],
             },
             editor: {
                 privileges: [
@@ -60,24 +64,27 @@ Shopware.Service('privileges')
                     'theme_sales_channel:create',
                     'theme_sales_channel:delete',
                     'product_export:create',
-                    'product_export:update'
+                    'product_export:update',
+                    'product_visibility:create',
+                    'product_visibility:delete',
                 ],
-                dependencies: ['sales_channel.viewer']
+                dependencies: ['sales_channel.viewer'],
             },
             creator: {
                 privileges: [
                     'product_stream:read',
                     'sales_channel:create',
                     'product_export:create',
-                    'product_export:update'
+                    'product_export:update',
                 ],
-                dependencies: ['sales_channel.viewer', 'sales_channel.editor']
+                dependencies: ['sales_channel.viewer', 'sales_channel.editor'],
             },
             deleter: {
                 privileges: [
-                    'sales_channel:delete'
+                    'sales_channel:delete',
+                    'product_visibility:delete',
                 ],
-                dependencies: ['sales_channel.viewer']
-            }
-        }
+                dependencies: ['sales_channel.viewer'],
+            },
+        },
     });

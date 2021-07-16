@@ -33,6 +33,9 @@ class CachedSitemapRoute extends AbstractSitemapRoute
 
     private EntityCacheKeyGenerator $generator;
 
+    /**
+     * @var AbstractCacheTracer<SitemapRouteResponse>
+     */
     private AbstractCacheTracer $tracer;
 
     private array $states;
@@ -43,6 +46,9 @@ class CachedSitemapRoute extends AbstractSitemapRoute
 
     private SystemConfigService $config;
 
+    /**
+     *  @param AbstractCacheTracer<SitemapRouteResponse> $tracer
+     */
     public function __construct(
         AbstractSitemapRoute $decorated,
         TagAwareAdapterInterface $cache,
@@ -77,12 +83,13 @@ class CachedSitemapRoute extends AbstractSitemapRoute
      * @Since("6.3.2.0")
      * @OA\Get(
      *      path="/sitemap",
-     *      summary="Sitemap",
+     *      summary="Fetch sitemaps",
+     *      description="Fetches a list of compressed sitemap files, which are often used by search engines.",
      *      operationId="readSitemap",
-     *      tags={"Store API", "Sitemap"},
+     *      tags={"Store API", "Sitemap & Routes"},
      *      @OA\Response(
      *          response="200",
-     *          description="",
+     *          description="Returns a list of available sitemaps.",
      *          @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Sitemap"))
      *     )
      * )

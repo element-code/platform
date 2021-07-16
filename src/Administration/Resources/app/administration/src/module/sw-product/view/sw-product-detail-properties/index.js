@@ -13,8 +13,24 @@ Component.register('sw-product-detail-properties', {
     data() {
         return {
             propertiesAvailable: true,
-            isInherited: false
+            isInherited: false,
         };
+    },
+
+    computed: {
+        ...mapState('swProductDetail', [
+            'product',
+            'parentProduct',
+        ]),
+
+        ...mapGetters('swProductDetail', [
+            'isLoading',
+            'isChild',
+        ]),
+
+        propertyRepository() {
+            return this.repositoryFactory.create('property_group_option');
+        },
     },
 
     watch: {
@@ -26,24 +42,8 @@ Component.register('sw-product-detail-properties', {
 
                 this.isInherited = this.isChild && !this.product.options.total;
             },
-            immediate: true
-        }
-    },
-
-    computed: {
-        ...mapState('swProductDetail', [
-            'product',
-            'parentProduct'
-        ]),
-
-        ...mapGetters('swProductDetail', [
-            'isLoading',
-            'isChild'
-        ]),
-
-        propertyRepository() {
-            return this.repositoryFactory.create('property_group_option');
-        }
+            immediate: true,
+        },
     },
 
     created() {
@@ -64,7 +64,7 @@ Component.register('sw-product-detail-properties', {
         },
 
         checkIfPropertiesExists() {
-            this.propertyRepository.search(new Criteria(1, 1), Shopware.Context.api).then((res) => {
+            this.propertyRepository.search(new Criteria(1, 1)).then((res) => {
                 this.propertiesAvailable = res.total > 0;
             });
         },
@@ -75,6 +75,6 @@ Component.register('sw-product-detail-properties', {
 
         removeInheritance() {
             this.isInherited = false;
-        }
-    }
+        },
+    },
 });

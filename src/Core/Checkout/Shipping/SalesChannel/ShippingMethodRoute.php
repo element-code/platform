@@ -42,15 +42,16 @@ class ShippingMethodRoute extends AbstractShippingMethodRoute
      * @Entity("shipping_method")
      * @OA\Post(
      *      path="/shipping-method",
-     *      summary="Loads all available shipping methods",
+     *      summary="Fetch shipping methods",
+     *      description="Perform a filtered search for shipping methods.",
      *      operationId="readShippingMethod",
-     *      tags={"Store API", "Shipping Method"},
+     *      tags={"Store API", "Payment & Shipping"},
      *      @OA\Parameter(name="Api-Basic-Parameters"),
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              @OA\Property(property="onlyAvailable", description="List only available", type="boolean")
-     *          )
+     *      @OA\Parameter(
+     *          name="onlyAvailable",
+     *          description="List only available shipping methods. This filters shipping methods methods which can not be used in the actual context because of their availability rule.",
+     *          @OA\Schema(type="boolean"),
+     *          in="query"
      *      ),
      *      @OA\Response(
      *          response="200",
@@ -69,7 +70,7 @@ class ShippingMethodRoute extends AbstractShippingMethodRoute
      *              @OA\Property(
      *                  property="elements",
      *                  type="array",
-     *                  @OA\Items(ref="#/components/schemas/shipping_method_flat")
+     *                  @OA\Items(ref="#/components/schemas/ShippingMethod")
      *              )
      *          )
      *     )
@@ -96,7 +97,7 @@ class ShippingMethodRoute extends AbstractShippingMethodRoute
             $shippingMethods = $shippingMethods->filterByActiveRules($context);
         }
 
-        $result->assign(['entities' => $shippingMethods]);
+        $result->assign(['entities' => $shippingMethods, 'elements' => $shippingMethods, 'total' => $shippingMethods->count()]);
 
         return new ShippingMethodRouteResponse($result);
     }

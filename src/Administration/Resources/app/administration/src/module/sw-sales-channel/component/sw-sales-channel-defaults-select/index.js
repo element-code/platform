@@ -5,55 +5,63 @@ const { Component, Mixin } = Shopware;
 Component.register('sw-sales-channel-defaults-select', {
     template,
 
+    inject: ['feature'],
+
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     props: {
         salesChannel: {
             type: Object,
             required: false,
-            default: null
+            default: null,
         },
 
         propertyName: {
             type: String,
-            required: true
+            required: true,
         },
 
         propertyLabel: {
             type: String,
-            required: true
+            required: true,
         },
 
         defaultPropertyName: {
             type: String,
-            required: true
+            required: true,
         },
 
         defaultPropertyLabel: {
             type: String,
-            required: true
+            required: true,
         },
 
         propertyNameInDomain: {
             type: String,
             required: false,
-            default: null
+            default: null,
 
         },
 
         helpText: {
             type: String,
             required: false,
-            default: null
+            default: null,
         },
 
         disabled: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
+
+        criteria: {
+            type: Object,
+            required: false,
+            default: undefined,
+        },
     },
 
     computed: {
@@ -70,7 +78,7 @@ Component.register('sw-sales-channel-defaults-select', {
                     return;
                 }
                 this.salesChannel[this.propertyName] = newCollection;
-            }
+            },
         },
 
         defaultId: {
@@ -85,7 +93,7 @@ Component.register('sw-sales-channel-defaults-select', {
                 if (this.salesChannel) {
                     this.salesChannel[this.defaultPropertyName] = newDefaultId;
                 }
-            }
+            },
         },
 
         propertyEntityName() {
@@ -106,7 +114,15 @@ Component.register('sw-sales-channel-defaults-select', {
 
         defaultsValueError() {
             return Shopware.State.getters['error/getApiError'](this.salesChannel, this.defaultPropertyName);
-        }
+        },
+
+        labelProperty() {
+            if (this.propertyEntityName === 'payment_method') {
+                return 'distinguishableName';
+            }
+
+            return 'name';
+        },
     },
 
     methods: {
@@ -150,8 +166,8 @@ Component.register('sw-sales-channel-defaults-select', {
                         message: this.$tc(
                             'sw-sales-channel.sw-sales-channel-defaults-select.messageError',
                             0,
-                            { url: domain.url }
-                        )
+                            { url: domain.url },
+                        ),
                     });
                     return;
                 }
@@ -175,6 +191,6 @@ Component.register('sw-sales-channel-defaults-select', {
             if (!!defaultId && !this.propertyCollection.has(defaultId)) {
                 this.propertyCollection.add(defaultEntity);
             }
-        }
-    }
+        },
+    },
 });

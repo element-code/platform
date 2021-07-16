@@ -40,6 +40,9 @@ function createWrapper(privileges = []) {
 
                     return privileges.includes(identifier);
                 }
+            },
+            customFieldDataProviderService: {
+                getCustomFieldSets: () => Promise.resolve([])
             }
         },
         stubs: {
@@ -72,13 +75,17 @@ describe('module/sw-settings-payment/page/sw-settings-payment-detail', () => {
     mockPaymentMethod.getEntityName = () => { return 'payment_method'; };
 
     it('should be a Vue.JS component', async () => {
-        const wrapper = createWrapper();
+        const wrapper = await createWrapper();
+        await wrapper.setData({
+            paymentMethod: mockPaymentMethod,
+            isLoading: false
+        });
 
         expect(wrapper.vm).toBeTruthy();
     });
 
     it('should not be able to save the settings-payment', async () => {
-        const wrapper = createWrapper();
+        const wrapper = await createWrapper();
         await wrapper.setData({
             paymentMethod: mockPaymentMethod,
             isLoading: false

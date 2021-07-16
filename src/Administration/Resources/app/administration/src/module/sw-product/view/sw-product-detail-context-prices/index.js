@@ -11,7 +11,7 @@ Component.register('sw-product-detail-context-prices', {
     inject: ['repositoryFactory', 'acl', 'feature'],
 
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     data() {
@@ -19,21 +19,8 @@ Component.register('sw-product-detail-context-prices', {
             rules: [],
             totalRules: 0,
             isInherited: false,
-            showListPrices: {}
+            showListPrices: {},
         };
-    },
-
-    watch: {
-        'product.prices': {
-            handler(value) {
-                if (!value) {
-                    return;
-                }
-
-                this.isInherited = this.isChild && !this.product.prices.total;
-            },
-            immediate: true
-        }
     },
 
     computed: {
@@ -42,7 +29,7 @@ Component.register('sw-product-detail-context-prices', {
             'product',
             'parentProduct',
             'taxes',
-            'currencies'
+            'currencies',
         ]),
 
         ...mapGetters('swProductDetail', [
@@ -50,14 +37,14 @@ Component.register('sw-product-detail-context-prices', {
             'defaultCurrency',
             'defaultPrice',
             'productTaxRate',
-            'isChild'
+            'isChild',
         ]),
 
         priceRepository() {
             if (this.product && this.product.prices) {
                 return this.repositoryFactory.create(
                     this.product.prices.entity,
-                    this.product.prices.source
+                    this.product.prices.source,
                 );
             }
             return null;
@@ -78,6 +65,7 @@ Component.register('sw-product-detail-context-prices', {
                 return priceRuleGroups;
             }
 
+            // eslint-disable-next-line vue/no-side-effects-in-computed-properties
             const sortedPrices = this.product.prices.sort((a, b) => {
                 const aRule = this.findRuleById(a.ruleId);
                 const bRule = this.findRuleById(b.ruleId);
@@ -94,7 +82,7 @@ Component.register('sw-product-detail-context-prices', {
                     priceRuleGroups[rule.ruleId] = {
                         ruleId: rule.ruleId,
                         rule: this.findRuleById(rule.ruleId),
-                        prices: this.findPricesByRuleId(rule.ruleId)
+                        prices: this.findPricesByRuleId(rule.ruleId),
                     };
                 }
             });
@@ -143,7 +131,7 @@ Component.register('sw-product-detail-context-prices', {
                     primary: false,
                     rawData: false,
                     width: '250px',
-                    multiLine: true
+                    multiLine: true,
                 };
             });
         },
@@ -157,7 +145,7 @@ Component.register('sw-product-detail-context-prices', {
                     allowResize: true,
                     primary: true,
                     rawData: false,
-                    width: '95px'
+                    width: '95px',
                 }, {
                     property: 'quantityEnd',
                     label: 'sw-product.advancedPrices.columnTo',
@@ -165,7 +153,7 @@ Component.register('sw-product-detail-context-prices', {
                     allowResize: true,
                     primary: true,
                     rawData: false,
-                    width: '95px'
+                    width: '95px',
                 },
                 {
                     property: 'type',
@@ -173,12 +161,26 @@ Component.register('sw-product-detail-context-prices', {
                     visible: true,
                     allowResize: true,
                     width: '95px',
-                    multiLine: true
-                }
+                    multiLine: true,
+                },
             ];
 
             return [...priceColumns, ...this.currencyColumns];
-        }
+        },
+    },
+
+
+    watch: {
+        'product.prices': {
+            handler(value) {
+                if (!value) {
+                    return;
+                }
+
+                this.isInherited = this.isChild && !this.product.prices.total;
+            },
+            immediate: true,
+        },
     },
 
     mounted() {
@@ -191,12 +193,12 @@ Component.register('sw-product-detail-context-prices', {
             ruleCriteria.addFilter(
                 Criteria.multi('OR', [
                     Criteria.contains('rule.moduleTypes.types', 'price'),
-                    Criteria.equals('rule.moduleTypes', null)
-                ])
+                    Criteria.equals('rule.moduleTypes', null),
+                ]),
             );
 
             Shopware.State.commit('swProductDetail/setLoading', ['rules', true]);
-            this.ruleRepository.search(ruleCriteria, Shopware.Context.api).then((res) => {
+            this.ruleRepository.search(ruleCriteria).then((res) => {
                 this.rules = res;
                 this.totalRules = res.total;
 
@@ -237,7 +239,7 @@ Component.register('sw-product-detail-context-prices', {
                 return;
             }
 
-            const newPriceRule = this.priceRepository.create(Shopware.Context.api);
+            const newPriceRule = this.priceRepository.create();
 
             newPriceRule.ruleId = ruleId;
             newPriceRule.productId = this.product.id;
@@ -249,7 +251,7 @@ Component.register('sw-product-detail-context-prices', {
                 gross: this.defaultPrice.gross,
                 linked: this.defaultPrice.linked,
                 net: this.defaultPrice.net,
-                listPrice: null
+                listPrice: null,
             }];
 
             if (this.defaultPrice.listPrice) {
@@ -257,7 +259,7 @@ Component.register('sw-product-detail-context-prices', {
                     currencyId: this.defaultCurrency.id,
                     gross: this.defaultPrice.listPrice.gross,
                     linked: this.defaultPrice.listPrice.linked,
-                    net: this.defaultPrice.listPrice.net
+                    net: this.defaultPrice.listPrice.net,
                 };
             }
 
@@ -269,7 +271,7 @@ Component.register('sw-product-detail-context-prices', {
                 if (scrollableArea) {
                     scrollableArea.scrollTo({
                         top: scrollableArea.scrollHeight,
-                        behavior: 'smooth'
+                        behavior: 'smooth',
                     });
                 }
             });
@@ -307,7 +309,7 @@ Component.register('sw-product-detail-context-prices', {
             // if it is the only item in the priceRuleGroup
             if (matchingPriceRuleGroup.prices.length <= 1) {
                 this.createNotificationError({
-                    message: this.$tc('sw-product.advancedPrices.deletionNotPossibleMessage')
+                    message: this.$tc('sw-product.advancedPrices.deletionNotPossibleMessage'),
                 });
 
                 return;
@@ -349,7 +351,7 @@ Component.register('sw-product-detail-context-prices', {
                 gross: this.convertPrice(defaultPrice.gross, currency),
                 linked: defaultPrice.linked,
                 net: this.convertPrice(defaultPrice.net, currency),
-                listPrice: null
+                listPrice: null,
             };
 
             if (defaultPrice.listPrice) {
@@ -357,7 +359,7 @@ Component.register('sw-product-detail-context-prices', {
                     currencyId: currency.id,
                     gross: this.convertPrice(defaultPrice.listPrice.gross, currency),
                     linked: defaultPrice.listPrice.linked,
-                    net: this.convertPrice(defaultPrice.listPrice.net, currency)
+                    net: this.convertPrice(defaultPrice.listPrice.net, currency),
                 };
             }
 
@@ -402,7 +404,7 @@ Component.register('sw-product-detail-context-prices', {
 
         createPriceRule(priceGroup) {
             // create new price rule
-            const newPriceRule = this.priceRepository.create(Shopware.Context.api);
+            const newPriceRule = this.priceRepository.create();
             newPriceRule.productId = this.product.id;
             newPriceRule.ruleId = priceGroup.ruleId;
 
@@ -414,7 +416,7 @@ Component.register('sw-product-detail-context-prices', {
                 gross: this.defaultPrice.gross,
                 linked: this.defaultPrice.linked,
                 net: this.defaultPrice.net,
-                listPrice: null
+                listPrice: null,
             }];
 
             if (this.defaultPrice.listPrice) {
@@ -422,7 +424,7 @@ Component.register('sw-product-detail-context-prices', {
                     currencyId: this.defaultCurrency.id,
                     gross: this.defaultPrice.listPrice ? this.defaultPrice.listPrice.gross : null,
                     linked: this.defaultPrice.listPrice ? this.defaultPrice.listPrice.linked : true,
-                    net: this.defaultPrice.listPrice ? this.defaultPrice.listPrice.net : null
+                    net: this.defaultPrice.listPrice ? this.defaultPrice.listPrice.net : null,
                 };
             }
 
@@ -438,7 +440,7 @@ Component.register('sw-product-detail-context-prices', {
         },
 
         duplicatePriceRule(referencePrice, ruleId = null) {
-            const newPriceRule = this.priceRepository.create(Shopware.Context.api);
+            const newPriceRule = this.priceRepository.create();
 
             newPriceRule.productId = referencePrice.productId;
             newPriceRule.quantityEnd = referencePrice.quantityEnd;
@@ -457,7 +459,7 @@ Component.register('sw-product-detail-context-prices', {
 
         getPriceRuleGroupClass(number) {
             return [
-                `context-price-group-${number}`
+                `context-price-group-${number}`,
             ];
         },
 
@@ -478,8 +480,8 @@ Component.register('sw-product-detail-context-prices', {
                 message: this.$tc('sw-product.advancedPrices.advancedPriceDisabledTooltip'),
                 width: 275,
                 showDelay: 200,
-                disabled: (itemIndex !== 0 || quantity !== 1)
+                disabled: (itemIndex !== 0 || quantity !== 1),
             };
-        }
-    }
+        },
+    },
 });

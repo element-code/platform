@@ -8,11 +8,12 @@ Component.register('sw-promotion-v2-detail-base', {
 
     inject: [
         'acl',
-        'promotionCodeApiService'
+        'promotionCodeApiService',
+        'customFieldDataProviderService',
     ],
 
     mixins: [
-        'placeholder'
+        'placeholder',
     ],
 
     props: {
@@ -21,7 +22,7 @@ Component.register('sw-promotion-v2-detail-base', {
             required: false,
             default() {
                 return null;
-            }
+            },
         },
 
         isLoading: {
@@ -29,13 +30,13 @@ Component.register('sw-promotion-v2-detail-base', {
             required: false,
             default() {
                 return false;
-            }
+            },
         },
 
         isCreateMode: {
             type: Boolean,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
@@ -48,8 +49,9 @@ Component.register('sw-promotion-v2-detail-base', {
             CODE_TYPES: Object.freeze({
                 NONE: '0',
                 FIXED: '1',
-                INDIVIDUAL: '2'
-            })
+                INDIVIDUAL: '2',
+            }),
+            customFieldSets: null,
         };
     },
 
@@ -57,17 +59,21 @@ Component.register('sw-promotion-v2-detail-base', {
         codeTypeOptions() {
             return Object.entries(this.CODE_TYPES).map(type => Object.create({
                 label: this.$tc(`sw-promotion-v2.detail.base.codes.${type[0].toLowerCase()}.description`),
-                value: type[1]
+                value: type[1],
             }));
         },
 
-        ...mapPropertyErrors('promotion', ['name', 'validUntil'])
+        ...mapPropertyErrors('promotion', ['name', 'validUntil']),
+
+        showCustomFields() {
+            return this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
         promotion() {
             this.createdComponent();
-        }
+        },
     },
 
     created() {
@@ -88,6 +94,7 @@ Component.register('sw-promotion-v2-detail-base', {
             }
 
             this.setNewCodeType(this.promotion.useCodes ? this.CODE_TYPES.FIXED : this.CODE_TYPES.NONE);
+            this.loadCustomFieldSets();
         },
 
         initialSort() {
@@ -134,6 +141,12 @@ Component.register('sw-promotion-v2-detail-base', {
             this.selectedCodeType = value;
         },
 
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('promotion').then((sets) => {
+                this.customFieldSets = sets;
+            });
+        },
+
         onGenerateCodeFixed() {
             this.isGenerating = true;
             this.promotionCodeApiService.generateCodeFixed().then((code) => {
@@ -146,6 +159,6 @@ Component.register('sw-promotion-v2-detail-base', {
 
         generateFinish() {
             this.isGenerateSuccessful = false;
-        }
-    }
+        },
+    },
 });

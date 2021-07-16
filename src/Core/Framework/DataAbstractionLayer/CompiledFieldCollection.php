@@ -5,13 +5,16 @@ namespace Shopware\Core\Framework\DataAbstractionLayer;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\AssociationField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ChildrenAssociationField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Field;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Extension;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Runtime;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\StorageAware;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\TranslatedField;
 
 /**
- * @method void       set(string $key, Field $entity)
- * @method Field|null first()
- * @method Field|null last()
+ * @method void          set(string $key, Field $entity)
+ * @method array<string, Field> getIterator()
+ * @method Field|null    first()
+ * @method Field|null    last()
  */
 class CompiledFieldCollection extends FieldCollection
 {
@@ -29,6 +32,16 @@ class CompiledFieldCollection extends FieldCollection
      * @var DefinitionInstanceRegistry
      */
     private $registry;
+
+    /**
+     * @var TranslatedField[]
+     */
+    private array $translatedFields = [];
+
+    /**
+     * @var Field[]
+     */
+    private array $extensionFields = [];
 
     public function __construct(DefinitionInstanceRegistry $registry, iterable $elements = [])
     {
@@ -67,6 +80,24 @@ class CompiledFieldCollection extends FieldCollection
         if ($field instanceof ChildrenAssociationField) {
             $this->childrenAssociationField = $field;
         }
+
+        if ($field instanceof TranslatedField) {
+            $this->translatedFields[$field->getPropertyName()] = $field;
+        }
+
+        if ($field->is(Extension::class)) {
+            $this->extensionFields[$field->getPropertyName()] = $field;
+        }
+    }
+
+    public function getTranslatedFields(): array
+    {
+        return $this->translatedFields;
+    }
+
+    public function getExtensionFields(): array
+    {
+        return $this->extensionFields;
     }
 
     /**

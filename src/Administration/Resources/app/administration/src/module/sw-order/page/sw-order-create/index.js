@@ -3,13 +3,12 @@ import './sw-order-create.scss';
 import swOrderState from '../../state/order.store';
 
 const { Component, State, Mixin } = Shopware;
-const { get } = Shopware.Utils;
 
 Component.register('sw-order-create', {
     template,
 
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     data() {
@@ -17,7 +16,7 @@ Component.register('sw-order-create', {
             isLoading: false,
             isSaveSuccessful: false,
             orderId: null,
-            showInvalidCodeModal: false
+            showInvalidCodeModal: false,
         };
     },
 
@@ -39,7 +38,7 @@ Component.register('sw-order-create', {
                 this.cart.token &&
                 this.cart.lineItems.length &&
                 !this.invalidPromotionCodes.length;
-        }
+        },
     },
 
     beforeCreate() {
@@ -72,11 +71,11 @@ Component.register('sw-order-create', {
                 State
                     .dispatch('swOrder/saveOrder', {
                         salesChannelId: this.customer.salesChannelId,
-                        contextToken: this.cart.token
+                        contextToken: this.cart.token,
                     })
                     .then((response) => {
                         this.isSaveSuccessful = true;
-                        this.orderId = get(response, 'data.id');
+                        this.orderId = response?.data?.id;
                     })
                     .catch((error) => this.showError(error))
                     .finally(() => {
@@ -98,16 +97,16 @@ Component.register('sw-order-create', {
             State
                 .dispatch('swOrder/cancelCart', {
                     salesChannelId: this.customer.salesChannelId,
-                    contextToken: this.cart.token
+                    contextToken: this.cart.token,
                 })
                 .then(() => this.redirectToOrderList());
         },
 
         showError(error) {
-            const errorMessage = get(error, 'response.data.errors[0].detail') || null;
+            const errorMessage = error?.response?.data?.errors?.[0]?.detail || null;
 
             this.createNotificationError({
-                message: errorMessage || this.$tc('sw-order.create.messageSaveError')
+                message: errorMessage || this.$tc('sw-order.create.messageSaveError'),
             });
         },
 
@@ -122,6 +121,6 @@ Component.register('sw-order-create', {
         removeInvalidCode() {
             State.commit('swOrder/removeInvalidPromotionCodes');
             this.closeInvalidCodeModal();
-        }
-    }
+        },
+    },
 });

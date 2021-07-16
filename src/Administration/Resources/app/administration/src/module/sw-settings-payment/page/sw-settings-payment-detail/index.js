@@ -8,21 +8,21 @@ const { warn } = Shopware.Utils.debug;
 Component.register('sw-settings-payment-detail', {
     template,
 
+    inject: ['repositoryFactory', 'acl', 'customFieldDataProviderService'],
+
     mixins: [
         Mixin.getByName('notification'),
-        Mixin.getByName('placeholder')
+        Mixin.getByName('placeholder'),
     ],
-
-    inject: ['repositoryFactory', 'acl'],
 
     shortcuts: {
         'SYSTEMKEY+S': {
             active() {
                 return this.acl.can('payment.editor');
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     data() {
@@ -31,22 +31,15 @@ Component.register('sw-settings-payment-detail', {
             mediaItem: null,
             uploadTag: 'sw-payment-method-upload-tag',
             isLoading: false,
-            isSaveSuccessful: false
+            isSaveSuccessful: false,
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
-    },
-
-    watch: {
-        'paymentMethod.mediaId'() {
-            if (this.paymentMethod.mediaId) {
-                this.setMediaItem({ targetId: this.paymentMethod.mediaId });
-            }
-        }
     },
 
     computed: {
@@ -71,21 +64,21 @@ Component.register('sw-settings-payment-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.acl.can('payment.editor'),
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
             const systemKey = this.$device.getSystemKey();
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
@@ -95,14 +88,26 @@ Component.register('sw-settings-payment-detail', {
                 'OR',
                 [
                     Criteria.contains('rule.moduleTypes.types', 'payment'),
-                    Criteria.equals('rule.moduleTypes', null)
-                ]
+                    Criteria.equals('rule.moduleTypes', null),
+                ],
             ));
 
             criteria.addSorting(Criteria.sort('name', 'ASC', false));
 
             return criteria;
-        }
+        },
+
+        showCustomFields() {
+            return this.paymentMethod && this.customFieldSets && this.customFieldSets.length > 0;
+        },
+    },
+
+    watch: {
+        'paymentMethod.mediaId'() {
+            if (this.paymentMethod.mediaId) {
+                this.setMediaItem({ targetId: this.paymentMethod.mediaId });
+            }
+        },
     },
 
     created() {
@@ -114,6 +119,7 @@ Component.register('sw-settings-payment-detail', {
             if (this.$route.params.id) {
                 this.paymentMethodId = this.$route.params.id;
                 this.loadEntityData();
+                this.loadCustomFieldSets();
             }
         },
 
@@ -140,7 +146,7 @@ Component.register('sw-settings-payment-detail', {
         loadEntityData() {
             this.isLoading = true;
 
-            this.paymentMethodRepository.get(this.paymentMethodId, Shopware.Context.api)
+            this.paymentMethodRepository.get(this.paymentMethodId)
                 .then((paymentMethod) => {
                     this.paymentMethod = paymentMethod;
                     this.setMediaItem({ targetId: this.paymentMethod.mediaId });
@@ -150,18 +156,24 @@ Component.register('sw-settings-payment-detail', {
                 });
         },
 
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('payment_method').then((sets) => {
+                this.customFieldSets = sets;
+            });
+        },
+
         saveFinish() {
             this.isSaveSuccessful = false;
         },
 
         onSave() {
             const messageSaveError = this.$tc(
-                'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid'
+                'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid',
             );
             this.isSaveSuccessful = false;
             this.isLoading = true;
 
-            return this.paymentMethodRepository.save(this.paymentMethod, Shopware.Context.api)
+            return this.paymentMethodRepository.save(this.paymentMethod)
                 .then(() => {
                     this.isSaveSuccessful = true;
                     this.$refs.mediaSidebarItem.getList();
@@ -169,7 +181,7 @@ Component.register('sw-settings-payment-detail', {
                 })
                 .catch((exception) => {
                     this.createNotificationError({
-                        message: messageSaveError
+                        message: messageSaveError,
                     });
                     warn(this._name, exception.message, exception.response);
                     throw exception;
@@ -184,7 +196,7 @@ Component.register('sw-settings-payment-detail', {
         },
 
         setMediaItem({ targetId }) {
-            this.mediaRepository.get(targetId, Shopware.Context.api)
+            this.mediaRepository.get(targetId)
                 .then((updatedMedia) => {
                     this.mediaItem = updatedMedia;
                     this.paymentMethod.mediaId = targetId;
@@ -207,6 +219,6 @@ Component.register('sw-settings-payment-detail', {
 
         openMediaSidebar() {
             this.$refs.mediaSidebarItem.openContent();
-        }
-    }
+        },
+    },
 });

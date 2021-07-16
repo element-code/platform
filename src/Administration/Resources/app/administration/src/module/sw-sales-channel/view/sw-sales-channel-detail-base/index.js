@@ -12,70 +12,68 @@ const { mapPropertyErrors } = Component.getComponentHelper();
 Component.register('sw-sales-channel-detail-base', {
     template,
 
-    mixins: [
-        Mixin.getByName('notification'),
-        Mixin.getByName('placeholder')
-    ],
-
     inject: [
         'salesChannelService',
         'productExportService',
         'repositoryFactory',
         'knownIpsService',
-        'acl'
+        'acl',
+    ],
+
+    mixins: [
+        Mixin.getByName('notification'),
+        Mixin.getByName('placeholder'),
     ],
 
     props: {
+        // FIXME: add type for salesChannel property
+        // eslint-disable-next-line vue/require-prop-types
         salesChannel: {
-            required: true
+            required: true,
         },
 
         productExport: {
             // type: Entity
             type: Object,
-            required: true
+            required: true,
         },
 
+        // FIXME: add default value for this property
+        // eslint-disable-next-line vue/require-default-prop
         storefrontSalesChannelCriteria: {
             type: Criteria,
-            required: false
+            required: false,
         },
 
         customFieldSets: {
             type: Array,
-            required: true
+            required: true,
         },
 
         isLoading: {
             type: Boolean,
-            default: false
+            default: false,
         },
 
         productComparisonAccessUrl: {
             type: String,
-            default: ''
+            default: '',
         },
 
         templateOptions: {
             type: Array,
-            default: () => []
+            default: () => [],
         },
 
         showTemplateModal: {
             type: Boolean,
-            default: false
+            default: false,
         },
 
         templateName: {
             type: String,
-            default: null
-        }
-    },
-
-    watch: {
-        'productExport.fileName'() {
-            this.onChangeFileName();
-        }
+            default: null,
+        },
     },
 
     data() {
@@ -89,14 +87,8 @@ Component.register('sw-sales-channel-detail-base', {
             invalidFileName: false,
             isFileNameChecking: false,
             disableGenerateByCronjob: false,
-            knownIps: []
+            knownIps: [],
         };
-    },
-
-    created() {
-        this.knownIpsService.getKnownIps().then(ips => {
-            this.knownIps = ips;
-        });
     },
 
     computed: {
@@ -135,6 +127,14 @@ Component.register('sw-sales-channel-detail-base', {
             return criteria.addFilter(Criteria.equals('salesChannels.id', this.productExport.storefrontSalesChannelId));
         },
 
+        paymentMethodCriteria() {
+            const criteria = new Criteria();
+
+            criteria.addSorting(Criteria.sort('position', 'ASC'));
+
+            return criteria;
+        },
+
         storefrontDomainsLoaded() {
             return this.storefrontDomains.length > 0;
         },
@@ -142,7 +142,7 @@ Component.register('sw-sales-channel-detail-base', {
         domainRepository() {
             return this.repositoryFactory.create(
                 this.salesChannel.domains.entity,
-                this.salesChannel.domains.source
+                this.salesChannel.domains.source,
             );
         },
 
@@ -164,76 +164,76 @@ Component.register('sw-sales-channel-detail-base', {
             return [
                 {
                     id: 0,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.0')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.0'),
                 },
                 {
                     id: 120,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.120')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.120'),
                 },
                 {
                     id: 300,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.300')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.300'),
                 },
                 {
                     id: 600,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.600')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.600'),
                 },
                 {
                     id: 900,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.900')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.900'),
                 },
                 {
                     id: 1800,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.1800')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.1800'),
                 },
                 {
                     id: 3600,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.3600')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.3600'),
                 },
                 {
                     id: 7200,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.7200')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.7200'),
                 },
                 {
                     id: 14400,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.14400')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.14400'),
                 },
                 {
                     id: 28800,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.28800')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.28800'),
                 },
                 {
                     id: 43200,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.43200')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.43200'),
                 },
                 {
                     id: 86400,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.86400')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.86400'),
                 },
                 {
                     id: 172800,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.172800')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.172800'),
                 },
                 {
                     id: 259200,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.259200')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.259200'),
                 },
                 {
                     id: 345600,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.345600')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.345600'),
                 },
                 {
                     id: 432000,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.432000')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.432000'),
                 },
                 {
                     id: 518400,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.518400')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.518400'),
                 },
                 {
                     id: 604800,
-                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.604800')
-                }
+                    name: this.$tc('sw-sales-channel.detail.productComparison.intervalLabels.604800'),
+                },
             ];
         },
 
@@ -241,12 +241,12 @@ Component.register('sw-sales-channel-detail-base', {
             return [
                 {
                     id: 'csv',
-                    name: this.$tc('sw-sales-channel.detail.productComparison.fileFormatLabels.csv')
+                    name: this.$tc('sw-sales-channel.detail.productComparison.fileFormatLabels.csv'),
                 },
                 {
                     id: 'xml',
-                    name: this.$tc('sw-sales-channel.detail.productComparison.fileFormatLabels.xml')
-                }
+                    name: this.$tc('sw-sales-channel.detail.productComparison.fileFormatLabels.xml'),
+                },
             ];
         },
 
@@ -254,12 +254,12 @@ Component.register('sw-sales-channel-detail-base', {
             return [
                 {
                     id: 'ISO-8859-1',
-                    name: 'ISO-8859-1'
+                    name: 'ISO-8859-1',
                 },
                 {
                     id: 'UTF-8',
-                    name: 'UTF-8'
-                }
+                    name: 'UTF-8',
+                },
             ];
         },
 
@@ -278,13 +278,13 @@ Component.register('sw-sales-channel-detail-base', {
                 {
                     value: 'horizontal',
                     name: this.$tc('sw-sales-channel.detail.taxCalculation.horizontalName'),
-                    description: this.$tc('sw-sales-channel.detail.taxCalculation.horizontalDescription')
+                    description: this.$tc('sw-sales-channel.detail.taxCalculation.horizontalDescription'),
                 },
                 {
                     value: 'vertical',
                     name: this.$tc('sw-sales-channel.detail.taxCalculation.verticalName'),
-                    description: this.$tc('sw-sales-channel.detail.taxCalculation.verticalDescription')
-                }
+                    description: this.$tc('sw-sales-channel.detail.taxCalculation.verticalDescription'),
+                },
             ];
         },
 
@@ -294,14 +294,14 @@ Component.register('sw-sales-channel-detail-base', {
             },
             set(value) {
                 this.salesChannel.maintenanceIpWhitelist = value;
-            }
+            },
         },
 
         ...mapPropertyErrors('salesChannel',
             [
                 'name',
                 'customerGroupId',
-                'navigationCategoryId'
+                'navigationCategoryId',
             ]),
 
         ...mapPropertyErrors('productExport',
@@ -311,8 +311,20 @@ Component.register('sw-sales-channel-detail-base', {
                 'fileName',
                 'fileFormat',
                 'salesChannelDomainId',
-                'currencyId'
-            ])
+                'currencyId',
+            ]),
+    },
+
+    watch: {
+        'productExport.fileName'() {
+            this.onChangeFileName();
+        },
+    },
+
+    created() {
+        this.knownIpsService.getKnownIps().then(ips => {
+            this.knownIps = ips;
+        });
     },
 
     methods: {
@@ -321,7 +333,7 @@ Component.register('sw-sales-channel-detail-base', {
                 this.salesChannel.accessKey = response.accessKey;
             }).catch(() => {
                 this.createNotificationError({
-                    message: this.$tc('sw-sales-channel.detail.messageAPIError')
+                    message: this.$tc('sw-sales-channel.detail.messageAPIError'),
                 });
             });
         },
@@ -333,12 +345,12 @@ Component.register('sw-sales-channel-detail-base', {
 
                 if (displaySaveNotification) {
                     this.createNotificationInfo({
-                        message: this.$tc('sw-sales-channel.detail.productComparison.messageAccessKeyChanged')
+                        message: this.$tc('sw-sales-channel.detail.productComparison.messageAccessKeyChanged'),
                     });
                 }
             }).catch(() => {
                 this.createNotificationError({
-                    message: this.$tc('sw-sales-channel.detail.messageAPIError')
+                    message: this.$tc('sw-sales-channel.detail.messageAPIError'),
                 });
             });
         },
@@ -361,8 +373,8 @@ Component.register('sw-sales-channel-detail-base', {
                     this.salesChannel.active = false;
                     this.createNotificationError({
                         message: this.$tc('sw-sales-channel.detail.messageActivateWithoutThemeError', 0, {
-                            name: this.salesChannel.name || this.placeholder(this.salesChannel, 'name')
-                        })
+                            name: this.salesChannel.name || this.placeholder(this.salesChannel, 'name'),
+                        }),
                     });
                 });
         },
@@ -391,8 +403,7 @@ Component.register('sw-sales-channel-detail-base', {
         },
 
         onStorefrontSelectionChange(storefrontSalesChannelId) {
-            this.salesChannelRepository
-                .get(storefrontSalesChannelId, Shopware.Context.api)
+            this.salesChannelRepository.get(storefrontSalesChannelId)
                 .then((entity) => {
                     this.salesChannel.languageId = entity.languageId;
                     this.salesChannel.currencyId = entity.currencyId;
@@ -406,8 +417,7 @@ Component.register('sw-sales-channel-detail-base', {
         },
 
         onStorefrontDomainSelectionChange(storefrontSalesChannelDomainId) {
-            this.globalDomainRepository
-                .get(storefrontSalesChannelDomainId, Shopware.Context.api)
+            this.globalDomainRepository.get(storefrontSalesChannelDomainId)
                 .then((entity) => {
                     this.productExport.salesChannelDomain = entity;
                     this.productExport.currencyId = entity.currencyId;
@@ -420,8 +430,7 @@ Component.register('sw-sales-channel-detail-base', {
 
             criteria.addFilter(Criteria.equals('salesChannelId', storefrontSalesChannelId));
 
-            this.globalDomainRepository
-                .search(criteria, Shopware.Context.api)
+            this.globalDomainRepository.search(criteria)
                 .then((searchResult) => {
                     this.storefrontDomains = searchResult;
                 });
@@ -451,12 +460,12 @@ Component.register('sw-sales-channel-detail-base', {
                     'AND',
                     [
                         Criteria.equals('fileName', this.productExport.fileName),
-                        Criteria.not('AND', [Criteria.equals('id', this.productExport.id)])
-                    ]
-                )
+                        Criteria.not('AND', [Criteria.equals('id', this.productExport.id)]),
+                    ],
+                ),
             );
 
-            this.productExportRepository.search(criteria, Shopware.Context.api).then(({ total }) => {
+            this.productExportRepository.search(criteria).then(({ total }) => {
                 this.invalidFileName = total > 0;
                 this.isFileNameChecking = false;
             }).catch(() => {
@@ -471,6 +480,6 @@ Component.register('sw-sales-channel-detail-base', {
             if (this.disableGenerateByCronjob) {
                 this.productExport.generateByCronjob = false;
             }
-        }
-    }
+        },
+    },
 });

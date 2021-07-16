@@ -2,7 +2,6 @@
 
 namespace Shopware\Storefront\Framework\Captcha;
 
-use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Validator\Constraints\Blank;
 use Symfony\Component\Validator\Mapping\ClassMetadata;
@@ -13,25 +12,13 @@ class HoneypotCaptcha extends AbstractCaptcha
     public const CAPTCHA_NAME = 'honeypot';
     public const CAPTCHA_REQUEST_PARAMETER = 'shopware_surname_confirm';
 
-    /**
-     * @var string
-     */
-    protected $honeypotValue;
+    protected ?string $honeypotValue;
 
-    /**
-     * @var ValidatorInterface
-     */
-    private $validator;
+    private ValidatorInterface $validator;
 
-    /**
-     * @var SystemConfigService
-     */
-    private $systemConfigService;
-
-    public function __construct(ValidatorInterface $validator, SystemConfigService $systemConfigService)
+    public function __construct(ValidatorInterface $validator)
     {
         $this->validator = $validator;
-        $this->systemConfigService = $systemConfigService;
     }
 
     /**
@@ -45,24 +32,9 @@ class HoneypotCaptcha extends AbstractCaptcha
     /**
      * {@inheritdoc}
      */
-    public function supports(Request $request): bool
-    {
-        $activeCaptchas = $this->systemConfigService->get('core.basicInformation.activeCaptchas');
-
-        if (empty($activeCaptchas) || !\is_array($activeCaptchas)) {
-            return false;
-        }
-
-        return $request->isMethod(Request::METHOD_POST)
-            && \in_array(self::CAPTCHA_NAME, $activeCaptchas, true);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function isValid(Request $request): bool
     {
-        $this->honeypotValue = $request->get(self::CAPTCHA_REQUEST_PARAMETER);
+        $this->honeypotValue = $request->get(self::CAPTCHA_REQUEST_PARAMETER, '');
 
         return \count($this->validator->validate($this)) < 1;
     }

@@ -7,15 +7,17 @@ Component.register('sw-sales-channel-detail-hreflang', {
     template,
 
     props: {
+        // FIXME: add type to salesChannel property
+        // eslint-disable-next-line vue/require-prop-types
         salesChannel: {
-            required: true
+            required: true,
         },
 
         disabled: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
     },
 
     computed: {
@@ -24,6 +26,6 @@ Component.register('sw-sales-channel-detail-hreflang', {
             criteria.addFilter(Criteria.equals('salesChannelId', this.salesChannel.id));
 
             return criteria;
-        }
-    }
+        },
+    },
 });

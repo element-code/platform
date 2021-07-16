@@ -149,13 +149,18 @@ class CreditNoteGeneratorTest extends TestCase
             );
         }
 
+        static::assertStringContainsString(
+            sprintf('€%s', number_format((float) -array_sum($creditPrices), 2)),
+            $processedTemplate
+        );
+
         $generatedDocument = new GeneratedDocument();
         $generatedDocument->setHtml($processedTemplate);
 
         $generatorOutput = $pdfGenerator->generate($generatedDocument);
         static::assertNotEmpty($generatorOutput);
 
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $finfo = new \finfo(\FILEINFO_MIME_TYPE);
         static::assertEquals('application/pdf', $finfo->buffer($generatorOutput));
     }
 

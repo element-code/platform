@@ -10,20 +10,16 @@ Component.register('sw-login-recovery-recovery', {
     props: {
         hash: {
             type: String,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
         return {
             newPassword: '',
             newPasswordConfirm: '',
-            hashValid: null
+            hashValid: null,
         };
-    },
-
-    created() {
-        this.createdComponent();
     },
 
     watch: {
@@ -32,7 +28,11 @@ Component.register('sw-login-recovery-recovery', {
                 this.$nextTick(() => this.$refs.swLoginRecoveryRecoveryNewPasswordField
                     .$el.querySelector('input').focus());
             }
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -60,15 +60,15 @@ Component.register('sw-login-recovery-recovery', {
             if (this.validatePasswords()) {
                 this.userRecoveryService.updateUserPassword(
                     this.hash, this.newPassword,
-                    this.newPasswordConfirm
+                    this.newPasswordConfirm,
                 ).then(() => {
                     this.$router.push({ name: 'sw.login.index' });
                 }).catch((error) => {
                     this.createNotificationError({
-                        message: error.message
+                        message: error.message,
                     });
                 });
             }
-        }
-    }
+        },
+    },
 });

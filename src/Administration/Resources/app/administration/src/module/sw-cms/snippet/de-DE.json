@@ -130,7 +130,7 @@
         "messageMissingBlockFields": "Konfiguration erforderlich. Bitte fülle alle Elemente mit Daten.",
         "messageMissingProductListing": "Speichern nicht möglich. Bitte füge mindestens einen Produktlisting-Block hinzu oder ändere den Typ dieses Layouts.",
         "messageMissingSections": "Du kannst leere Seiten nicht speichern. Bitte füge zuerst eine Sektion hinzu.",
-        "messageMissingBlocks": "Du kannst keine leere Seite speichern. Bitte füge zuerst einige Blöcke hinzu.",
+        "messageMissingBlocks": "Du kannst keine leere Seite speichern. Bitte füge zuerst einen Block hinzu.",
         "messageMissingElements": "Konfiguration erforderlich. Bitte konfiguriere alle Elemente Deines Layouts.",
         "messageRedundantElements": "Layouts dürfen nur ein {name}-Element enthalten."
       },
@@ -146,6 +146,8 @@
         "titleNavigator": "Navigator",
         "titleSectionSettings": "Sektion-Einstellungen",
         "titleLayoutAssignment": "Layout-Zuweisung",
+        "confirmTextNavigator": "Beim Betreten des Block-Navigators wird die aktuelle Seite gespeichert werden. Möchtest Du wirklich fortfahren?",
+        "confirmReminderNavigator": "Nicht noch einmal fragen",
         "mobile": "Mobiles Sidebar-Verhalten",
         "mobileOptionHidden": "Nicht angezeigt",
         "mobileOptionWrap": "Umbrechen"
@@ -157,7 +159,7 @@
       "tooltip": {
         "blockNameField": "Benenne jeden Block individuell und eindeutig, um einen guten Überblick über Deine Arbeit zu behalten.",
         "sectionNameField": "Benenne jede Sektion individuell und eindeutig, um einen guten Überblick über Deine Arbeit zu erhalten.",
-        "cannotSelectProductPageLayout": "Du kannst ein Layout vom Typ Produktseite nicht in einen anderen Layout-Typ ändern."
+        "cannotSelectProductPageLayout": "Du kannst den Layout-Typ einer Produktseite nicht ändern."
       }
     },
     "elements": {

@@ -6,23 +6,23 @@ const { Component } = Shopware;
 Component.register('sw-category-view', {
     template,
 
-    mixins: [
-        'placeholder'
-    ],
-
     inject: ['acl'],
+
+    mixins: [
+        'placeholder',
+    ],
 
     props: {
         isLoading: {
             type: Boolean,
             required: true,
-            default: false
+            default: false,
         },
         type: {
             type: String,
             required: false,
-            default: 'page'
-        }
+            default: 'page',
+        },
     },
 
     computed: {
@@ -40,6 +40,6 @@ Component.register('sw-category-view', {
 
         isPage() {
             return this.type !== 'folder' && this.type !== 'link';
-        }
-    }
+        },
+    },
 });

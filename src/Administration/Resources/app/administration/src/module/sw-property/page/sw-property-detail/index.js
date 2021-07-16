@@ -9,12 +9,13 @@ Component.register('sw-property-detail', {
 
     inject: [
         'repositoryFactory',
-        'acl'
+        'acl',
+        'customFieldDataProviderService',
     ],
 
     mixins: [
         Mixin.getByName('notification'),
-        Mixin.getByName('placeholder')
+        Mixin.getByName('placeholder'),
     ],
 
     shortcuts: {
@@ -22,34 +23,30 @@ Component.register('sw-property-detail', {
             active() {
                 return this.acl.can('product.editor');
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     props: {
         groupId: {
-            type: String
-        }
-    },
-
-    watch: {
-        groupId() {
-            this.loadEntityData();
-        }
+            type: String,
+            default: null,
+        },
     },
 
     data() {
         return {
             propertyGroup: null,
             isLoading: false,
-            isSaveSuccessful: false
+            isSaveSuccessful: false,
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -61,7 +58,7 @@ Component.register('sw-property-detail', {
         optionRepository() {
             return this.repositoryFactory.create(
                 this.propertyGroup.options.entity,
-                this.propertyGroup.options.source
+                this.propertyGroup.options.source,
             );
         },
 
@@ -74,7 +71,7 @@ Component.register('sw-property-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.acl.can('property.editor'),
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -82,14 +79,14 @@ Component.register('sw-property-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
@@ -103,7 +100,17 @@ Component.register('sw-property-detail', {
 
         useNaturalSorting() {
             return this.sortBy === 'property.name';
-        }
+        },
+
+        showCustomFields() {
+            return this.propertyGroup && this.customFieldSets && this.customFieldSets.length > 0;
+        },
+    },
+
+    watch: {
+        groupId() {
+            this.loadEntityData();
+        },
     },
 
     created() {
@@ -113,6 +120,7 @@ Component.register('sw-property-detail', {
     methods: {
         createdComponent() {
             this.loadEntityData();
+            this.loadCustomFieldSets();
         },
 
         loadEntityData() {
@@ -125,6 +133,12 @@ Component.register('sw-property-detail', {
                 }).catch(() => {
                     this.isLoading = false;
                 });
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('property_group').then((sets) => {
+                this.customFieldSets = sets;
+            });
         },
 
         saveFinish() {
@@ -147,13 +161,13 @@ Component.register('sw-property-detail', {
             this.isSaveSuccessful = false;
             this.isLoading = true;
 
-            return this.propertyRepository.save(this.propertyGroup, Shopware.Context.api).then(() => {
+            return this.propertyRepository.save(this.propertyGroup).then(() => {
                 this.loadEntityData();
                 this.isLoading = false;
                 this.isSaveSuccessful = true;
             }).catch((exception) => {
                 this.createNotificationError({
-                    message: this.$tc('sw-property.detail.messageSaveError')
+                    message: this.$tc('sw-property.detail.messageSaveError'),
                 });
                 this.isLoading = false;
                 throw exception;
@@ -162,6 +176,6 @@ Component.register('sw-property-detail', {
 
         onCancel() {
             this.$router.push({ name: 'sw.property.index' });
-        }
-    }
+        },
+    },
 });

@@ -4,8 +4,10 @@ namespace Shopware\Storefront\Framework\Cache;
 
 use Shopware\Core\Framework\Adapter\Cache\AbstractCacheTracer;
 use Shopware\Core\Framework\Adapter\Cache\CacheCompressor;
+use Shopware\Core\System\SalesChannel\StoreApiResponse;
 use Shopware\Storefront\Framework\Cache\Event\HttpCacheHitEvent;
 use Shopware\Storefront\Framework\Cache\Event\HttpCacheItemWrittenEvent;
+use Shopware\Storefront\Framework\Routing\MaintenanceModeResolver;
 use Shopware\Storefront\Framework\Routing\StorefrontResponse;
 use Symfony\Component\Cache\Adapter\TagAwareAdapterInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,26 +25,41 @@ class CacheStore implements StoreInterface
 
     private EventDispatcherInterface $eventDispatcher;
 
+    /**
+     * @var AbstractCacheTracer<StoreApiResponse>
+     */
     private AbstractCacheTracer $tracer;
 
     private AbstractHttpCacheKeyGenerator $cacheKeyGenerator;
 
+    private MaintenanceModeResolver $maintenanceResolver;
+
+    /**
+     * @param AbstractCacheTracer<StoreApiResponse> $tracer
+     */
     public function __construct(
         TagAwareAdapterInterface $cache,
         CacheStateValidator $stateValidator,
         EventDispatcherInterface $eventDispatcher,
         AbstractCacheTracer $tracer,
-        AbstractHttpCacheKeyGenerator $cacheKeyGenerator
+        AbstractHttpCacheKeyGenerator $cacheKeyGenerator,
+        MaintenanceModeResolver $maintenanceModeResolver
     ) {
         $this->cache = $cache;
         $this->stateValidator = $stateValidator;
         $this->eventDispatcher = $eventDispatcher;
         $this->tracer = $tracer;
         $this->cacheKeyGenerator = $cacheKeyGenerator;
+        $this->maintenanceResolver = $maintenanceModeResolver;
     }
 
     public function lookup(Request $request)
     {
+        // maintenance mode active and current ip is whitelisted > disable caching
+        if ($this->maintenanceResolver->isMaintenanceRequest($request)) {
+            return null;
+        }
+
         $key = $this->cacheKeyGenerator->generate($request);
 
         $item = $this->cache->getItem($key);
@@ -68,6 +85,12 @@ class CacheStore implements StoreInterface
     public function write(Request $request, Response $response)
     {
         $key = $this->cacheKeyGenerator->generate($request);
+
+        // maintenance mode active and current ip is whitelisted > disable caching
+        if ($this->maintenanceResolver->isMaintenanceRequest($request)) {
+            return $key;
+        }
+
         if ($response instanceof StorefrontResponse) {
             $response->setData(null);
             $response->setContext(null);

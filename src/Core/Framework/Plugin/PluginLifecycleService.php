@@ -52,60 +52,27 @@ use Symfony\Component\Messenger\EventListener\StopWorkerOnRestartSignalListener;
  */
 class PluginLifecycleService
 {
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $pluginRepo;
+    private EntityRepositoryInterface $pluginRepo;
 
-    /**
-     * @var EventDispatcherInterface
-     */
-    private $eventDispatcher;
+    private EventDispatcherInterface $eventDispatcher;
 
-    /**
-     * @var KernelPluginCollection
-     */
-    private $pluginCollection;
+    private KernelPluginCollection $pluginCollection;
 
-    /**
-     * @var ContainerInterface
-     */
-    private $container;
+    private ContainerInterface $container;
 
-    /**
-     * @var MigrationCollectionLoader
-     */
-    private $migrationLoader;
+    private MigrationCollectionLoader $migrationLoader;
 
-    /**
-     * @var AssetService
-     */
-    private $assetInstaller;
+    private AssetService $assetInstaller;
 
-    /**
-     * @var CommandExecutor
-     */
-    private $executor;
+    private CommandExecutor $executor;
 
-    /**
-     * @var RequirementsValidator
-     */
-    private $requirementValidator;
+    private RequirementsValidator $requirementValidator;
 
-    /**
-     * @var string
-     */
-    private $shopwareVersion;
+    private string $shopwareVersion;
 
-    /**
-     * @var CacheItemPoolInterface
-     */
-    private $restartSignalCachePool;
+    private CacheItemPoolInterface $restartSignalCachePool;
 
-    /**
-     * @var SystemConfigService
-     */
-    private $systemConfigService;
+    private SystemConfigService $systemConfigService;
 
     /**
      * @psalm-suppress ContainerDependency
@@ -577,7 +544,7 @@ class PluginLifecycleService
         $tmpStaticPluginLoader = new StaticKernelPluginLoader($pluginLoader->getClassLoader(), $pluginDir, $plugins);
         $kernel->reboot(null, $tmpStaticPluginLoader);
 
-        // If symfony throws an exception when calling getContainer on an not booted kernel and catch it here
+        // If symfony throws an exception when calling getContainer on a not booted kernel and catch it here
         /** @var ContainerInterface|null $newContainer */
         $newContainer = $kernel->getContainer();
         if (!$newContainer) {

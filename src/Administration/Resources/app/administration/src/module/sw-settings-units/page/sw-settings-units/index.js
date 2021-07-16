@@ -10,14 +10,8 @@ Component.register('sw-settings-units', {
     inject: ['repositoryFactory', 'acl'],
 
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
-
-    metaInfo() {
-        return {
-            title: this.$createTitle()
-        };
-    },
 
     data() {
         return {
@@ -25,7 +19,13 @@ Component.register('sw-settings-units', {
             placeholderAmount: 7,
             unitsCriteria: null,
             units: [],
-            newUnit: null
+            newUnit: null,
+        };
+    },
+
+    metaInfo() {
+        return {
+            title: this.$createTitle(),
         };
     },
 
@@ -51,20 +51,20 @@ Component.register('sw-settings-units', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.acl.can('scale_unit.creator'),
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
             return {
                 showOnDisabledElements: true,
                 message: this.$tc('sw-settings-units.general.disableAddNewUnitMessage'),
-                disabled: !this.isAddingUnitsDisabled
+                disabled: !this.isAddingUnitsDisabled,
             };
         },
 
         isAddingUnitsDisabled() {
             return Shopware.Context.api.languageId !== Shopware.Context.api.systemLanguageId;
-        }
+        },
     },
 
     created() {
@@ -88,7 +88,7 @@ Component.register('sw-settings-units', {
         loadUnits() {
             this.isLoading = true;
 
-            this.unitRepository.search(this.unitsCriteria, Shopware.Context.api).then((searchResult) => {
+            this.unitRepository.search(this.unitsCriteria).then((searchResult) => {
                 this.units = searchResult;
                 this.placeholderAmount = searchResult.total;
                 this.isLoading = false;
@@ -96,7 +96,7 @@ Component.register('sw-settings-units', {
         },
 
         createNewUnit() {
-            this.newUnit = this.unitRepository.create(Shopware.Context.api);
+            this.newUnit = this.unitRepository.create();
             this.newUnit.name = '';
             this.newUnit.shortCode = '';
 
@@ -106,7 +106,7 @@ Component.register('sw-settings-units', {
         saveUnit(unit) {
             this.isLoading = true;
 
-            this.unitRepository.save(unit, Shopware.Context.api).then(() => {
+            this.unitRepository.save(unit).then(() => {
                 this.isLoading = false;
 
                 this.loadUnits();
@@ -118,7 +118,7 @@ Component.register('sw-settings-units', {
 
                 this.createNotificationSuccess({
                     title: titleSaveSuccess,
-                    message: messageSaveSuccess
+                    message: messageSaveSuccess,
                 });
             }).catch(() => {
                 this.isLoading = false;
@@ -134,7 +134,7 @@ Component.register('sw-settings-units', {
 
                 this.createNotificationError({
                     title: titleSaveError,
-                    message: messageSaveError
+                    message: messageSaveError,
                 });
             });
         },
@@ -146,7 +146,7 @@ Component.register('sw-settings-units', {
 
         deleteUnit(unit) {
             this.isLoading = true;
-            this.unitRepository.delete(unit.id, Shopware.Context.api).then(() => {
+            this.unitRepository.delete(unit.id).then(() => {
                 this.isLoading = false;
                 this.loadUnits();
             });
@@ -161,16 +161,16 @@ Component.register('sw-settings-units', {
             return [{
                 property: 'name',
                 label: 'sw-settings-units.grid.columnName',
-                inlineEdit: 'string'
+                inlineEdit: 'string',
             }, {
                 property: 'shortCode',
                 label: 'sw-settings-units.grid.columnShortCode',
-                inlineEdit: 'string'
+                inlineEdit: 'string',
             }];
         },
 
         onChangeLanguage() {
             this.loadUnits();
-        }
-    }
+        },
+    },
 });

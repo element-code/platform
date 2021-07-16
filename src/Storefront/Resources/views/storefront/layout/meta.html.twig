@@ -125,5 +125,9 @@
         {% block layout_head_javascript_tracking %}
             {% sw_include "@Storefront/storefront/component/analytics.html.twig" %}
         {% endblock %}
+
+        {% block layout_head_javascript_recaptcha %}
+            {% sw_include "@Storefront/storefront/component/recaptcha.html.twig" %}
+        {% endblock %}
     </head>
 {% endblock %}

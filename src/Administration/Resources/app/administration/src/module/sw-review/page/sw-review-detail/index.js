@@ -7,12 +7,12 @@ const { Criteria } = Shopware.Data;
 Component.register('sw-review-detail', {
     template,
 
-    inject: ['repositoryFactory', 'acl'],
+    inject: ['repositoryFactory', 'acl', 'customFieldDataProviderService'],
 
     mixins: [
         'placeholder',
         'notification',
-        'salutation'
+        'salutation',
     ],
 
     shortcuts: {
@@ -20,9 +20,9 @@ Component.register('sw-review-detail', {
             active() {
                 return this.acl.can('review.editor');
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     data() {
@@ -30,13 +30,14 @@ Component.register('sw-review-detail', {
             isLoading: null,
             isSaveSuccessful: false,
             reviewId: null,
-            review: {}
+            review: {},
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -70,7 +71,7 @@ Component.register('sw-review-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: true,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -78,22 +79,26 @@ Component.register('sw-review-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
-        }
+        },
+
+        showCustomFields() {
+            return this.review && this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
         '$route.params.id'() {
             this.createdComponent();
-        }
+        },
     },
 
     created() {
@@ -106,6 +111,7 @@ Component.register('sw-review-detail', {
                 this.reviewId = this.$route.params.id;
 
                 this.loadEntityData();
+                this.loadCustomFieldSets();
             }
         },
 
@@ -124,17 +130,23 @@ Component.register('sw-review-detail', {
             });
         },
 
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('product_review').then((sets) => {
+                this.customFieldSets = sets;
+            });
+        },
+
         onSave() {
             this.isSaveSuccessful = false;
             const messageSaveError = this.$tc(
-                'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid'
+                'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid',
             );
 
-            this.repository.save(this.review, Shopware.Context.api).then(() => {
+            this.repository.save(this.review).then(() => {
                 this.isSaveSuccessful = true;
             }).catch(() => {
                 this.createNotificationError({
-                    message: messageSaveError
+                    message: messageSaveError,
                 });
             });
         },
@@ -146,6 +158,6 @@ Component.register('sw-review-detail', {
 
         onCancel() {
             this.$router.push({ name: 'sw.review.index' });
-        }
-    }
+        },
+    },
 });

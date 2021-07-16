@@ -8,21 +8,21 @@ const { mapPropertyErrors } = Shopware.Component.getComponentHelper();
 Component.register('sw-mail-header-footer-detail', {
     template,
 
+    inject: ['entityMappingService', 'repositoryFactory', 'acl'],
+
     mixins: [
         Mixin.getByName('placeholder'),
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
-
-    inject: ['entityMappingService', 'repositoryFactory', 'acl'],
 
     shortcuts: {
         'SYSTEMKEY+S': {
             active() {
                 return this.allowSave;
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     data() {
@@ -32,20 +32,20 @@ Component.register('sw-mail-header-footer-detail', {
             isLoading: true,
             isSaveSuccessful: false,
             editorConfig: {
-                enableBasicAutocompletion: true
-            }
+                enableBasicAutocompletion: true,
+            },
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
     computed: {
         ...mapPropertyErrors('mailHeaderFooter', [
-            'name'
+            'name',
         ]),
 
         identifier() {
@@ -74,11 +74,11 @@ Component.register('sw-mail-header-footer-detail', {
                     const properties = [];
                     Object.keys(
                         entityMappingService.getEntityMapping(
-                            prefix, { salesChannel: 'sales_channel' }
-                        )
+                            prefix, { salesChannel: 'sales_channel' },
+                        ),
                     ).forEach((val) => {
                         properties.push({
-                            value: val
+                            value: val,
                         });
                     });
                     return properties;
@@ -98,7 +98,7 @@ Component.register('sw-mail-header-footer-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.allowSave,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -106,19 +106,19 @@ Component.register('sw-mail-header-footer-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
-        }
-    },
-
-    created() {
-        this.createdComponent();
+        },
     },
 
     watch: {
         '$route.params.id'() {
             this.createdComponent();
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -137,7 +137,7 @@ Component.register('sw-mail-header-footer-detail', {
             this.mailHeaderFooter = await this.mailHeaderFooterRepository.get(
                 this.mailHeaderFooterId,
                 Shopware.Context.api,
-                this.mailHeaderFooterCriteria
+                this.mailHeaderFooterCriteria,
             );
 
             this.isLoading = false;
@@ -167,7 +167,7 @@ Component.register('sw-mail-header-footer-detail', {
             this.isSaveSuccessful = false;
             this.isLoading = true;
 
-            return this.mailHeaderFooterRepository.save(this.mailHeaderFooter, Shopware.Context.api)
+            return this.mailHeaderFooterRepository.save(this.mailHeaderFooter)
                 .then(() => {
                     return this.loadEntityData();
                 })
@@ -177,8 +177,8 @@ Component.register('sw-mail-header-footer-detail', {
                 .catch((error) => {
                     const notificationError = {
                         message: this.$tc(
-                            'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid'
-                        )
+                            'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid',
+                        ),
                     };
 
                     this.createNotificationError(notificationError);
@@ -187,6 +187,6 @@ Component.register('sw-mail-header-footer-detail', {
                 .finally(() => {
                     this.isLoading = false;
                 });
-        }
-    }
+        },
+    },
 });

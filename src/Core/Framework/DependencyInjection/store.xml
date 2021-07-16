@@ -27,7 +27,6 @@
             <argument type="service" id="plugin.repository" />
             <argument type="service" id="Shopware\Core\Framework\Plugin\PluginManagementService" />
             <argument type="service" id="user.repository" />
-            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
             <argument type="service" id="Shopware\Core\Framework\Store\Services\AbstractExtensionDataProvider"
                       on-invalid="null"/>
             <call method="setContainer">
@@ -38,7 +37,6 @@
         <service id="Shopware\Core\Framework\Store\Api\FirstRunWizardController" public="true">
             <argument type="service" id="Shopware\Core\Framework\Store\Services\FirstRunWizardClient"/>
             <argument type="service" id="plugin.repository" />
-            <argument type="service" id="user.repository" />
             <call method="setContainer">
                 <argument type="service" id="service_container"/>
             </call>
@@ -49,9 +47,10 @@
             <argument type="service" id="Shopware\Core\Framework\Store\Services\StoreService" />
             <argument type="service" id="plugin.repository"/>
             <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
-            <argument type="service" id="Shopware\Core\Framework\Store\Authentication\AbstractAuthenticationProvider" on-invalid="null"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Authentication\StoreRequestOptionsProvider" on-invalid="null"/>
             <argument type="service" id="Shopware\Core\Framework\Store\Services\ExtensionLoader" on-invalid="null"/>
             <argument type="service" id="shopware.store_client"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Services\InstanceService"/>
         </service>
 
         <service id="Shopware\Core\Framework\Store\Services\FirstRunWizardClient">
@@ -61,20 +60,24 @@
             <argument>%shopware.store.frw%</argument>
             <argument type="service" id="event_dispatcher"/>
             <argument type="service" id="shopware.store_client"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Authentication\FrwRequestOptionsProvider"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Services\InstanceService"/>
         </service>
 
-        <service id="Shopware\Core\Framework\Store\Services\StoreService">
-            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
+        <service id="Shopware\Core\Framework\Store\Services\StoreService" lazy="true">
+            <argument type="service" id="user.repository"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Services\InstanceService"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Authentication\StoreRequestOptionsProvider"/>
+        </service>
+
+        <service id="Shopware\Core\Framework\Store\Services\InstanceService">
             <argument>%kernel.shopware_version%</argument>
             <argument>%instance_id%</argument>
-            <argument type="service" id="shopware.store_client"/>
-            <argument type="service" id="user.repository"/>
         </service>
 
         <service id="Shopware\Core\Framework\Store\Services\OpenSSLVerifier">
             <argument type="collection">
-                <argument>%kernel.project_dir%/vendor/shopware/platform/src/Core/Framework/Store/public.key</argument>
-                <argument>%kernel.project_dir%/vendor/shopware/core/Framework/Store/public.key</argument>
+                <argument>%kernel.shopware_core_dir%/Framework/Store/public.key</argument>
             </argument>
         </service>
 
@@ -94,8 +97,23 @@
             <tag name="console.command"/>
         </service>
 
-        <service id="Shopware\Core\Framework\Store\Authentication\AbstractAuthenticationProvider" class="Shopware\Core\Framework\Store\Authentication\AuthenticationProvider">
+        <service id="Shopware\Core\Framework\Store\Authentication\LocaleProvider">
             <argument type="service" id="user.repository"/>
+        </service>
+
+        <service id="Shopware\Core\Framework\Store\Authentication\StoreRequestOptionsProvider">
+            <argument type="service" id="user.repository"/>
+            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Services\InstanceService"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Authentication\LocaleProvider"/>
+        </service>
+
+        <service id="Shopware\Core\Framework\Store\Authentication\FrwRequestOptionsProvider">
+            <argument type="service" id="Shopware\Core\Framework\Store\Authentication\StoreRequestOptionsProvider"/>
+        </service>
+
+        <service id="Shopware\Core\Framework\Store\Authentication\AbstractAuthenticationProvider" class="Shopware\Core\Framework\Store\Authentication\AuthenticationProvider">
+            <argument type="service" id="Shopware\Core\Framework\Store\Authentication\StoreRequestOptionsProvider"/>
             <tag name="shopware.feature" flag="FEATURE_NEXT_12608"/>
         </service>
 
@@ -108,6 +126,7 @@
             <argument type="service" id="theme.repository"/>
             <argument type="service" id="Shopware\Core\Framework\App\Lifecycle\AppLoader"/>
             <argument type="service" id="Shopware\Core\System\SystemConfig\Service\ConfigurationService"/>
+            <argument type="service" id="Shopware\Core\Framework\Store\Services\StoreService"/>
             <tag name="shopware.feature" flag="FEATURE_NEXT_12608"/>
         </service>
 
@@ -126,6 +145,8 @@
 
         <service id="Shopware\Core\Framework\Store\Api\ExtensionStoreDataController" public="true">
             <argument type="service" id="Shopware\Core\Framework\Store\Services\AbstractExtensionDataProvider"/>
+            <argument type="service" id="user.repository"/>
+            <argument type="service" id="language.repository"/>
             <call method="setContainer">
                 <argument type="service" id="service_container"/>
             </call>
@@ -158,7 +179,6 @@
 
         <service id="Shopware\Core\Framework\Store\Services\ExtensionDownloader">
             <argument type="service" id="plugin.repository"/>
-            <argument type="service" id="Shopware\Core\Framework\Store\Authentication\AbstractAuthenticationProvider"/>
             <argument type="service" id="Shopware\Core\Framework\Store\Services\StoreClient"/>
             <argument type="service" id="Shopware\Core\Framework\Plugin\PluginManagementService"/>
             <tag name="shopware.feature" flag="FEATURE_NEXT_12608"/>
@@ -188,7 +208,7 @@
             <argument type="service" id="Shopware\Core\Framework\Store\Services\OpenSSLVerifier"/>
         </service>
 
-        <service id="shopware.store_client" class="GuzzleHttp\Client">
+        <service id="shopware.store_client" class="GuzzleHttp\Client" lazy="true">
             <factory service="Shopware\Core\Framework\Store\Services\StoreClientFactory" method="create"/>
         </service>
 

@@ -3,14 +3,13 @@ import template from './sw-settings-tax-detail.html.twig';
 const { Component, Mixin } = Shopware;
 const { mapPropertyErrors } = Shopware.Component.getComponentHelper();
 
-
 Component.register('sw-settings-tax-detail', {
     template,
 
-    inject: ['repositoryFactory', 'acl'],
+    inject: ['repositoryFactory', 'acl', 'customFieldDataProviderService'],
 
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     shortcuts: {
@@ -18,30 +17,31 @@ Component.register('sw-settings-tax-detail', {
             active() {
                 return this.allowSave;
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     props: {
         taxId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     data() {
         return {
             tax: {},
             isLoading: false,
-            isSaveSuccessful: false
+            isSaveSuccessful: false,
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -73,7 +73,7 @@ Component.register('sw-settings-tax-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.allowSave,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -81,7 +81,7 @@ Component.register('sw-settings-tax-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
@@ -91,7 +91,11 @@ Component.register('sw-settings-tax-detail', {
 
         label() {
             return this.isShopwareDefaultTax ? this.$tc(`global.tax-rates.${this.tax.name}`) : this.tax.name;
-        }
+        },
+
+        showCustomFields() {
+            return this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
@@ -99,7 +103,7 @@ Component.register('sw-settings-tax-detail', {
             if (!this.taxId) {
                 this.createdComponent();
             }
-        }
+        },
     },
 
     created() {
@@ -111,15 +115,22 @@ Component.register('sw-settings-tax-detail', {
             this.isLoading = true;
             if (this.taxId) {
                 this.taxId = this.$route.params.id;
-                this.taxRepository.get(this.taxId, Shopware.Context.api).then((tax) => {
+                this.taxRepository.get(this.taxId).then((tax) => {
                     this.tax = tax;
                     this.isLoading = false;
                 });
+                this.loadCustomFieldSets();
                 return;
             }
 
-            this.tax = this.taxRepository.create(Shopware.Context.api);
+            this.tax = this.taxRepository.create();
             this.isLoading = false;
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('tax').then((sets) => {
+                this.customFieldSets = sets;
+            });
         },
 
         saveAndReload() {
@@ -138,19 +149,19 @@ Component.register('sw-settings-tax-detail', {
             this.isSaveSuccessful = false;
             this.isLoading = true;
 
-            return this.taxRepository.save(this.tax, Shopware.Context.api).then(() => {
+            return this.taxRepository.save(this.tax).then(() => {
                 this.isSaveSuccessful = true;
                 if (!this.taxId) {
                     this.$router.push({ name: 'sw.settings.tax.detail', params: { id: this.tax.id } });
                 }
 
-                this.taxRepository.get(this.tax.id, Shopware.Context.api).then((updatedTax) => {
+                this.taxRepository.get(this.tax.id).then((updatedTax) => {
                     this.tax = updatedTax;
                     this.isLoading = false;
                 });
             }).catch(() => {
                 this.createNotificationError({
-                    message: this.$tc('sw-settings-tax.detail.messageSaveError')
+                    message: this.$tc('sw-settings-tax.detail.messageSaveError'),
                 });
                 this.isLoading = false;
             });
@@ -162,6 +173,6 @@ Component.register('sw-settings-tax-detail', {
 
         changeName(name) {
             this.tax.name = name;
-        }
-    }
+        },
+    },
 });

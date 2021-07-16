@@ -1,0 +1,39 @@
+shopware:
+    filesystem:
+        private:
+            type: "memory"
+            config:
+                root: ~
+        public:
+            type: "memory"
+            config:
+                root: ~
+
+    admin_worker:
+        poll_interval: 1
+
+    media:
+        enable_url_upload_feature: true
+        enable_url_validation: true
+
+    html_sanitizer:
+        sets:
+            - name: custom
+              tags: ["input"]
+              options:
+                  - key: HTML.Trusted
+                    value: true
+        fields:
+            - name: test.media
+              sets: ["basic", "media"]
+            - name: test.script
+              sets: ["basic", "script"]
+            - name: test.custom
+              sets: ["basic", "custom"]
+
+    feature:
+        flags:
+            - name: FEATURE_NEXT_12345
+              default: false
+              major: false
+              description: "test feature flag"

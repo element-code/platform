@@ -14,6 +14,8 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 class CustomerIndexer extends EntityIndexer
 {
+    public const MANY_TO_MANY_ID_FIELD_UPDATER = 'customer.many-to-many-id-field';
+
     /**
      * @var IteratorFactory
      */
@@ -53,8 +55,10 @@ class CustomerIndexer extends EntityIndexer
 
     /**
      * @param array|null $offset
+     *
+     * @deprecated tag:v6.5.0 The parameter $offset will be native typed
      */
-    public function iterate($offset): ?EntityIndexingMessage
+    public function iterate(/*?array */$offset): ?EntityIndexingMessage
     {
         $iterator = $this->iteratorFactory->createIterator($this->repository->getDefinition(), $offset);
 
@@ -89,8 +93,10 @@ class CustomerIndexer extends EntityIndexer
 
         $context = $message->getContext();
 
-        $this->manyToManyIdFieldUpdater->update(CustomerDefinition::ENTITY_NAME, $ids, $context);
+        if ($message->allow(self::MANY_TO_MANY_ID_FIELD_UPDATER)) {
+            $this->manyToManyIdFieldUpdater->update(CustomerDefinition::ENTITY_NAME, $ids, $context);
+        }
 
-        $this->eventDispatcher->dispatch(new CustomerIndexerEvent($ids, $context));
+        $this->eventDispatcher->dispatch(new CustomerIndexerEvent($ids, $context, $message->getSkip()));
     }
 }

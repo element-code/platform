@@ -26,12 +26,17 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  */
 class CachedLanguageRoute extends AbstractLanguageRoute
 {
+    public const ALL_TAG = 'language-route';
+
     private AbstractLanguageRoute $decorated;
 
     private TagAwareAdapterInterface $cache;
 
     private EntityCacheKeyGenerator $generator;
 
+    /**
+     * @var AbstractCacheTracer<LanguageRouteResponse>
+     */
     private AbstractCacheTracer $tracer;
 
     private array $states;
@@ -40,6 +45,9 @@ class CachedLanguageRoute extends AbstractLanguageRoute
 
     private LoggerInterface $logger;
 
+    /**
+     * @param AbstractCacheTracer<LanguageRouteResponse> $tracer
+     */
     public function __construct(
         AbstractLanguageRoute $decorated,
         TagAwareAdapterInterface $cache,
@@ -73,31 +81,28 @@ class CachedLanguageRoute extends AbstractLanguageRoute
      * @Entity("language")
      * @OA\Post(
      *      path="/language",
-     *      summary="Loads all available languages",
+     *      summary="Fetch languages",
+     *      description="Perform a filtered search for languages.",
      *      operationId="readLanguages",
-     *      tags={"Store API","Language"},
+     *      tags={"Store API","System & Context"},
      *      @OA\Parameter(name="Api-Basic-Parameters"),
      *      @OA\Response(
      *          response="200",
-     *          description="",
-     *          @OA\JsonContent(type="object",
-     *              @OA\Property(
-     *                  property="total",
-     *                  type="integer",
-     *                  description="Total amount"
-     *              ),
-     *              @OA\Property(
-     *                  property="aggregations",
-     *                  type="object",
-     *                  description="aggregation result"
-     *              ),
-     *              @OA\Property(
-     *                  property="elements",
-     *                  type="array",
-     *                  @OA\Items(ref="#/components/schemas/language_flat")
-     *              )
+     *          description="Entity search result containing languages.",
+     *          @OA\JsonContent(
+     *              type="object",
+     *              allOf={
+     *                  @OA\Schema(ref="#/components/schemas/EntitySearchResult"),
+     *                  @OA\Schema(type="object",
+     *                      @OA\Property(
+     *                          type="array",
+     *                          property="elements",
+     *                          @OA\Items(ref="#/components/schemas/Language")
+     *                      )
+     *                  )
+     *              }
      *          )
-     *      )
+     *     )
      * )
      * @Route("/store-api/language", name="store-api.language", methods={"GET", "POST"})
      */
@@ -157,7 +162,7 @@ class CachedLanguageRoute extends AbstractLanguageRoute
     {
         $tags = array_merge(
             $this->tracer->get(self::buildName($context->getSalesChannelId())),
-            [self::buildName($context->getSalesChannelId())]
+            [self::buildName($context->getSalesChannelId()), self::ALL_TAG]
         );
 
         $event = new LanguageRouteCacheTagsEvent($tags, $request, $response, $context, $criteria);

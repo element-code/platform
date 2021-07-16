@@ -70,7 +70,10 @@ function createWrapper(eventActionId = null, privileges = []) {
             'sw-switch-field': true,
             'sw-event-action-detail-recipients': true,
             'router-link': true,
-            'sw-icon': true
+            'sw-icon': true,
+            'sw-select-rule-create': true,
+            'sw-field': true,
+            'sw-custom-field-set-renderer': true
         },
         propsData: {
             eventActionId: eventActionId
@@ -102,6 +105,9 @@ function createWrapper(eventActionId = null, privileges = []) {
                         return Promise.resolve();
                     })
                 })
+            },
+            customFieldDataProviderService: {
+                getCustomFieldSets: () => Promise.resolve([])
             }
         }
     });
@@ -156,7 +162,7 @@ describe('src/module/sw-event-action/page/sw-event-action-detail', () => {
         await wrapper.vm.$nextTick();
 
         // Expect to call `event_action` repository create with shopware context
-        expect(wrapper.vm.eventActionRepository.create).toHaveBeenCalledWith(Shopware.Context.api);
+        expect(wrapper.vm.eventActionRepository.create).toHaveBeenCalledWith();
 
         // Expect to call businessEventService to load all business events
         expect(wrapper.vm.businessEventService.getBusinessEvents).toHaveBeenCalledTimes(1);
@@ -220,7 +226,7 @@ describe('src/module/sw-event-action/page/sw-event-action-detail', () => {
         await wrapper.vm.$nextTick();
 
         // Ensure `event_action` repository save has been called
-        expect(wrapper.vm.eventActionRepository.save).toHaveBeenCalledWith(wrapper.vm.eventAction, Shopware.Context.api);
+        expect(wrapper.vm.eventActionRepository.save).toHaveBeenCalledWith(wrapper.vm.eventAction);
     });
 
     it('should not perform save action when no mail template id is given', async () => {

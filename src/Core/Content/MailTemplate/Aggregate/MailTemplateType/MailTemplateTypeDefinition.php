@@ -56,9 +56,9 @@ class MailTemplateTypeDefinition extends EntityDefinition
             (new StringField('technical_name', 'technicalName'))->addFlags(new ApiAware(), new Required()),
             new JsonField('available_entities', 'availableEntities'),
             (new TranslatedField('customFields'))->addFlags(new ApiAware()),
-
             (new TranslationsAssociationField(MailTemplateTypeTranslationDefinition::class, 'mail_template_type_id'))->addFlags(new ApiAware(), new Required()),
             (new OneToManyAssociationField('mailTemplates', MailTemplateDefinition::class, 'mail_template_type_id'))->addFlags(new SetNullOnDelete()),
+            (new JsonField('template_data', 'templateData')),
         ]);
     }
 }

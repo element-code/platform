@@ -3,22 +3,15 @@ import './sw-media-quickinfo-metadata-item.scss';
 Shopware.Component.register('sw-media-quickinfo-metadata-item', {
     functional: true,
 
-    props: {
-        labelName: {
-            required: true,
-            type: String
-        }
-    },
-
     render(createElement, context) {
         const title = createElement(
             'dt',
             {
-                class: 'sw-media-quickinfo-metadata-item__term'
+                class: 'sw-media-quickinfo-metadata-item__term',
             },
             [
-                `${context.props.labelName}:`
-            ]
+                `${context.props.labelName}:`,
+            ],
         );
 
         const description = createElement(
@@ -27,15 +20,22 @@ Shopware.Component.register('sw-media-quickinfo-metadata-item', {
                 class: [
                     context.data.staticClass,
                     {
-                        'sw-media-quickinfo-metadata-item__description': true
-                    }
-                ]
+                        'sw-media-quickinfo-metadata-item__description': true,
+                    },
+                ],
             },
             [
-                context.children
-            ]
+                context.children,
+            ],
         );
 
         return [title, description];
-    }
+    },
+
+    props: {
+        labelName: {
+            required: true,
+            type: String,
+        },
+    },
 });

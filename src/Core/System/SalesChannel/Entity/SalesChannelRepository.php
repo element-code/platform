@@ -19,13 +19,14 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\EntitySearcherInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\EntitySearchResult;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\IdSearchResult;
 use Shopware\Core\Framework\Struct\ArrayEntity;
+use Shopware\Core\System\SalesChannel\Event\SalesChannelProcessCriteriaEvent;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class SalesChannelRepository implements SalesChannelRepositoryInterface
 {
     /**
-     * @var EntityDefinition|SalesChannelDefinitionInterface
+     * @var EntityDefinition
      */
     protected $definition;
 
@@ -207,6 +208,11 @@ class SalesChannelRepository implements SalesChannelRepositoryInterface
 
             if ($definition instanceof SalesChannelDefinitionInterface) {
                 $definition->processCriteria($criteria, $salesChannelContext);
+
+                $eventName = \sprintf('sales_channel.%s.process.criteria', $definition->getEntityName());
+                $event = new SalesChannelProcessCriteriaEvent($criteria, $salesChannelContext);
+
+                $this->eventDispatcher->dispatch($event, $eventName);
             }
 
             $processed[\get_class($definition)] = true;

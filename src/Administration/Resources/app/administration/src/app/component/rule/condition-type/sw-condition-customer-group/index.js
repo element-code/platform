@@ -18,13 +18,9 @@ Component.extend('sw-condition-customer-group', 'sw-condition-base', {
 
     inject: ['repositoryFactory'],
 
-    created() {
-        this.createdComponent();
-    },
-
     data() {
         return {
-            customerGroups: null
+            customerGroups: null,
         };
     },
 
@@ -45,14 +41,18 @@ Component.extend('sw-condition-customer-group', 'sw-condition-base', {
             set(customerGroupIds) {
                 this.ensureValueExist();
                 this.condition.value = { ...this.condition.value, customerGroupIds };
-            }
+            },
         },
 
         ...mapPropertyErrors('condition', ['value.operator', 'value.customerGroupIds']),
 
         currentError() {
             return this.conditionValueOperatorError || this.conditionValueCustomerGroupIdsError;
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -60,7 +60,7 @@ Component.extend('sw-condition-customer-group', 'sw-condition-base', {
             this.customerGroups = new EntityCollection(
                 this.customerGroupRepository.route,
                 this.customerGroupRepository.entityName,
-                Context.api
+                Context.api,
             );
 
             if (this.customerGroupIds.length <= 0) {
@@ -78,6 +78,6 @@ Component.extend('sw-condition-customer-group', 'sw-condition-base', {
         setCustomerGroupIds(customerGroups) {
             this.customerGroupIds = customerGroups.getIds();
             this.customerGroups = customerGroups;
-        }
-    }
+        },
+    },
 });

@@ -11,12 +11,19 @@ Component.register('sw-category-detail-base', {
 
     inject: [
         'repositoryFactory',
-        'acl'
+        'acl',
     ],
 
     mixins: [
-        'placeholder'
+        'placeholder',
     ],
+
+    props: {
+        isLoading: {
+            type: Boolean,
+            required: true,
+        },
+    },
 
     data() {
         return {
@@ -27,31 +34,8 @@ Component.register('sw-category-detail-base', {
             productStreamInvalid: false,
 
             // @deprecated tag:v6.5.0 - can be removed completely
-            manualAssignedProductsCount: 0
+            manualAssignedProductsCount: 0,
         };
-    },
-
-    props: {
-        isLoading: {
-            type: Boolean,
-            required: true
-        }
-    },
-
-    watch: {
-        // @deprecated tag:v6.5.0 - can be removed completely
-        'category.productStreamId'(id) {
-            if (!id) {
-                this.productStreamFilter = null;
-                return;
-            }
-            this.loadProductStreamPreview();
-        }
-    },
-
-    // @deprecated tag:v6.5.0 - can be removed completely
-    created() {
-        this.createdComponent();
     },
 
     computed: {
@@ -59,17 +43,17 @@ Component.register('sw-category-detail-base', {
             return [
                 {
                     value: 'page',
-                    label: this.$tc('sw-category.base.general.types.page')
+                    label: this.$tc('sw-category.base.general.types.page'),
                 },
                 {
                     value: 'folder',
-                    label: this.$tc('sw-category.base.general.types.folder')
+                    label: this.$tc('sw-category.base.general.types.folder'),
                 },
                 {
                     value: 'link',
                     label: this.typeLinkLabel,
-                    disabled: this.isSalesChannelEntryPoint
-                }
+                    disabled: this.isSalesChannelEntryPoint,
+                },
             ];
         },
 
@@ -94,12 +78,12 @@ Component.register('sw-category-detail-base', {
             return [
                 {
                     value: 'product',
-                    label: this.$tc('sw-category.base.products.productAssignmentTypeManualLabel')
+                    label: this.$tc('sw-category.base.products.productAssignmentTypeManualLabel'),
                 },
                 {
                     value: 'product_stream',
-                    label: this.$tc('sw-category.base.products.productAssignmentTypeStreamLabel')
-                }
+                    label: this.$tc('sw-category.base.products.productAssignmentTypeStreamLabel'),
+                },
             ];
         },
 
@@ -131,13 +115,13 @@ Component.register('sw-category-detail-base', {
                     label: this.$tc('sw-category.base.products.columnNameLabel'),
                     dataIndex: 'name',
                     routerLink: 'sw.product.detail',
-                    sortable: false
+                    sortable: false,
                 }, {
                     property: 'manufacturer.name',
                     label: this.$tc('sw-category.base.products.columnManufacturerLabel'),
                     routerLink: 'sw.manufacturer.detail',
-                    sortable: false
-                }
+                    sortable: false,
+                },
             ];
         },
 
@@ -168,7 +152,7 @@ Component.register('sw-category-detail-base', {
                 }
 
                 return state.customFieldSets;
-            }
+            },
         }),
 
         // @deprecated tag:v6.5.0 - can be removed completely
@@ -176,7 +160,7 @@ Component.register('sw-category-detail-base', {
             if (this.productStreamInvalid) {
                 return new ShopwareError({
                     code: 'PRODUCT_STREAM_INVALID',
-                    detail: this.$tc('sw-category.base.products.dynamicProductGroupInvalidMessage')
+                    detail: this.$tc('sw-category.base.products.dynamicProductGroupInvalidMessage'),
                 });
             }
             return null;
@@ -188,13 +172,13 @@ Component.register('sw-category-detail-base', {
 
             // @deprecated tag:v6.5.0 - can be removed completely
             'productStreamId',
-            'productAssignmentType'
+            'productAssignmentType',
         ]),
 
         // @deprecated tag:v6.5.0 - can be removed completely
         dynamicProductGroupHelpText() {
             const link = {
-                name: 'sw.product.stream.index'
+                name: 'sw.product.stream.index',
             };
 
             const helpText = this.$tc('sw-category.base.products.dynamicProductGroupHelpText.label', 0, {
@@ -202,7 +186,7 @@ Component.register('sw-category-detail-base', {
                            :router-link=${JSON.stringify(link)}
                            :inline="true">
                            ${this.$tc('sw-category.base.products.dynamicProductGroupHelpText.linkText')}
-                       </sw-internal-link>`
+                       </sw-internal-link>`,
             });
 
             try {
@@ -218,7 +202,23 @@ Component.register('sw-category-detail-base', {
                         href="${this.$tc('sw-category.base.products.dynamicProductGroupHelpText.videoUrl')}">
                         ${this.$tc('sw-category.base.products.dynamicProductGroupHelpText.videoLink')}
                     </sw-external-link>`;
-        }
+        },
+    },
+
+    watch: {
+        // @deprecated tag:v6.5.0 - can be removed completely
+        'category.productStreamId'(id) {
+            if (!id) {
+                this.productStreamFilter = null;
+                return;
+            }
+            this.loadProductStreamPreview();
+        },
+    },
+
+    // @deprecated tag:v6.5.0 - can be removed completely
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -232,8 +232,7 @@ Component.register('sw-category-detail-base', {
 
         // @deprecated tag:v6.5.0 - can be removed completely
         loadProductStreamPreview() {
-            this.productStreamRepository
-                .get(this.category.productStreamId, Shopware.Context.api)
+            this.productStreamRepository.get(this.category.productStreamId)
                 .then((response) => {
                     this.productStreamFilter = response.apiFilter;
                     this.productStreamInvalid = response.invalid;
@@ -243,6 +242,6 @@ Component.register('sw-category-detail-base', {
         // @deprecated tag:v6.5.0 - can be removed completely
         onPaginateManualProductAssignment(assignment) {
             this.manualAssignedProductsCount = assignment.total;
-        }
-    }
+        },
+    },
 });

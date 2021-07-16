@@ -37,7 +37,7 @@ describe('Test if essential characteristics are displayed in checkout', () => {
         });
     });
 
-    it.skip('@checkout: Should display essential characteristics', () => {
+    it('@checkout: Should display essential characteristics', () => {
         const page = new CheckoutPageObject();
 
         // Product detail

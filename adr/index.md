@@ -1,5 +1,8 @@
 # Architecture Decision Record
 
+*  [2021-06-14 - Introduce jest-fail-on-console for jest tests](2021-06-14-introduce-jest-fail-on-console.md)
+*  [2021-05-28 - Introduce eslint on vue admin](2021-05-28-introduce-eslint-on-vue-admin.md)
+*  [2021-05-14 - When to use plain SQL or DAL](2021-05-14-when-to-use-plain-sql-or-dal.md)
 *  [2021-03-24 - Processing of nested line items](2021-03-24-nested-line-items.md)
 *  [2021-01-21 - Deprecation strategy](2021-01-21-deprecation-strategy.md)
 *  [2020-12-03 - The best-practice to always re-fetch the data after saving](2020-12-03-The-best-practice-to-always-re-fetch-the-data-after-saving.md)
@@ -22,3 +25,4 @@
 *  [2020-07-02 - Implement sales channel context token requirement](2020-07-02-Implement-sales-channel-context-token-requirement.md)
 *  [2020-07-02 - Control clone behavior](2020-07-02-control-clone-behavior.md)
 *  [2020-06-25 - Implement architecture decision record](2020-06-25-Implement-architecture-decision-records.md)
+   

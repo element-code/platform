@@ -5,38 +5,37 @@ const { Component, Mixin } = Shopware;
 const { object, string: { kebabCase } } = Shopware.Utils;
 
 Component.register('sw-system-config', {
-    name: 'sw-system-config',
 
     template,
 
+    inject: ['systemConfigApiService'],
+
     mixins: [
         Mixin.getByName('notification'),
-        Mixin.getByName('sw-inline-snippet')
+        Mixin.getByName('sw-inline-snippet'),
     ],
-
-    inject: ['systemConfigApiService'],
 
     props: {
         domain: {
             required: true,
-            type: String
+            type: String,
         },
         salesChannelId: {
             required: false,
             type: String,
-            default: null
+            default: null,
         },
         salesChannelSwitchable: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
         // Shows the value of salesChannel=null as placeholder when the salesChannelSwitchable prop is true
         inherit: {
             type: Boolean,
             required: false,
-            default: true
-        }
+            default: true,
+        },
     },
 
     data() {
@@ -45,17 +44,8 @@ Component.register('sw-system-config', {
             isLoading: false,
             config: {},
             actualConfigData: {},
-            salesChannelModel: null
+            salesChannelModel: null,
         };
-    },
-
-    watch: {
-        actualConfigData: {
-            handler() {
-                this.emitConfig();
-            },
-            deep: true
-        }
     },
 
     computed: {
@@ -73,9 +63,18 @@ Component.register('sw-system-config', {
                 'float',
                 'bool',
                 'checkbox',
-                'colorpicker'
+                'colorpicker',
             ];
-        }
+        },
+    },
+
+    watch: {
+        actualConfigData: {
+            handler() {
+                this.emitConfig();
+            },
+            deep: true,
+        },
     },
 
     created() {
@@ -92,7 +91,7 @@ Component.register('sw-system-config', {
                     });
                 })
                 .catch((error) => {
-                    if (error && error.response && error.response.data && error.response.data.errors) {
+                    if (error?.response?.data?.errors) {
                         this.createErrorNotification(error.response.data.errors);
                     }
                 });
@@ -137,7 +136,7 @@ Component.register('sw-system-config', {
         createErrorNotification(errors) {
             let message = `<div>${this.$tc(
                 'sw-config-form-renderer.configLoadErrorMessage',
-                errors.length
+                errors.length,
             )}</div><ul>`;
 
             errors.forEach((error) => {
@@ -147,7 +146,7 @@ Component.register('sw-system-config', {
 
             this.createNotificationError({
                 message: message,
-                autoClose: false
+                autoClose: false,
             });
         },
         onSalesChannelChanged(salesChannelId) {
@@ -181,6 +180,10 @@ Component.register('sw-system-config', {
                 bind.config.valueProperty = 'id';
             }
 
+            if (element.type === 'text-editor') {
+                bind.config.componentName = 'sw-text-editor';
+            }
+
             return bind;
         },
 
@@ -191,7 +194,7 @@ Component.register('sw-system-config', {
 
             return {
                 label: this.getInlineSnippet(element.config.label),
-                helpText: this.getInlineSnippet(element.config.helpText)
+                helpText: this.getInlineSnippet(element.config.helpText),
             };
         },
 
@@ -202,7 +205,7 @@ Component.register('sw-system-config', {
                 return value;
             }
 
-            if (element.config && element.config.componentName) {
+            if (element.config?.componentName) {
                 const componentName = element.config.componentName;
 
                 if (componentName === 'sw-switch-field') {
@@ -218,7 +221,8 @@ Component.register('sw-system-config', {
                 case 'password':
                 case 'url':
                 case 'text':
-                case 'textarea': {
+                case 'textarea':
+                case 'text-editor': {
                     return '';
                 }
 
@@ -248,6 +252,6 @@ Component.register('sw-system-config', {
 
         kebabCase(value) {
             return kebabCase(value);
-        }
-    }
+        },
+    },
 });

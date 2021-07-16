@@ -12,13 +12,13 @@ Component.register('sw-product-variants-configurator-prices', {
     props: {
         product: {
             type: Object,
-            required: true
+            required: true,
         },
 
         selectedGroups: {
             type: Array,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
@@ -27,21 +27,8 @@ Component.register('sw-product-variants-configurator-prices', {
             term: '',
             optionsForGroup: [],
             currencies: {},
-            isLoading: true
+            isLoading: true,
         };
-    },
-
-    mounted() {
-        this.mountedComponent();
-    },
-
-    watch: {
-        'activeGroup'() {
-            this.getOptionsForGroup();
-        },
-        'term'() {
-            this.getOptionsForGroup();
-        }
     },
 
     computed: {
@@ -54,7 +41,7 @@ Component.register('sw-product-variants-configurator-prices', {
                 return {
                     id: currency.id,
                     name: currency.name,
-                    symbol: currency.symbol
+                    symbol: currency.symbol,
                 };
             });
         },
@@ -64,8 +51,8 @@ Component.register('sw-product-variants-configurator-prices', {
                 {
                     property: 'name',
                     label: this.$tc('sw-product.variations.configuratorModal.priceOptions'),
-                    rawData: true
-                }
+                    rawData: true,
+                },
             ];
 
             const currenciesColumns = this.currenciesList.map((currency) => {
@@ -74,12 +61,25 @@ Component.register('sw-product-variants-configurator-prices', {
                     label: currency.name,
                     rawData: true,
                     allowResize: true,
-                    width: '200px'
+                    width: '200px',
                 };
             });
 
             return [...defaultColumns, ...currenciesColumns];
-        }
+        },
+    },
+
+    watch: {
+        'activeGroup'() {
+            this.getOptionsForGroup();
+        },
+        'term'() {
+            this.getOptionsForGroup();
+        },
+    },
+
+    mounted() {
+        this.mountedComponent();
     },
 
     methods: {
@@ -90,7 +90,7 @@ Component.register('sw-product-variants-configurator-prices', {
 
         loadCurrencies() {
             this.currencyRepository
-                .search(new Criteria(), Shopware.Context.api)
+                .search(new Criteria())
                 .then((searchResult) => {
                     this.currencies = searchResult;
                 });
@@ -124,7 +124,7 @@ Component.register('sw-product-variants-configurator-prices', {
                         currencyId: currency.id,
                         gross: 0,
                         linked: true,
-                        net: 0
+                        net: 0,
                     };
                     option.price.push(newPriceForCurrency);
                 }
@@ -133,6 +133,6 @@ Component.register('sw-product-variants-configurator-prices', {
 
         getCurrencyOfOption(option, currencyId) {
             return option.price.find((currency) => currency.currencyId === currencyId);
-        }
-    }
+        },
+    },
 });

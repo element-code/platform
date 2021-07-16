@@ -8,12 +8,12 @@ const utils = Shopware.Utils;
 Component.register('sw-settings-payment-list', {
     template,
 
-    inject: ['repositoryFactory', 'acl'],
+    inject: ['repositoryFactory', 'acl', 'feature'],
 
     mixins: [
         Mixin.getByName('listing'),
         Mixin.getByName('notification'),
-        Mixin.getByName('position')
+        Mixin.getByName('position'),
     ],
 
     data() {
@@ -24,13 +24,13 @@ Component.register('sw-settings-payment-list', {
             sortBy: 'position',
             sortDirection: 'ASC',
             naturalSorting: true,
-            showDeleteModal: false
+            showDeleteModal: false,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle()
+            title: this.$createTitle(),
         };
     },
 
@@ -41,7 +41,7 @@ Component.register('sw-settings-payment-list', {
 
         disablePositioning() {
             return (!!this.term) || (this.sortBy !== 'position');
-        }
+        },
     },
 
     methods: {
@@ -52,8 +52,10 @@ Component.register('sw-settings-payment-list', {
 
             criteria.setTerm(this.term);
             criteria.addSorting(Criteria.sort(this.sortBy, this.sortDirection, this.naturalSorting));
+            criteria.addAssociation('plugin');
+            criteria.addAssociation('appPaymentMethod.app');
 
-            this.paymentRepository.search(criteria, Shopware.Context.api).then((items) => {
+            this.paymentRepository.search(criteria).then((items) => {
                 this.total = items.total;
                 this.payment = items;
                 this.isLoading = false;
@@ -72,12 +74,12 @@ Component.register('sw-settings-payment-list', {
         onInlineEditSave(promise, payment) {
             promise.then(() => {
                 this.createNotificationSuccess({
-                    message: this.$tc('sw-settings-payment.detail.messageSaveSuccess', 0, { name: payment.name })
+                    message: this.$tc('sw-settings-payment.detail.messageSaveSuccess', 0, { name: payment.name }),
                 });
             }).catch(() => {
                 this.getList();
                 this.createNotificationError({
-                    message: this.$tc('sw-settings-payment.detail.messageSaveError')
+                    message: this.$tc('sw-settings-payment.detail.messageSaveError'),
                 });
             });
         },
@@ -93,7 +95,7 @@ Component.register('sw-settings-payment-list', {
         onConfirmDelete(id) {
             this.showDeleteModal = false;
 
-            return this.paymentRepository.delete(id, Shopware.Context.api).then(() => {
+            return this.paymentRepository.delete(id).then(() => {
                 this.getList();
             });
         },
@@ -101,12 +103,12 @@ Component.register('sw-settings-payment-list', {
         onPositionChanged: utils.debounce(function syncPayment(payment) {
             this.payment = payment;
 
-            this.paymentRepository.sync(payment, Shopware.Context.api)
+            this.paymentRepository.sync(payment)
                 .then(this.getList)
                 .catch(() => {
                     this.getList();
                     this.createNotificationError({
-                        message: this.$tc('global.notification.unspecifiedSaveErrorMessage')
+                        message: this.$tc('global.notification.unspecifiedSaveErrorMessage'),
                     });
                 });
         }, 800),
@@ -119,18 +121,33 @@ Component.register('sw-settings-payment-list', {
                 label: 'sw-settings-payment.list.columnName',
                 routerLink: 'sw.settings.payment.detail',
                 width: '250px',
-                primary: true
+                primary: true,
+            }, {
+                property: 'extension',
+                label: 'sw-settings-payment.list.columnExtension',
             }, {
                 property: 'active',
                 inlineEdit: 'string',
-                label: 'sw-settings-payment.list.columnActive'
+                label: 'sw-settings-payment.list.columnActive',
             }, {
                 property: 'description',
-                label: 'sw-settings-payment.list.columnDescription'
+                label: 'sw-settings-payment.list.columnDescription',
             }, {
                 property: 'position',
-                label: 'sw-settings-payment.list.columnPosition'
+                label: 'sw-settings-payment.list.columnPosition',
             }];
-        }
-    }
+        },
+
+        getExtensionName(paymentMethod) {
+            if (paymentMethod.plugin) {
+                return paymentMethod.plugin.translated.label;
+            }
+
+            if (paymentMethod.appPaymentMethod) {
+                return paymentMethod.appPaymentMethod.app.translated.label;
+            }
+
+            return null;
+        },
+    },
 });

@@ -6,10 +6,15 @@ const { Criteria } = Shopware.Data;
 Component.register('sw-settings-custom-field-set-detail', {
     template,
 
+    inject: [
+        'repositoryFactory',
+        'acl',
+    ],
+
     mixins: [
         Mixin.getByName('notification'),
         Mixin.getByName('sw-inline-snippet'),
-        Mixin.getByName('discard-detail-page-changes')('set')
+        Mixin.getByName('discard-detail-page-changes')('set'),
     ],
 
     shortcuts: {
@@ -17,28 +22,23 @@ Component.register('sw-settings-custom-field-set-detail', {
             active() {
                 return this.acl.can('custom_field.editor');
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
-
-    inject: [
-        'repositoryFactory',
-        'acl'
-    ],
 
     data() {
         return {
             set: {},
             setId: '',
             isLoading: false,
-            isSaveSuccessful: false
+            isSaveSuccessful: false,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -77,7 +77,7 @@ Component.register('sw-settings-custom-field-set-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.acl.can('custom_field.editor'),
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -85,16 +85,16 @@ Component.register('sw-settings-custom-field-set-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
-        }
+        },
     },
 
     created() {
@@ -113,7 +113,7 @@ Component.register('sw-settings-custom-field-set-detail', {
             this.set = await this.customFieldSetRepository.get(
                 this.setId,
                 Shopware.Context.api,
-                this.customFieldSetCriteria
+                this.customFieldSetCriteria,
             );
         },
 
@@ -125,7 +125,7 @@ Component.register('sw-settings-custom-field-set-detail', {
             const setLabel = this.identifier;
             const titleSaveSuccess = this.$tc('global.default.success');
             const messageSaveSuccess = this.$tc('sw-settings-custom-field.set.detail.messageSaveSuccess', 0, {
-                name: setLabel
+                name: setLabel,
             });
             this.isSaveSuccessful = false;
             this.isLoading = true;
@@ -141,20 +141,20 @@ Component.register('sw-settings-custom-field-set-detail', {
                 this.set.relations = [];
             }
 
-            this.customFieldSetRepository.save(this.set, Shopware.Context.api).then(() => {
+            this.customFieldSetRepository.save(this.set).then(() => {
                 this.isSaveSuccessful = true;
 
                 this.createNotificationSuccess({
                     title: titleSaveSuccess,
-                    message: messageSaveSuccess
+                    message: messageSaveSuccess,
                 });
 
                 return this.loadEntityData();
             }).catch((error) => {
-                const errorMessage = Shopware.Utils.get(error, 'response.data.errors[0].detail', 'Error');
+                const errorMessage = error?.response?.data?.errors?.[0]?.detail ?? 'Error';
 
                 this.createNotificationError({
-                    message: errorMessage
+                    message: errorMessage,
                 });
             }).finally(() => {
                 this.isLoading = false;
@@ -175,6 +175,6 @@ Component.register('sw-settings-custom-field-set-detail', {
 
         onChangeLanguage() {
             this.loadEntityData();
-        }
-    }
+        },
+    },
 });

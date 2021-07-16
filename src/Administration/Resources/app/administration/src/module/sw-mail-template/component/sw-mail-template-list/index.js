@@ -10,22 +10,22 @@ Component.register('sw-mail-template-list', {
 
     mixins: [
         Mixin.getByName('listing'),
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     props: {
         searchTerm: {
             type: String,
             required: false,
-            default: ''
-        }
+            default: '',
+        },
     },
 
     data() {
         return {
             mailTemplates: null,
             showDeleteModal: null,
-            isLoading: false
+            isLoading: false,
         };
     },
 
@@ -40,13 +40,13 @@ Component.register('sw-mail-template-list', {
 
         showListing() {
             return !!this.mailTemplates && this.mailTemplates.length !== 0;
-        }
+        },
     },
 
     watch: {
         searchTerm() {
             this.getList();
-        }
+        },
     },
 
     methods: {
@@ -61,7 +61,7 @@ Component.register('sw-mail-template-list', {
                 criteria.setTerm(this.searchTerm);
             }
 
-            this.mailTemplateRepository.search(criteria, Shopware.Context.api).then(items => {
+            this.mailTemplateRepository.search(criteria).then(items => {
                 this.total = items.total;
                 this.mailTemplates = items;
                 this.isLoading = false;
@@ -76,12 +76,12 @@ Component.register('sw-mail-template-list', {
                 dataIndex: 'mailTemplateType.name',
                 label: 'sw-mail-template.list.columnMailType',
                 allowResize: true,
-                primary: true
+                primary: true,
             }, {
                 property: 'description',
                 dataIndex: 'description',
                 label: 'sw-mail-template.list.columnDescription',
-                allowResize: true
+                allowResize: true,
             }];
         },
 
@@ -91,20 +91,20 @@ Component.register('sw-mail-template-list', {
 
         onDuplicate(id) {
             this.isLoading = true;
-            this.mailTemplateRepository.clone(id, Shopware.Context.api).then((mailTemplate) => {
+            this.mailTemplateRepository.clone(id).then((mailTemplate) => {
                 this.getList();
                 this.isLoading = false;
                 this.$router.push(
                     {
                         name: 'sw.mail.template.detail',
-                        params: { id: mailTemplate.id }
-                    }
+                        params: { id: mailTemplate.id },
+                    },
                 );
             });
         },
 
         updateRecords(result) {
             this.mailTemplates = result;
-        }
-    }
+        },
+    },
 });

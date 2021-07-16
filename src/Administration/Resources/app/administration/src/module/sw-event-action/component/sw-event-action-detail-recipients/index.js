@@ -11,18 +11,33 @@ Component.register('sw-event-action-detail-recipients', {
     props: {
         configRecipients: {
             type: Object,
-            required: false
+            required: false,
+            default: null,
         },
         isLoading: {
             type: Boolean,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
         return {
-            recipients: []
+            recipients: [],
         };
+    },
+
+    computed: {
+        recipientColumns() {
+            return [{
+                property: 'email',
+                label: 'sw-event-action.detail.columnRecipientMail',
+                inlineEdit: 'string',
+            }, {
+                property: 'name',
+                label: 'sw-event-action.detail.columnRecipientName',
+                inlineEdit: 'string',
+            }];
+        },
     },
 
     created() {
@@ -44,7 +59,7 @@ Component.register('sw-event-action-detail-recipients', {
                 return {
                     email: item[0],
                     name: item[1],
-                    id: Utils.createId()
+                    id: Utils.createId(),
                 };
             });
         },
@@ -55,7 +70,7 @@ Component.register('sw-event-action-detail-recipients', {
             this.recipients.unshift({
                 id: newId,
                 email: '',
-                name: ''
+                name: '',
             });
 
             this.$nextTick(() => {
@@ -110,7 +125,7 @@ Component.register('sw-event-action-detail-recipients', {
             }
 
             return new ShopwareError({
-                code: 'EVENT_ACTION_DETAIL_RECIPIENT_INVALID_MAIL'
+                code: 'EVENT_ACTION_DETAIL_RECIPIENT_INVALID_MAIL',
             });
         },
 
@@ -120,22 +135,8 @@ Component.register('sw-event-action-detail-recipients', {
             }
 
             return new ShopwareError({
-                code: 'EVENT_ACTION_DETAIL_RECIPIENT_INVALID_NAME'
+                code: 'EVENT_ACTION_DETAIL_RECIPIENT_INVALID_NAME',
             });
-        }
+        },
     },
-
-    computed: {
-        recipientColumns() {
-            return [{
-                property: 'email',
-                label: 'sw-event-action.detail.columnRecipientMail',
-                inlineEdit: 'string'
-            }, {
-                property: 'name',
-                label: 'sw-event-action.detail.columnRecipientName',
-                inlineEdit: 'string'
-            }];
-        }
-    }
 });

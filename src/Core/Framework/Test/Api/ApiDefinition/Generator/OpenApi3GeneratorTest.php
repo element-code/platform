@@ -53,7 +53,8 @@ class OpenApi3GeneratorTest extends TestCase
             new OpenApiSchemaBuilder('6.4.0.0'),
             new OpenApiPathBuilder(),
             new OpenApiDefinitionSchemaBuilder(),
-            new OpenApiLoader($this->getContainer()->get('router'), $this->getContainer()->get('event_dispatcher'))
+            new OpenApiLoader($this->getContainer()->get('router'), $this->getContainer()->get('event_dispatcher')),
+            $this->getContainer()->getParameter('kernel.bundles_metadata')
         );
 
         $this->schema = $this->openApiGenerator->getSchema($this->definitionRegistry->getDefinitions());
@@ -120,8 +121,8 @@ class OpenApi3GeneratorTest extends TestCase
         static::assertArrayHasKey('id', $properties);
         static::assertArrayHasKey('type', $properties['id']);
         static::assertEquals('string', $properties['id']['type']);
-        static::assertArrayHasKey('format', $properties['id']);
-        static::assertEquals('uuid', $properties['id']['format']);
+        static::assertArrayHasKey('pattern', $properties['id']);
+        static::assertEquals('^[0-9a-f]{32}$', $properties['id']['pattern']);
         static::assertArrayHasKey('stringField', $properties);
         static::assertArrayHasKey('type', $properties['stringField']);
         static::assertEquals('string', $properties['stringField']['type']);
@@ -157,7 +158,6 @@ class OpenApi3GeneratorTest extends TestCase
 
     private static function isFeatureAllTrue(): bool
     {
-        /* @var mixed $value */
         $value = $_SERVER['FEATURE_ALL'] ?? 'false';
 
         return $value

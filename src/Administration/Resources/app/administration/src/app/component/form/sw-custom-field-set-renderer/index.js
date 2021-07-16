@@ -3,7 +3,6 @@ import './sw-custom-field-set-renderer.scss';
 
 const { Component, Mixin } = Shopware;
 const { Criteria } = Shopware.Data;
-const utils = Shopware.Utils;
 
 /**
  * @public
@@ -18,34 +17,34 @@ Component.register('sw-custom-field-set-renderer', {
 
     inject: ['feature'],
 
-    mixins: [
-        Mixin.getByName('sw-inline-snippet'),
-        Mixin.getByName('placeholder')
-    ],
-
     // Grant access to some variables to the child form render components
     provide() {
         return {
             getEntity: this.entity,
             getParentEntity: this.parentEntity,
             getCustomFieldSet: this.set,
-            getCustomFieldSetVariant: this.variant
+            getCustomFieldSetVariant: this.variant,
         };
     },
+
+    mixins: [
+        Mixin.getByName('sw-inline-snippet'),
+        Mixin.getByName('placeholder'),
+    ],
 
     props: {
         sets: {
             type: Array,
-            required: true
+            required: true,
         },
         entity: {
             type: Object,
-            required: true
+            required: true,
         },
         parentEntity: {
             type: Object,
             required: false,
-            default: null
+            default: null,
         },
         variant: {
             type: String,
@@ -57,28 +56,28 @@ Component.register('sw-custom-field-set-renderer', {
                     return true;
                 }
                 return ['tabs', 'media-collapse'].includes(value);
-            }
+            },
         },
         disabled: {
             type: Boolean,
             default: false,
-            required: false
+            required: false,
         },
         isLoading: {
             type: Boolean,
             default: false,
-            required: false
+            required: false,
         },
         isSaveSuccessful: {
             type: Boolean,
             default: false,
-            required: false
+            required: false,
         },
         showCustomFieldSetSelection: {
             type: Boolean,
             default: false,
-            require: false
-        }
+            require: false,
+        },
     },
 
     computed: {
@@ -149,7 +148,7 @@ Component.register('sw-custom-field-set-renderer', {
 
         componentsWithMapInheritanceSupport() {
             return ['sw-field'];
-        }
+        },
     },
 
     watch: {
@@ -157,14 +156,14 @@ Component.register('sw-custom-field-set-renderer', {
             handler(value) {
                 this.onChangeCustomFieldSetSelectionActive(value);
             },
-            deep: true
+            deep: true,
         },
 
         'entity.customFieldsSets': {
             handler() {
                 this.onChangeCustomFieldSets();
-            }
-        }
+            },
+        },
     },
 
     created() {
@@ -184,7 +183,7 @@ Component.register('sw-custom-field-set-renderer', {
         },
 
         getInheritedCustomField(customFieldName) {
-            const value = utils.get(this.parentEntity, `translated.customFields.${customFieldName}`, null);
+            const value = this.parentEntity?.translated?.customFields?.[customFieldName] ?? null;
 
             if (value) {
                 return value;
@@ -237,14 +236,14 @@ Component.register('sw-custom-field-set-renderer', {
 
         getInheritValue(field) {
             // Search field in translated
-            const value = utils.get(this.parentEntity, `translated.${field}`, null);
+            const value = this.parentEntity?.translated?.[field] ?? null;
 
             if (value) {
                 return value;
             }
 
             // Search field on top level of entity
-            return utils.get(this.parentEntity, `${field}`, null);
+            return this.parentEntity?.[field] ?? null;
         },
 
         getParentCustomFieldSetSelectionSwitchState() {
@@ -301,7 +300,7 @@ Component.register('sw-custom-field-set-renderer', {
 
             return {
                 helpText: this.getInlineSnippet(customField.config.helpText) || '',
-                label: this.getInlineSnippet(customField.config.label) || ' '
+                label: this.getInlineSnippet(customField.config.label) || ' ',
             };
         },
 
@@ -337,6 +336,6 @@ Component.register('sw-custom-field-set-renderer', {
          */
         sortSets(sets) {
             return sets.sort((a, b) => a.position - b.position);
-        }
-    }
+        },
+    },
 });

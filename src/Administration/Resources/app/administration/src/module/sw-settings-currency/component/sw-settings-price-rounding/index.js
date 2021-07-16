@@ -12,7 +12,7 @@ Component.register('sw-settings-price-rounding', {
             required: false,
             default() {
                 return {};
-            }
+            },
         },
 
         totalRounding: {
@@ -20,8 +20,8 @@ Component.register('sw-settings-price-rounding', {
             required: false,
             default() {
                 return {};
-            }
-        }
+            },
+        },
     },
 
     data() {
@@ -31,8 +31,8 @@ Component.register('sw-settings-price-rounding', {
                 { label: '0.05', value: 0.05 },
                 { label: '0.10', value: 0.10 },
                 { label: '0.50', value: 0.50 },
-                { label: '1.00', value: 1 }
-            ]
+                { label: '1.00', value: 1 },
+            ],
         };
     },
 
@@ -42,7 +42,14 @@ Component.register('sw-settings-price-rounding', {
         },
         totalIntervalDisabled() {
             return this.totalRounding.decimals > 2;
-        }
+        },
+        showHeaderInfo() {
+            return this.totalRounding.interval !== 0.01
+                || this.itemRounding.decimals !== this.totalRounding.decimals;
+        },
+        showHeaderWarning() {
+            return this.totalRounding.interval !== this.itemRounding.interval;
+        },
     },
 
     methods: {
@@ -56,6 +63,6 @@ Component.register('sw-settings-price-rounding', {
             }
 
             this[type].interval = 0.01;
-        }
-    }
+        },
+    },
 });

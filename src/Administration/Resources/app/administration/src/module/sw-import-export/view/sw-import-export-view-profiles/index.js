@@ -13,14 +13,8 @@ Shopware.Component.register('sw-import-export-view-profiles', {
     inject: ['repositoryFactory'],
 
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
-
-    metaInfo() {
-        return {
-            title: this.$createTitle()
-        };
-    },
 
     data() {
         return {
@@ -29,7 +23,13 @@ Shopware.Component.register('sw-import-export-view-profiles', {
             profiles: null,
             searchTerm: null,
             sortBy: 'name',
-            sortDirection: 'ASC'
+            sortDirection: 'ASC',
+        };
+    },
+
+    metaInfo() {
+        return {
+            title: this.$createTitle(),
         };
     },
 
@@ -56,16 +56,28 @@ Shopware.Component.register('sw-import-export-view-profiles', {
                     dataIndex: 'label',
                     label: 'sw-import-export.profile.nameColumn',
                     allowResize: true,
-                    primary: true
+                    primary: true,
                 },
                 {
                     property: 'systemDefault',
                     dataIndex: 'systemDefault',
                     label: 'sw-import-export.profile.typeColumn',
-                    allowResize: true
-                }
+                    allowResize: true,
+                },
             ];
-        }
+        },
+
+        isNotSystemLanguage() {
+            return Shopware.Context.api.systemLanguageId !== Shopware.Context.api.languageId;
+        },
+
+        createTooltip() {
+            return {
+                showDelay: 300,
+                message: this.$tc('sw-import-export.profile.addNewProfileTooltipLanguage'),
+                disabled: !this.isNotSystemLanguage,
+            };
+        },
     },
 
     created() {
@@ -80,7 +92,7 @@ Shopware.Component.register('sw-import-export-view-profiles', {
         async loadProfiles() {
             this.isLoading = true;
 
-            this.profiles = await this.profileRepository.search(this.profileCriteria, Shopware.Context.api);
+            this.profiles = await this.profileRepository.search(this.profileCriteria);
 
             this.isLoading = false;
         },
@@ -94,7 +106,7 @@ Shopware.Component.register('sw-import-export-view-profiles', {
         },
 
         onAddNewProfile() {
-            this.selectedProfile = this.profileRepository.create(Shopware.Context.api);
+            this.selectedProfile = this.profileRepository.create();
             this.selectedProfile.fileType = 'text/csv';
             this.selectedProfile.mapping = [];
             this.$set(this.selectedProfile, 'config', {});
@@ -104,7 +116,7 @@ Shopware.Component.register('sw-import-export-view-profiles', {
         },
 
         async onEditProfile(id) {
-            this.selectedProfile = await this.profileRepository.get(id, Shopware.Context.api);
+            this.selectedProfile = await this.profileRepository.get(id);
 
             if (Array.isArray(this.selectedProfile.config) && this.selectedProfile.config.length <= 0) {
                 this.$set(this.selectedProfile, 'config', {});
@@ -112,17 +124,27 @@ Shopware.Component.register('sw-import-export-view-profiles', {
         },
 
         onDuplicateProfile(item) {
-            this.selectedProfile = this.profileRepository.create(Shopware.Context.api);
+            const behavior = {
+                cloneChildren: false,
+                overwrites: {
+                    label: `${this.$tc('sw-import-export.profile.copyOfLabel')} ${item.label || item.translated.label}`,
+                    systemDefault: false,
+                },
+            };
 
-            this.selectedProfile.label = `${this.$tc('sw-import-export.profile.copyOfLabel')} ${item.label || ''}`;
-            this.$set(this.selectedProfile, 'translated', {});
-            this.selectedProfile.systemDefault = false;
-            this.$set(this.selectedProfile, 'config', Array.isArray(item.config) ? {} : item.config);
-            this.selectedProfile.fileType = item.fileType;
-            this.selectedProfile.mapping = item.mapping;
-            this.selectedProfile.delimiter = item.delimiter;
-            this.selectedProfile.enclosure = item.enclosure;
-            this.selectedProfile.sourceEntity = item.sourceEntity;
+            return this.profileRepository.clone(item.id, Shopware.Context.api, behavior).then((clone) => {
+                const criteria = new Criteria();
+                criteria.setIds([clone.id]);
+                return this.profileRepository.search(criteria);
+            }).then((profiles) => {
+                this.selectedProfile = profiles[0];
+                return this.loadProfiles(); // refresh the list in any case (even if the modal is canceled)
+                // because the duplicate already exists.
+            }).catch(() => {
+                this.createNotificationError({
+                    message: this.$tc('global.notification.unspecifiedSaveErrorMessage'),
+                });
+            });
         },
 
         onDeleteProfile(id) {
@@ -135,15 +157,15 @@ Shopware.Component.register('sw-import-export-view-profiles', {
 
         saveSelectedProfile() {
             this.isLoading = true;
-            this.profileRepository.save(this.selectedProfile, Shopware.Context.api).then(() => {
+            return this.profileRepository.save(this.selectedProfile, Shopware.Context.api).then(() => {
                 this.selectedProfile = null;
                 this.createNotificationSuccess({
-                    message: this.$tc('sw-import-export.profile.messageSaveSuccess', 0)
+                    message: this.$tc('sw-import-export.profile.messageSaveSuccess', 0),
                 });
                 return this.loadProfiles();
             }).catch(() => {
                 this.createNotificationError({
-                    message: this.$tc('sw-import-export.profile.messageSaveError', 0)
+                    message: this.$tc('sw-import-export.profile.messageSaveError', 0),
                 });
             }).finally(() => {
                 this.isLoading = false;
@@ -154,6 +176,6 @@ Shopware.Component.register('sw-import-export-view-profiles', {
             return isSystemDefault ?
                 this.$tc('sw-import-export.profile.defaultTypeLabel') :
                 this.$tc('sw-import-export.profile.customTypeLabel');
-        }
-    }
+        },
+    },
 });

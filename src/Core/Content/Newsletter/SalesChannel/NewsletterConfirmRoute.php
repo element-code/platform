@@ -20,7 +20,6 @@ use Shopware\Core\System\SalesChannel\NoContentResponse;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Constraints\EqualTo;
-use Symfony\Component\Validator\Constraints\IsNull;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
@@ -63,14 +62,30 @@ class NewsletterConfirmRoute extends AbstractNewsletterConfirmRoute
      * @Since("6.2.0.0")
      * @OA\Post(
      *      path="/newsletter/confirm",
-     *      summary="Confirm newsletter registration",
+     *      summary="Confirm a newsletter registration",
+     *      description="You have to use the hash from the link sent out via email to confirm the user registration.",
      *      operationId="confirmNewsletter",
      *      tags={"Store API", "Newsletter"},
-     *      @OA\Parameter(name="hash", description="Hash from Mail", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="em", description="Hash from Mail", in="query", @OA\Schema(type="string")),
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\JsonContent(
+     *              required={
+     *                  "hash",
+     *                  "em"
+     *              },
+     *              @OA\Property(
+     *                  property="hash",
+     *                  type="string",
+     *                  description="Hash parameter from link the in the confirmation mail"),
+     *              @OA\Property(
+     *                  property="em",
+     *                  type="string",
+     *                  description="Email hash parameter from the link in the confirmation mail"),
+     *          )
+     *      ),
      *      @OA\Response(
      *          response="200",
-     *          description="Success",
+     *          description="The newsletter confirmation was successful.",
      *     )
      * )
      * @Route("/store-api/newsletter/confirm", name="store-api.newsletter.confirm", methods={"POST"})
@@ -118,7 +133,6 @@ class NewsletterConfirmRoute extends AbstractNewsletterConfirmRoute
     {
         $definition = new DataValidationDefinition('newsletter_recipient.opt_in_before');
         $definition->add('id', new NotBlank())
-            ->add('confirmedAt', new IsNull())
             ->add('status', new EqualTo(['value' => NewsletterSubscribeRoute::STATUS_NOT_SET]))
             ->add('em', new EqualTo(['value' => $emHash]));
 

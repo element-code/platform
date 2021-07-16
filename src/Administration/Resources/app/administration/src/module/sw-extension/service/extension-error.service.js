@@ -9,7 +9,7 @@ export default class ExtensionErrorService {
     }
 
     handleErrorResponse(errorResponse, translator) {
-        const errors = Shopware.Utils.get(errorResponse, 'response.data.errors', []);
+        const errors = errorResponse?.response?.data?.errors ?? [];
 
         if (!Array.isArray(errors)) {
             return [];
@@ -23,7 +23,7 @@ export default class ExtensionErrorService {
     handleError(error, translator) {
         return this._translateRawNotification(
             this._getNotification(error, translator),
-            translator
+            translator,
         );
     }
 
@@ -32,7 +32,7 @@ export default class ExtensionErrorService {
             this.errorCodes[error.code] :
             {
                 title: error.title || this.fallbackError.title,
-                message: error.detail || this.fallbackError.detail
+                message: error.detail || this.fallbackError.detail,
             };
     }
 
@@ -40,7 +40,7 @@ export default class ExtensionErrorService {
         return {
             title: translator.$tc(notification.title),
             message: translator.$tc(notification.message),
-            autoClose: notification.autoClose || true
+            autoClose: notification.autoClose || true,
         };
     }
 }

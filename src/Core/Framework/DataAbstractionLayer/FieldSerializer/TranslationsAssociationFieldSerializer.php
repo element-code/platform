@@ -146,8 +146,6 @@ class TranslationsAssociationFieldSerializer implements FieldSerializerInterface
 
         $value = $data->getValue();
 
-        /* @var TranslationsAssociationField $field */
-
         if ($value === null) {
             $value = [
                 $parameters->getContext()->getContext()->getLanguageId() => [],
@@ -164,8 +162,11 @@ class TranslationsAssociationFieldSerializer implements FieldSerializerInterface
 
     /**
      * @throws DecodeByHydratorException
+     *
+     * @deprecated tag:v6.5.0 The parameter $value will be native typed
+     * @never
      */
-    public function decode(Field $field, $value): void
+    public function decode(Field $field, /*?string */$value): void
     {
         throw new DecodeByHydratorException($field);
     }

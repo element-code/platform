@@ -19,42 +19,42 @@ Component.register('sw-search-bar-item', {
         item: {
             type: Object,
             required: false,
-            default: () => ({})
+            default: () => ({}),
         },
         type: {
             required: true,
-            type: String
+            type: String,
         },
         index: {
             type: Number,
-            required: true
+            required: true,
         },
         column: {
             type: Number,
-            required: true
+            required: true,
         },
         searchTerm: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
+    },
+
+    data() {
+        return {
+            isActive: false,
+            searchTypes: null,
+        };
     },
 
     computed: {
         componentClasses() {
             return [
                 {
-                    'is--active': this.isActive
-                }
+                    'is--active': this.isActive,
+                },
             ];
-        }
-    },
-
-    data() {
-        return {
-            isActive: false,
-            searchTypes: null
-        };
+        },
     },
 
     created() {
@@ -112,9 +112,9 @@ Component.register('sw-search-bar-item', {
             this.$parent.$emit('mouse-over', {
                 originalDomEvent,
                 index: this.index,
-                column: this.column
+                column: this.column,
             });
             this.isActive = true;
-        }
-    }
+        },
+    },
 });

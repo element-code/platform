@@ -13,6 +13,10 @@ use Shopware\Storefront\Framework\Cache\CacheStore;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpCache\HttpCache;
 
+/**
+ * @group skip-paratest
+ * @group cache
+ */
 class HttpCacheIntegrationTest extends TestCase
 {
     use KernelTestBehaviour;
@@ -60,7 +64,7 @@ class HttpCacheIntegrationTest extends TestCase
     {
         $kernel = $this->getCacheKernel();
 
-        $request = $this->createRequest();
+        $request = $this->createRequest($_SERVER['APP_URL']);
 
         $response = $kernel->handle($request);
         static::assertTrue($response->headers->has('x-symfony-cache'));
@@ -74,7 +78,7 @@ class HttpCacheIntegrationTest extends TestCase
     {
         $kernel = $this->getCacheKernel();
 
-        $request = $this->createRequest();
+        $request = $this->createRequest($_SERVER['APP_URL']);
         $request->cookies->set(CacheResponseSubscriber::CONTEXT_CACHE_COOKIE, 'a');
 
         $response = $kernel->handle($request);

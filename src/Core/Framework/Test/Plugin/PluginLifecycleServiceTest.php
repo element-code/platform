@@ -38,6 +38,7 @@ use Symfony\Component\Filesystem\Filesystem;
 
 /**
  * @group slow
+ * @group skip-paratest
  */
 class PluginLifecycleServiceTest extends TestCase
 {
@@ -403,7 +404,6 @@ class PluginLifecycleServiceTest extends TestCase
             static::assertCount(1, $dependants);
             static::assertEquals(sprintf('"%s"', self::DEPENDENT_PLUGIN_NAME), $dependantNames);
 
-            /* @var PluginEntity $dependant */
             $dependant = array_pop($dependants);
 
             static::assertInstanceOf(PluginEntity::class, $dependant);
@@ -425,6 +425,44 @@ class PluginLifecycleServiceTest extends TestCase
             RequirementStackException::class
         );
         $this->pluginLifecycleService->activatePlugin($pluginEntity, $this->context);
+    }
+
+    /**
+     * @dataProvider themeProvideData
+     */
+    public function testThemeRemovalOnUninstall(bool $keepUserData): void
+    {
+        $this->addTestPluginToKernel('SwagTestTheme');
+
+        $this->pluginService->refreshPlugins($this->context, new NullIO());
+
+        $pluginInstalled = $this->pluginService->getPluginByName('SwagTestTheme', $this->context);
+        $this->pluginLifecycleService->installPlugin($pluginInstalled, $this->context);
+
+        $this->pluginLifecycleService->activatePlugin($pluginInstalled, $this->context);
+        static::assertTrue($pluginInstalled->getActive());
+
+        $themeRepo = $this->container->get('theme.repository');
+
+        $criteria = new Criteria();
+        $criteria->addFilter(new EqualsFilter('technicalName', 'SwagTestTheme'));
+
+        static::assertCount(1, $themeRepo->search($criteria, $this->context)->getElements());
+
+        $this->pluginLifecycleService->uninstallPlugin($pluginInstalled, $this->context, $keepUserData);
+
+        $pluginUninstalled = $this->getTestPlugin($this->context);
+        static::assertNull($pluginUninstalled->getInstalledAt());
+        static::assertFalse($pluginUninstalled->getActive());
+        static::assertCount($keepUserData ? 1 : 0, $themeRepo->search($criteria, $this->context)->getElements());
+    }
+
+    public function themeProvideData(): array
+    {
+        return [
+            'Test with keep data' => [true],
+            'Test without keep data' => [false],
+        ];
     }
 
     private function installNotSupportedPlugin(string $name): PluginEntity

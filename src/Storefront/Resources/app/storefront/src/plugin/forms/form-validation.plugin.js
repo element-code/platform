@@ -51,7 +51,7 @@ export default class FormValidation extends Plugin {
         /**
          * Use an already visible text as a hint for the length-validation
          */
-        lengthTextAttr: 'data-form-validation-length-text'
+        lengthTextAttr: 'data-form-validation-length-text',
     };
 
     init() {
@@ -139,7 +139,11 @@ export default class FormValidation extends Plugin {
 
         this.el.classList.add(this.options.styleCls);
 
+        /**
+         * @deprecated tag:v6.5.0- onFormSubmit event will be removed, use beforeSubmit instead
+         */
         this.$emitter.publish('onFormSubmit', { validity });
+        this.$emitter.publish('beforeSubmit', { validity });
     }
 
     /**

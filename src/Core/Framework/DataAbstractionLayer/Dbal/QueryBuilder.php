@@ -18,7 +18,12 @@ class QueryBuilder extends DBALQueryBuilder
 
     public function addState(string $state): void
     {
-        $this->states[] = $state;
+        $this->states[$state] = $state;
+    }
+
+    public function removeState(string $state): void
+    {
+        unset($this->states[$state]);
     }
 
     public function hasState(string $state): bool
@@ -46,7 +51,7 @@ class QueryBuilder extends DBALQueryBuilder
         $sql = parent::getSQL();
 
         if ($this->getTitle()) {
-            $sql = '# ' . $this->title . PHP_EOL . $sql;
+            $sql = '# ' . $this->title . \PHP_EOL . $sql;
         }
 
         return $sql;

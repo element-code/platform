@@ -156,22 +156,21 @@ describe('Order: Read order', () => {
         // click save
         cy.get('.sw-order-detail__smart-bar-save-button').click();
 
+        // assert save successful
         cy.wait('@orderSaveCall').then((xhr) => {
             expect(xhr).to.have.property('status', 204);
         });
 
-        // assert save successful
-        // cy.get('.sw-data-grid__row').assertRowWithLabelContains('1','.sw-data-grid__cell--quantity','Product name','.sw-data-grid__cell--label');
-        cy.get('.sw-data-grid__row').children().get('.sw-data-grid__cell--label').contains('Product name')
-            .parent()
-            .parent()
-            .parent()
-            .within(() => { cy.get('.sw-data-grid__cell--quantity > .sw-data-grid__cell-content').contains('1'); });
-        cy.get('.sw-data-grid__row').children().get('.sw-data-grid__cell--label').contains('Awesome product')
-            .parent()
-            .parent()
-            .parent()
-            .within(() => { cy.get('.sw-data-grid__cell--quantity > .sw-data-grid__cell-content').contains('10'); });
+        // Get correct quantity of both items
+        cy.get('.sw-data-grid__row--1')
+            .within(() => {
+                cy.get('.sw-data-grid__cell--quantity .sw-data-grid__cell-content').contains('10');
+            });
+
+        cy.get('.sw-data-grid__row--0')
+            .within(() => {
+                cy.get('.sw-data-grid__cell--quantity .sw-data-grid__cell-content').contains('1');
+            });
     });
 
     it('@base @order: can add custom products', () => {
@@ -216,8 +215,8 @@ describe('Order: Read order', () => {
         });
 
         // Assert the price breakdown contains both VATs. This also implies that a recalculation has taken place.
-        assertPriceBreakdownContains(/^plus 19\% VAT$/, /^[0-9]+,[0-9]{2}.€$/);
-        assertPriceBreakdownContains(/^plus 10\% VAT$/, /^1\.215,45.€$/);
+        assertPriceBreakdownContains(/^\s*plus 19\% VAT\s*$/, /^\s*€.[0-9]+\.[0-9]{2}\s*$/);
+        assertPriceBreakdownContains(/^\s*plus 10\% VAT\s*$/, /^\s*€1,215\.45\s*$/);
     });
 
     it('@base @order: can add custom credit items', () => {
@@ -257,7 +256,7 @@ describe('Order: Read order', () => {
         });
 
         // Assert that the total is negative
-        assertPriceBreakdownContains(/^Total including VAT$/, /^-[0-9.]+,[0-9]{2}.€$/);
+        assertPriceBreakdownContains(/^\s*Total including VAT\s*$/, /^\s*-€[0-9,]+.[0-9]{2}\s*$/);
     });
 
     it('@base @order: can delete items', () => {
@@ -294,7 +293,7 @@ describe('Order: Read order', () => {
         });
     });
 
-    it.skip('@base @order: can edit existing line items', () => {
+    it('@base @order: can edit existing line items', () => {
         const page = new OrderPageObject();
 
         navigateToOrder(page);
@@ -302,7 +301,7 @@ describe('Order: Read order', () => {
         cy.get('.sw-order-detail-base__line-item-grid-card').scrollIntoView();
 
         // enter edit state
-        cy.get('.sw-data-grid__row--0 > .sw-data-grid__cell--label').dblclick().click();
+        cy.get('.sw-data-grid__row--0 > .sw-data-grid__cell--unitPrice').dblclick().click();
 
         // change item price ...
         cy.get('#sw-field--item-priceDefinition-price').clear().type('1337');
@@ -325,10 +324,13 @@ describe('Order: Read order', () => {
         });
 
         // check that the changes have been persisted
-        cy.get('.sw-data-grid__cell--unitPrice').contains(/1\.337,00.€/);
-        cy.get('.sw-data-grid__cell--quantity').contains('10');
-        cy.get('.sw-data-grid__cell--price-taxRules\\[0\\]').contains(/10.%/);
+        // currency and formatting independently regex for the price
+        cy.get('.sw-data-grid__cell--unitPrice').contains(/1[,.]?337/);
 
-        assertPriceBreakdownContains(/^plus 10% VAT$/, /121,55.€/);
+        cy.get('.sw-data-grid__cell--quantity').contains('10');
+        cy.get('.sw-data-grid__cell--price-taxRules\\[0\\]').contains(/10\s%/);
+
+        // currency and formatting independently regex for the price
+        assertPriceBreakdownContains(/^\s*plus 10% VAT\s*$/, /1[,.]?215[.,]45/);
     });
 });

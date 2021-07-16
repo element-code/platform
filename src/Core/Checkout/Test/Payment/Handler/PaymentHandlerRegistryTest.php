@@ -17,26 +17,18 @@ use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
-use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Test\App\GuzzleTestClientBehaviour;
 
 class PaymentHandlerRegistryTest extends TestCase
 {
     use GuzzleTestClientBehaviour;
 
-    /**
-     * @var PaymentHandlerRegistry
-     */
-    private $paymentHandlerRegistry;
+    private PaymentHandlerRegistry $paymentHandlerRegistry;
 
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $paymentMethodRepository;
+    private EntityRepositoryInterface $paymentMethodRepository;
 
     public function setUp(): void
     {
-        Feature::skipTestIfInActive('FEATURE_NEXT_14357', $this);
         $this->paymentMethodRepository = $this->getContainer()->get('payment_method.repository');
         $this->paymentHandlerRegistry = $this->getContainer()->get(PaymentHandlerRegistry::class);
 
@@ -47,6 +39,8 @@ class PaymentHandlerRegistryTest extends TestCase
 
     /**
      * @dataProvider paymentMethodDataProvider
+     *
+     * @param class-string<AsynchronousPaymentHandlerInterface>|class-string<SynchronousPaymentHandlerInterface> $handlerClass
      */
     public function testGetHandler(string $handlerName, string $handlerClass): void
     {
@@ -76,7 +70,7 @@ class PaymentHandlerRegistryTest extends TestCase
     {
         $paymentMethod = $this->getPaymentMethod($handlerName);
         $handler = $this->paymentHandlerRegistry->getSyncHandlerForPaymentMethod($paymentMethod);
-        if (!$isAsync) {
+        if ($isAsync === false) {
             static::assertInstanceOf(SynchronousPaymentHandlerInterface::class, $handler);
         } else {
             static::assertNull($handler);
@@ -94,7 +88,7 @@ class PaymentHandlerRegistryTest extends TestCase
         ];
     }
 
-    private function getPaymentMethod(string $handler): ?PaymentMethodEntity
+    private function getPaymentMethod(string $handler): PaymentMethodEntity
     {
         $criteria = new Criteria();
         $criteria->addFilter(new EqualsFilter('handlerIdentifier', $handler));

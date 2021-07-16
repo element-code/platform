@@ -10,14 +10,8 @@ Component.register('sw-settings-currency-list', {
 
     mixins: [
         Mixin.getByName('listing'),
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
-
-    metaInfo() {
-        return {
-            title: this.$createTitle()
-        };
-    },
 
     data() {
         return {
@@ -27,20 +21,26 @@ Component.register('sw-settings-currency-list', {
             isLoading: false,
             sortDirection: 'ASC',
             naturalSorting: true,
-            showDeleteModal: false
+            showDeleteModal: false,
+        };
+    },
+
+    metaInfo() {
+        return {
+            title: this.$createTitle(),
         };
     },
 
     computed: {
         currencyRepository() {
             return this.repositoryFactory.create('currency');
-        }
+        },
     },
 
     methods: {
         metaInfo() {
             return {
-                title: this.$createTitle()
+                title: this.$createTitle(),
             };
         },
 
@@ -52,7 +52,7 @@ Component.register('sw-settings-currency-list', {
             criteria.setTerm(this.term);
             criteria.addSorting(Criteria.sort(this.sortBy, this.sortDirection, this.naturalSorting));
 
-            this.currencyRepository.search(criteria, Shopware.Context.api).then((items) => {
+            this.currencyRepository.search(criteria).then((items) => {
                 this.total = items.total;
                 this.currency = items;
                 this.isLoading = false;
@@ -71,12 +71,12 @@ Component.register('sw-settings-currency-list', {
         onInlineEditSave(promise, currency) {
             promise.then(() => {
                 this.createNotificationSuccess({
-                    message: this.$tc('sw-settings-currency.detail.messageSaveSuccess', 0, { name: currency.name })
+                    message: this.$tc('sw-settings-currency.detail.messageSaveSuccess', 0, { name: currency.name }),
                 });
             }).catch(() => {
                 this.getList();
                 this.createNotificationError({
-                    message: this.$tc('sw-settings-currency.detail.messageSaveError')
+                    message: this.$tc('sw-settings-currency.detail.messageSaveError'),
                 });
             });
         },
@@ -92,7 +92,7 @@ Component.register('sw-settings-currency-list', {
         onConfirmDelete(id) {
             this.showDeleteModal = false;
 
-            return this.currencyRepository.delete(id, Shopware.Context.api).then(() => {
+            return this.currencyRepository.delete(id).then(() => {
                 this.getList();
             });
         },
@@ -106,20 +106,20 @@ Component.register('sw-settings-currency-list', {
                 label: 'sw-settings-currency.list.columnName',
                 routerLink: 'sw.settings.currency.detail',
                 width: '250px',
-                primary: true
+                primary: true,
             }, {
                 property: 'shortName',
                 inlineEdit: 'string',
-                label: 'sw-settings-currency.list.columnShortName'
+                label: 'sw-settings-currency.list.columnShortName',
             }, {
                 property: 'symbol',
                 inlineEdit: 'string',
-                label: 'sw-settings-currency.list.columnSymbol'
+                label: 'sw-settings-currency.list.columnSymbol',
             }, {
                 property: 'factor',
                 inlineEdit: 'string',
-                label: 'sw-settings-currency.list.columnFactor'
+                label: 'sw-settings-currency.list.columnFactor',
             }];
-        }
-    }
+        },
+    },
 });

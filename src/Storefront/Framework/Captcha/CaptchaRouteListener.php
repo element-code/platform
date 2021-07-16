@@ -3,6 +3,10 @@
 namespace Shopware\Storefront\Framework\Captcha;
 
 use Shopware\Core\Framework\Routing\KernelListenerPriorities;
+use Shopware\Core\PlatformRequest;
+use Shopware\Core\System\SalesChannel\SalesChannelContext;
+use Shopware\Core\System\SystemConfig\SystemConfigService;
+use Shopware\Storefront\Controller\ErrorController;
 use Shopware\Storefront\Framework\Captcha\Annotation\Captcha as CaptchaAnnotation;
 use Shopware\Storefront\Framework\Captcha\Exception\CaptchaInvalidException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -12,19 +16,28 @@ use Symfony\Component\HttpKernel\KernelEvents;
 class CaptchaRouteListener implements EventSubscriberInterface
 {
     /**
-     * @var iterable|AbstractCaptcha[]
+     * @var iterable<AbstractCaptcha>
      */
-    private $captchas;
+    private iterable $captchas;
 
-    public function __construct(iterable $captchas)
-    {
+    private ErrorController $errorController;
+
+    private SystemConfigService $systemConfigService;
+
+    public function __construct(
+        iterable $captchas,
+        ErrorController $errorController,
+        SystemConfigService $systemConfigService
+    ) {
         $this->captchas = $captchas;
+        $this->errorController = $errorController;
+        $this->systemConfigService = $systemConfigService;
     }
 
     /**
      * {@inheritdoc}
      */
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             KernelEvents::CONTROLLER => [
@@ -46,11 +59,34 @@ class CaptchaRouteListener implements EventSubscriberInterface
             return;
         }
 
+        /** @var SalesChannelContext|null $context */
+        $context = $event->getRequest()->get(PlatformRequest::ATTRIBUTE_SALES_CHANNEL_CONTEXT_OBJECT);
+
+        $salesChannelId = $context ? $context->getSalesChannelId() : null;
+
+        $activeCaptchas = (array) ($this->systemConfigService->get('core.basicInformation.activeCaptchasV2', $salesChannelId) ?? []);
+
         foreach ($this->captchas as $captcha) {
+            $captchaConfig = $activeCaptchas[$captcha->getName()] ?? [];
+            $request = $event->getRequest();
             if (
-                $captcha->supports($event->getRequest()) && !$captcha->isValid($event->getRequest())
+                $captcha->supports($request, $captchaConfig) && !$captcha->isValid($request, $captchaConfig)
             ) {
-                throw new CaptchaInvalidException($captcha);
+                if ($captcha->shouldBreak()) {
+                    throw new CaptchaInvalidException($captcha);
+                }
+
+                $violations = $captcha->getViolations();
+
+                $event->setController(function () use (
+                    $violations,
+                    $request
+                ) {
+                    return $this->errorController->onCaptchaFailure($violations, $request);
+                });
+
+                // Return on first invalid captcha
+                return;
             }
         }
     }

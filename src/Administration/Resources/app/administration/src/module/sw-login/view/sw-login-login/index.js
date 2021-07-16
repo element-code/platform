@@ -9,13 +9,13 @@ Component.register('sw-login-login', {
     inject: ['loginService', 'userService', 'licenseViolationService'],
 
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     data() {
         return {
             username: '',
-            password: ''
+            password: '',
         };
     },
 
@@ -80,7 +80,7 @@ Component.register('sw-login-login', {
                 return;
             }
 
-            if (previousRoute && previousRoute.fullPath) {
+            if (previousRoute?.fullPath) {
                 this.$router.push(previousRoute.fullPath);
                 return;
             }
@@ -102,7 +102,7 @@ Component.register('sw-login-login', {
         createNotificationFromResponse(response) {
             if (!response.response) {
                 this.createNotificationError({
-                    message: this.$tc('sw-login.index.messageGeneralRequestError')
+                    message: this.$tc('sw-login.index.messageGeneralRequestError'),
                 });
                 return;
             }
@@ -111,14 +111,14 @@ Component.register('sw-login-login', {
             let error = response.response.data.errors;
             error = error.length > 1 ? error : error[0];
 
-            if (error.code && error.code.length) {
+            if (error.code?.length) {
                 const { message, title } = getErrorCode(parseInt(error.code, 10));
 
                 this.createNotificationError({
                     title: this.$tc(title),
-                    message: this.$tc(message, 0, { url })
+                    message: this.$tc(message, 0, { url }),
                 });
             }
-        }
-    }
+        },
+    },
 });

@@ -8,21 +8,21 @@ const { EntityCollection, Criteria } = Shopware.Data;
 Shopware.Component.register('sw-cms-layout-assignment-modal', {
     template,
 
+    inject: [
+        'systemConfigApiService',
+        'acl',
+    ],
+
+    mixins: [
+        Shopware.Mixin.getByName('notification'),
+    ],
+
     props: {
         page: {
             type: Object,
-            required: true
-        }
+            required: true,
+        },
     },
-
-    mixins: [
-        Shopware.Mixin.getByName('notification')
-    ],
-
-    inject: [
-        'systemConfigApiService',
-        'acl'
-    ],
 
     data() {
         return {
@@ -45,12 +45,8 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
             hasCategoriesWithAssignedLayouts: false,
             hasProductsWithAssignedLayouts: false,
             hasLandingPagesWithAssignedLayouts: false,
-            previousProducts: null
+            previousProducts: null,
         };
-    },
-
-    created() {
-        this.createdComponent();
     },
 
     computed: {
@@ -62,40 +58,40 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
             return [
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.tosPage'),
-                    value: 'core.basicInformation.tosPage'
+                    value: 'core.basicInformation.tosPage',
                 },
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.revocationPage'),
-                    value: 'core.basicInformation.revocationPage'
+                    value: 'core.basicInformation.revocationPage',
                 },
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.shippingPaymentInfoPage'),
-                    value: 'core.basicInformation.shippingPaymentInfoPage'
+                    value: 'core.basicInformation.shippingPaymentInfoPage',
                 },
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.privacyPage'),
-                    value: 'core.basicInformation.privacyPage'
+                    value: 'core.basicInformation.privacyPage',
                 },
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.imprintPage'),
-                    value: 'core.basicInformation.imprintPage'
+                    value: 'core.basicInformation.imprintPage',
                 },
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.404Page'),
-                    value: 'core.basicInformation.404Page'
+                    value: 'core.basicInformation.404Page',
                 },
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.maintenancePage'),
-                    value: 'core.basicInformation.maintenancePage'
+                    value: 'core.basicInformation.maintenancePage',
                 },
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.contactPage'),
-                    value: 'core.basicInformation.contactPage'
+                    value: 'core.basicInformation.contactPage',
                 },
                 {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPages.newsletterPage'),
-                    value: 'core.basicInformation.newsletterPage'
-                }
+                    value: 'core.basicInformation.newsletterPage',
+                },
             ];
         },
 
@@ -106,13 +102,13 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.products.columnNameLabel'),
                     dataIndex: 'name',
                     routerLink: 'sw.product.detail',
-                    sortable: false
+                    sortable: false,
                 }, {
                     property: 'manufacturer.name',
                     label: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.products.columnManufacturerLabel'),
                     routerLink: 'sw.manufacturer.detail',
-                    sortable: false
-                }
+                    sortable: false,
+                },
             ];
         },
 
@@ -127,7 +123,11 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
 
         isProductDetailPage() {
             return this.page.type === 'product_detail';
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -192,7 +192,7 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
                 .batchSave(shopPages)
                 .catch(() => {
                     this.createNotificationError({
-                        message: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPagesSaveError')
+                        message: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPagesSaveError'),
                     });
                 });
         },
@@ -232,7 +232,7 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
                     this.previousShopPages = cloneDeep(this.selectedShopPages);
                 }).catch(() => {
                     this.createNotificationError({
-                        message: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPagesLoadError')
+                        message: this.$tc('sw-cms.components.cmsLayoutAssignmentModal.shopPagesLoadError'),
                     });
                 }).finally(() => {
                     this.isLoading = false;
@@ -377,7 +377,7 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
                 this.page.categories.entity,
                 Shopware.Context.api,
                 null,
-                this.previousCategories
+                this.previousCategories,
             );
         },
 
@@ -387,7 +387,7 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
                 this.page.landingPages.entity,
                 Shopware.Context.api,
                 null,
-                this.previousLandingPages
+                this.previousLandingPages,
             );
         },
 
@@ -405,7 +405,7 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
                 this.page.products.entity,
                 Shopware.Context.api,
                 null,
-                this.previousProducts
+                this.previousProducts,
             );
         },
 
@@ -438,6 +438,6 @@ Shopware.Component.register('sw-cms-layout-assignment-modal', {
 
         onInputSalesChannelSelect() {
             this.loadSystemConfig();
-        }
-    }
+        },
+    },
 });

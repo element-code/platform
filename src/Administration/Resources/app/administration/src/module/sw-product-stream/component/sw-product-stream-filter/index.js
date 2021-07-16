@@ -11,7 +11,7 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
         'insertNodeIntoTree',
         'removeNodeFromTree',
         'productCustomFields',
-        'acl'
+        'acl',
     ],
 
     computed: {
@@ -29,6 +29,10 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
                     return [];
                 }
 
+                if (this.isCustomField(this.actualCondition.field)) {
+                    return [this.actualCondition.field];
+                }
+
                 return this.actualCondition.field.split('.');
             },
             set(fields) {
@@ -44,7 +48,7 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
                 }
 
                 this.actualCondition.field = concatenation;
-            }
+            },
         },
 
         fieldDefinitions() {
@@ -71,7 +75,7 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
             if (this.fieldDefinitions.length > this.fields.length) {
                 return {
                     fieldName: null,
-                    definition: EntityDefinition.get('product')
+                    definition: EntityDefinition.get('product'),
                 };
             }
 
@@ -80,9 +84,9 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
 
             return {
                 fieldName,
-                definition
+                definition,
             };
-        }
+        },
     },
 
     methods: {
@@ -98,7 +102,7 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
             this.fields = fields;
         },
 
-        changeType({ type, parameters }) {
+        handleWrapForTypeNull(type, parameters) {
             if (type === null) {
                 if (this.condition.type === 'not') {
                     this.unwrapNot(this.condition, null);
@@ -109,20 +113,35 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
                 this.condition.type !== 'not'
             ) {
                 this.wrapInNot(this.condition, type, parameters);
-                return;
+                return false;
             }
 
             if (this.condition.type === 'not' &&
                 !this.conditionDataProviderService.isNegatedType(type)
             ) {
                 this.unwrapNot(this.condition, type, parameters);
-                return;
+                return false;
             }
 
-            // negation type stays the same
             this.actualCondition.type = type;
-            this.actualCondition.value = null;
-            this.actualCondition.parameters = parameters;
+
+            return true;
+        },
+
+        changeBooleanValue({ type, value }) {
+            this.handleWrapForTypeNull(type);
+            if (this.condition.type === 'not') {
+                this.condition.queries[0].value = '1';
+            }
+
+            this.condition.value = value;
+        },
+
+        changeType({ type, parameters }) {
+            if (this.handleWrapForTypeNull(type, parameters)) {
+                this.actualCondition.parameters = parameters;
+                this.actualCondition.value = null;
+            }
         },
 
         wrapInNot(condition, newType, parameters) {
@@ -140,8 +159,8 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
                     field: null,
                     operator: null,
                     value: null,
-                    parameters: null
-                }
+                    parameters: null,
+                },
             );
         },
 
@@ -164,8 +183,14 @@ Component.extend('sw-product-stream-filter', 'sw-condition-base', {
                 message: this.$tc('sw-privileges.tooltip.warning'),
                 appearance: 'dark',
                 showOnDisabledElements,
-                disabled: this.acl.can(role)
+                disabled: this.acl.can(role),
             };
-        }
-    }
+        },
+
+        isCustomField(fieldName) {
+            const strippedFieldName = fieldName.replace(/customFields\./, '');
+
+            return Object.keys(this.productCustomFields).includes(strippedFieldName);
+        },
+    },
 });

@@ -12,15 +12,15 @@ Component.register('sw-product-clone-modal', {
     props: {
         product: {
             type: Object,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
         return {
             cloningVariants: false,
             cloneMaxProgress: 0,
-            cloneProgress: 0
+            cloneProgress: 0,
         };
     },
 
@@ -31,7 +31,7 @@ Component.register('sw-product-clone-modal', {
 
         repository() {
             return this.repositoryFactory.create('product');
-        }
+        },
     },
 
     created() {
@@ -57,11 +57,11 @@ Component.register('sw-product-clone-modal', {
                     productNumber: number.number,
                     name: `${this.product.name} ${this.$tc('sw-product.general.copy')}`,
                     active: false,
-                    mainVariantId: null
-                }
+                    mainVariantId: null,
+                },
             };
 
-            await this.repository.save(this.product, Shopware.Context.api);
+            await this.repository.save(this.product);
             const clone = await this.repository.clone(this.product.id, Shopware.Context.api, behavior);
 
             return { id: clone.id, productNumber: number.number };
@@ -89,11 +89,11 @@ Component.register('sw-product-clone-modal', {
         getChildrenIds() {
             const criteria = new Criteria(1, null);
             criteria.addFilter(
-                Criteria.equals('parentId', this.product.id)
+                Criteria.equals('parentId', this.product.id),
             );
 
             return this.repository
-                .searchIds(criteria, Shopware.Context.api)
+                .searchIds(criteria)
                 .then((response) => {
                     return response.data;
                 });
@@ -109,9 +109,9 @@ Component.register('sw-product-clone-modal', {
             const behavior = {
                 overwrites: {
                     parentId: duplicate.id,
-                    productNumber: `${duplicate.productNumber}.${this.cloneProgress}`
+                    productNumber: `${duplicate.productNumber}.${this.cloneProgress}`,
                 },
-                cloneChildren: false
+                cloneChildren: false,
             };
 
             this.repository
@@ -120,6 +120,6 @@ Component.register('sw-product-clone-modal', {
                     this.cloneProgress += 1;
                     this.duplicateVariant(duplicate, ids, callback);
                 });
-        }
-    }
+        },
+    },
 });

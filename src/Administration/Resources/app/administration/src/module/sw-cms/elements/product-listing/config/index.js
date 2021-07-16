@@ -10,7 +10,7 @@ Component.register('sw-cms-el-config-product-listing', {
     inject: ['repositoryFactory', 'feature'],
 
     mixins: [
-        Mixin.getByName('cms-element')
+        Mixin.getByName('cms-element'),
     ],
 
     data() {
@@ -19,29 +19,8 @@ Component.register('sw-cms-el-config-product-listing', {
             defaultSorting: {},
             filters: [],
             filterPropertiesTerm: '',
-            properties: []
+            properties: [],
         };
-    },
-
-    created() {
-        this.createdComponent();
-    },
-
-    watch: {
-        productSortings: {
-            handler() {
-                this.element.config.availableSortings.value = this.transformProductSortings();
-            },
-            deep: true
-        },
-
-        defaultSorting() {
-            if (Object.keys(this.defaultSorting).length === 0) {
-                this.element.config.defaultSorting.value = '';
-            } else {
-                this.element.config.defaultSorting.value = this.defaultSorting.key;
-            }
-        }
     },
 
     computed: {
@@ -75,6 +54,7 @@ Component.register('sw-cms-el-config-product-listing', {
 
             criteria.addSorting(Criteria.sort('name', 'ASC', false));
             criteria.addFilter(Criteria.equals('filterable', true));
+            criteria.setLimit(null);
 
             return criteria;
         },
@@ -93,7 +73,7 @@ Component.register('sw-cms-el-config-product-listing', {
             if (this.defaultSorting.id) {
                 criteria.addFilter(Criteria.not(
                     'AND',
-                    [Criteria.equals('id', this.defaultSorting.id)]
+                    [Criteria.equals('id', this.defaultSorting.id)],
                 ));
             }
 
@@ -112,7 +92,7 @@ Component.register('sw-cms-el-config-product-listing', {
             },
             set(value) {
                 this.updateFilters('manufacturer-filter', value);
-            }
+            },
         },
 
         filterByRating: {
@@ -121,7 +101,7 @@ Component.register('sw-cms-el-config-product-listing', {
             },
             set(value) {
                 this.updateFilters('rating-filter', value);
-            }
+            },
         },
 
         filterByPrice: {
@@ -130,7 +110,7 @@ Component.register('sw-cms-el-config-product-listing', {
             },
             set(value) {
                 this.updateFilters('price-filter', value);
-            }
+            },
         },
 
         filterByFreeShipping: {
@@ -139,7 +119,7 @@ Component.register('sw-cms-el-config-product-listing', {
             },
             set(value) {
                 this.updateFilters('shipping-free-filter', value);
-            }
+            },
         },
 
         filterByProperties: {
@@ -149,7 +129,7 @@ Component.register('sw-cms-el-config-product-listing', {
             set(value) {
                 this.updateFilters('property-filter', !value);
                 this.sortProperties(this.properties);
-            }
+            },
         },
 
         displayedProperties() {
@@ -171,7 +151,28 @@ Component.register('sw-cms-el-config-product-listing', {
 
         showPropertySelection() {
             return !this.properties.length < 1;
-        }
+        },
+    },
+
+    watch: {
+        productSortings: {
+            handler() {
+                this.element.config.availableSortings.value = this.transformProductSortings();
+            },
+            deep: true,
+        },
+
+        defaultSorting() {
+            if (Object.keys(this.defaultSorting).length === 0) {
+                this.element.config.defaultSorting.value = '';
+            } else {
+                this.element.config.defaultSorting.value = this.defaultSorting.key;
+            }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -183,7 +184,7 @@ Component.register('sw-cms-el-config-product-listing', {
                     this.productSortingRepository.route,
                     this.productSortingRepository.schema.entity,
                     Shopware.Context.api,
-                    this.productSortingsCriteria
+                    this.productSortingsCriteria,
                 );
             } else {
                 this.fetchProductSortings().then(productSortings => {
@@ -197,7 +198,7 @@ Component.register('sw-cms-el-config-product-listing', {
         },
 
         fetchProductSortings() {
-            return this.productSortingRepository.search(this.productSortingsCriteria, Shopware.Context.api)
+            return this.productSortingRepository.search(this.productSortingsCriteria)
                 .then(productSortings => this.updateValuesFromConfig(productSortings));
         },
 
@@ -236,7 +237,7 @@ Component.register('sw-cms-el-config-product-listing', {
 
                 criteria.addFilter(Criteria.equals('key', defaultSortingKey));
 
-                this.productSortingRepository.search(criteria, Shopware.Context.api)
+                this.productSortingRepository.search(criteria)
                     .then(response => {
                         this.defaultSorting = response.first();
                     });
@@ -244,7 +245,7 @@ Component.register('sw-cms-el-config-product-listing', {
         },
 
         loadFilterableProperties() {
-            return this.propertyRepository.search(this.propertyCriteria, Shopware.Context.api)
+            return this.propertyRepository.search(this.propertyCriteria)
                 .then(properties => {
                     this.properties = this.sortProperties(properties);
                 });
@@ -356,6 +357,6 @@ Component.register('sw-cms-el-config-product-listing', {
 
                     return [...acc, current];
                 }, []);
-        }
-    }
+        },
+    },
 });

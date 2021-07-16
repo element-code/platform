@@ -26,12 +26,17 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  */
 class CachedShippingMethodRoute extends AbstractShippingMethodRoute
 {
+    public const ALL_TAG = 'shipping-method-route';
+
     private AbstractShippingMethodRoute $decorated;
 
     private TagAwareAdapterInterface $cache;
 
     private EntityCacheKeyGenerator $generator;
 
+    /**
+     * @var AbstractCacheTracer<ShippingMethodRouteResponse>
+     */
     private AbstractCacheTracer $tracer;
 
     private array $states;
@@ -40,6 +45,9 @@ class CachedShippingMethodRoute extends AbstractShippingMethodRoute
 
     private LoggerInterface $logger;
 
+    /**
+     * @param AbstractCacheTracer<ShippingMethodRouteResponse> $tracer
+     */
     public function __construct(
         AbstractShippingMethodRoute $decorated,
         TagAwareAdapterInterface $cache,
@@ -68,15 +76,16 @@ class CachedShippingMethodRoute extends AbstractShippingMethodRoute
      * @Entity("shipping_method")
      * @OA\Post(
      *      path="/shipping-method",
-     *      summary="Loads all available shipping methods",
+     *      summary="Fetch shipping methods",
+     *      description="Perform a filtered search for shipping methods.",
      *      operationId="readShippingMethod",
-     *      tags={"Store API", "Shipping Method"},
+     *      tags={"Store API", "Payment & Shipping"},
      *      @OA\Parameter(name="Api-Basic-Parameters"),
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              @OA\Property(property="onlyAvailable", description="List only available", type="boolean")
-     *          )
+     *      @OA\Parameter(
+     *          name="onlyAvailable",
+     *          description="List only available shipping methods. This filters shipping methods methods which can not be used in the actual context because of their availability rule.",
+     *          @OA\Schema(type="boolean"),
+     *          in="query"
      *      ),
      *      @OA\Response(
      *          response="200",
@@ -95,7 +104,7 @@ class CachedShippingMethodRoute extends AbstractShippingMethodRoute
      *              @OA\Property(
      *                  property="elements",
      *                  type="array",
-     *                  @OA\Items(ref="#/components/schemas/shipping_method_flat")
+     *                  @OA\Items(ref="#/components/schemas/ShippingMethod")
      *              )
      *          )
      *     )
@@ -165,7 +174,7 @@ class CachedShippingMethodRoute extends AbstractShippingMethodRoute
     {
         $tags = array_merge(
             $this->tracer->get(self::buildName($context->getSalesChannelId())),
-            [self::buildName($context->getSalesChannelId())]
+            [self::buildName($context->getSalesChannelId()), self::ALL_TAG]
         );
 
         $event = new ShippingMethodRouteCacheTagsEvent($tags, $request, $response, $context, $criteria);

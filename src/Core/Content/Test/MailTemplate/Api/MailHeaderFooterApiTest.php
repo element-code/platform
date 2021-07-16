@@ -34,10 +34,7 @@ class MailHeaderFooterApiTest extends TestCase
         $this->repository = $this->getContainer()->get('mail_header_footer.repository');
         $this->connection = $this->getContainer()->get(Connection::class);
         $this->context = Context::createDefaultContext();
-    }
 
-    protected function tearDown(): void
-    {
         try {
             $this->connection->executeUpdate('DELETE FROM mail_header_footer');
         } catch (\Exception $e) {
@@ -58,7 +55,7 @@ class MailHeaderFooterApiTest extends TestCase
 
         // do API calls
         foreach ($data as $entry) {
-            $this->getBrowser()->request('POST', $this->prepareRoute(), $entry);
+            $this->getBrowser()->request('POST', $this->prepareRoute(), [], [], [], json_encode($entry));
             $response = $this->getBrowser()->getResponse();
             static::assertSame(Response::HTTP_NO_CONTENT, $response->getStatusCode(), $response->getContent());
         }
@@ -145,9 +142,9 @@ class MailHeaderFooterApiTest extends TestCase
             $expextData[$id] = $data[$idx];
             unset($data[$idx]['id']);
 
-            $this->getBrowser()->request('PATCH', $this->prepareRoute() . $id, $data[$idx], [], [
+            $this->getBrowser()->request('PATCH', $this->prepareRoute() . $id, [], [], [
                 'HTTP_ACCEPT' => 'application/json',
-            ]);
+            ], json_encode($data[$idx]));
             $response = $this->getBrowser()->getResponse();
             static::assertEquals(Response::HTTP_NO_CONTENT, $response->getStatusCode());
         }

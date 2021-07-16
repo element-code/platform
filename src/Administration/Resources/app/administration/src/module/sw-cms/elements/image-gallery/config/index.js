@@ -1,18 +1,18 @@
 import template from './sw-cms-el-config-image-gallery.html.twig';
 import './sw-cms-el-config-image-gallery.scss';
 
-const { Component, Mixin, Utils } = Shopware;
+const { Component, Mixin } = Shopware;
 const { cloneDeep } = Shopware.Utils.object;
 const Criteria = Shopware.Data.Criteria;
 
 Component.register('sw-cms-el-config-image-gallery', {
     template,
 
-    mixins: [
-        Mixin.getByName('cms-element')
-    ],
-
     inject: ['repositoryFactory', 'feature'],
+
+    mixins: [
+        Mixin.getByName('cms-element'),
+    ],
 
     data() {
         return {
@@ -20,7 +20,7 @@ Component.register('sw-cms-el-config-image-gallery', {
             initialFolderId: null,
             enitiy: this.element,
             mediaItems: [],
-            columnWidth: '100px'
+            columnWidth: '100px',
         };
     },
 
@@ -46,7 +46,7 @@ Component.register('sw-cms-el-config-image-gallery', {
         },
 
         sliderItemsConfigValue() {
-            return Utils.get(this.element, 'config.sliderItems.value');
+            return this.element?.config?.sliderItems?.value;
         },
 
         gridAutoRows() {
@@ -54,8 +54,8 @@ Component.register('sw-cms-el-config-image-gallery', {
         },
 
         isProductPage() {
-            return Utils.get(this.cmsPageState, 'currentPage.type', '') === 'product_detail';
-        }
+            return (this.cmsPageState?.currentPage?.type ?? '') === 'product_detail';
+        },
     },
 
     watch: {
@@ -69,7 +69,7 @@ Component.register('sw-cms-el-config-image-gallery', {
                 return;
             }
 
-            const isSourceMapped = Utils.get(this.element, 'config.sliderItems.source') === 'mapped';
+            const isSourceMapped = this.element?.config?.sliderItems?.source === 'mapped';
             const isSliderLengthValid = value && value.length === this.sliderItems.length;
 
             if (isSourceMapped || isSliderLengthValid || !this.sliderItems.length) {
@@ -85,10 +85,10 @@ Component.register('sw-cms-el-config-image-gallery', {
                     mediaId: item.media.id,
                     mediaUrl: item.media.url,
                     newTab: item.newTab,
-                    url: item.url
+                    url: item.url,
                 };
             });
-        }
+        },
     },
 
     created() {
@@ -113,7 +113,7 @@ Component.register('sw-cms-el-config-image-gallery', {
                 const criteria = new Criteria();
                 criteria.setIds(mediaIds);
 
-                const searchResult = await this.mediaRepository.search(criteria, Shopware.Context.api);
+                const searchResult = await this.mediaRepository.search(criteria);
                 this.mediaItems = mediaIds.map((mediaId) => {
                     return searchResult.get(mediaId);
                 });
@@ -128,8 +128,8 @@ Component.register('sw-cms-el-config-image-gallery', {
 
         initConfig() {
             if (!this.isProductPage
-                || Utils.get(this.element, 'translated.config')
-                || Utils.get(this.element, 'data.sliderItems')) {
+                || this.element?.translated?.config
+                || this.element?.data?.sliderItems) {
                 return;
             }
 
@@ -168,7 +168,7 @@ Component.register('sw-cms-el-config-image-gallery', {
                 mediaUrl: mediaItem.url,
                 mediaId: mediaItem.id,
                 url: null,
-                newTab: false
+                newTab: false,
             });
 
             this.mediaItems.push(mediaItem);
@@ -180,11 +180,11 @@ Component.register('sw-cms-el-config-image-gallery', {
             const key = mediaItem.id;
             this.element.config.sliderItems.value =
                 this.element.config.sliderItems.value.filter(
-                    (item, i) => (item.mediaId !== key || i !== index)
+                    (item, i) => (item.mediaId !== key || i !== index),
                 );
 
             this.mediaItems = this.mediaItems.filter(
-                (item, i) => (item.id !== key || i !== index)
+                (item, i) => (item.id !== key || i !== index),
             );
 
             this.updateMediaDataValue();
@@ -197,7 +197,7 @@ Component.register('sw-cms-el-config-image-gallery', {
                     mediaUrl: item.url,
                     mediaId: item.id,
                     url: null,
-                    newTab: false
+                    newTab: false,
                 });
             });
 
@@ -242,6 +242,6 @@ Component.register('sw-cms-el-config-image-gallery', {
 
         emitUpdateEl() {
             this.$emit('element-update', this.element);
-        }
-    }
+        },
+    },
 });

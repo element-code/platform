@@ -4,7 +4,9 @@ namespace Shopware\Core\Framework\Test\TestCaseBase;
 
 use Composer\Autoload\ClassLoader;
 use Doctrine\DBAL\Connection;
+use Shopware\Core\DevOps\Environment\EnvironmentHelper;
 use Shopware\Core\Framework\Plugin\KernelPluginLoader\DbalKernelPluginLoader;
+use Shopware\Core\Framework\Plugin\KernelPluginLoader\StaticKernelPluginLoader;
 use Shopware\Core\Framework\Test\Filesystem\Adapter\MemoryAdapterFactory;
 use Shopware\Core\Framework\Test\TestCaseHelper\TestBrowser;
 use Shopware\Core\Kernel;
@@ -98,7 +100,7 @@ class KernelLifecycleManager
         return static::$kernel;
     }
 
-    public static function createKernel(?string $kernelClass = null, bool $reuseConnection = true, string $cacheId = 'h8f3f0ee9c61829627676afd6294bb029'): KernelInterface
+    public static function createKernel(?string $kernelClass = null, bool $reuseConnection = true, string $cacheId = 'h8f3f0ee9c61829627676afd6294bb029', ?string $projectDir = null): KernelInterface
     {
         if ($kernelClass === null) {
             if (static::$class === null) {
@@ -108,44 +110,39 @@ class KernelLifecycleManager
             $kernelClass = static::$class;
         }
 
-        if (isset($_ENV['APP_ENV'])) {
-            $env = $_ENV['APP_ENV'];
-        } elseif (isset($_SERVER['APP_ENV'])) {
-            $env = $_SERVER['APP_ENV'];
-        } else {
-            $env = 'test';
-        }
-
-        if (isset($_ENV['APP_DEBUG'])) {
-            $debug = (bool) $_ENV['APP_DEBUG'];
-        } elseif (isset($_SERVER['APP_DEBUG'])) {
-            $debug = (bool) $_SERVER['APP_DEBUG'];
-        } else {
-            $debug = true;
-        }
+        $env = EnvironmentHelper::getVariable('APP_ENV', 'test');
+        $debug = (bool) EnvironmentHelper::getVariable('APP_DEBUG', true);
 
         if (self::$classLoader === null) {
             throw new \InvalidArgumentException('No class loader set. Please call KernelLifecycleManager::prepare');
         }
 
-        $existingConnection = null;
-        if ($reuseConnection) {
-            $existingConnection = self::$connection;
+        try {
+            $existingConnection = null;
+            if ($reuseConnection) {
+                $existingConnection = self::$connection;
 
-            try {
-                $existingConnection->fetchAll('SELECT 1');
-            } catch (\Throwable $e) {
-                // The connection is closed
-                $existingConnection = null;
+                try {
+                    $existingConnection->fetchAll('SELECT 1');
+                } catch (\Throwable $e) {
+                    // The connection is closed
+                    $existingConnection = null;
+                }
             }
-        }
-        if ($existingConnection === null) {
-            $existingConnection = self::$connection = $kernelClass::getConnection();
+            if ($existingConnection === null) {
+                $existingConnection = self::$connection = $kernelClass::getConnection();
+            }
+
+            // force connection to database
+            $existingConnection->fetchAll('SELECT 1');
+
+            $pluginLoader = new DbalKernelPluginLoader(self::$classLoader, null, $existingConnection);
+        } catch (\Throwable $e) {
+            // if we don't have database yet, we'll boot the kernel without plugins
+            $pluginLoader = new StaticKernelPluginLoader(self::$classLoader);
         }
 
-        $pluginLoader = new DbalKernelPluginLoader(self::$classLoader, null, $existingConnection);
-
-        return new $kernelClass($env, $debug, $pluginLoader, $cacheId, null, $existingConnection);
+        return new $kernelClass($env, $debug, $pluginLoader, $cacheId, null, $existingConnection, $projectDir);
     }
 
     /**
@@ -154,7 +151,7 @@ class KernelLifecycleManager
      */
     public static function getKernelClass(): string
     {
-        if (!isset($_SERVER['KERNEL_CLASS']) && !isset($_ENV['KERNEL_CLASS'])) {
+        if (!EnvironmentHelper::hasVariable('KERNEL_CLASS')) {
             throw new \LogicException(
                 sprintf(
                     'You must set the KERNEL_CLASS environment variable to the fully-qualified class name of your Kernel in phpunit.xml / phpunit.xml.dist or override the %1$s::createKernel() or %1$s::getKernelClass() method.',
@@ -163,7 +160,7 @@ class KernelLifecycleManager
             );
         }
 
-        if (!class_exists($class = $_ENV['KERNEL_CLASS'] ?? $_SERVER['KERNEL_CLASS'])) {
+        if (!class_exists($class = EnvironmentHelper::getVariable('KERNEL_CLASS'))) {
             throw new \RuntimeException(
                 sprintf(
                     'Class "%s" doesn\'t exist or cannot be autoloaded. Check that the KERNEL_CLASS value in phpunit.xml matches the fully-qualified class name of your Kernel or override the %s::createKernel() method.',

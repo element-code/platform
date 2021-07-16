@@ -12,8 +12,8 @@ Component.register('sw-customer-detail-order', {
     props: {
         customer: {
             type: Object,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
@@ -23,12 +23,8 @@ Component.register('sw-customer-detail-order', {
             orders: null,
             term: '',
             // todo after NEXT-2291: to be removed if new emptyState-Splashscreens are implemented
-            orderIcon: 'default-shopping-paper-bag'
+            orderIcon: 'default-shopping-paper-bag',
         };
-    },
-
-    created() {
-        this.createdComponent();
     },
 
     computed: {
@@ -44,7 +40,11 @@ Component.register('sw-customer-detail-order', {
             return this.term ?
                 this.$tc('sw-customer.detailOrder.emptySearchTitle') :
                 this.$tc('sw-customer.detailOrder.emptyTitle');
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -66,18 +66,18 @@ Component.register('sw-customer-detail-order', {
             return [{
                 property: 'orderNumber',
                 label: 'sw-customer.detailOrder.columnNumber',
-                align: 'center'
+                align: 'center',
             }, {
                 property: 'amountTotal',
                 label: 'sw-customer.detailOrder.columnAmount',
-                align: 'right'
+                align: 'right',
             }, {
                 property: 'stateMachineState.name',
-                label: 'sw-customer.detailOrder.columnOrderState'
+                label: 'sw-customer.detailOrder.columnOrderState',
             }, {
                 property: 'orderDateTime',
                 label: 'sw-customer.detailOrder.columnOrderDate',
-                align: 'center'
+                align: 'center',
             }];
         },
 
@@ -91,10 +91,10 @@ Component.register('sw-customer-detail-order', {
             criteria.addAssociation('stateMachineState')
                 .addAssociation('currency');
 
-            this.orderRepository.search(criteria, Shopware.Context.api).then((orders) => {
+            this.orderRepository.search(criteria).then((orders) => {
                 this.orders = orders;
                 this.isLoading = false;
             });
-        }
-    }
+        },
+    },
 });

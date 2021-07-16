@@ -12,12 +12,21 @@ Component.register('sw-settings-tax-rule-modal', {
     props: {
         tax: {
             type: Object,
-            required: true
+            required: true,
         },
         currentRule: {
             type: Object,
-            required: false
-        }
+            required: false,
+            default: null,
+        },
+    },
+
+    data() {
+        return {
+            showModal: false,
+            taxRule: null,
+            currentTaxRuleType: null,
+        };
     },
 
     computed: {
@@ -41,15 +50,7 @@ Component.register('sw-settings-tax-rule-modal', {
             return criteria;
         },
 
-        ...mapPropertyErrors('taxRule', ['taxRuleTypeId', 'countryId', 'taxRate'])
-    },
-
-    data() {
-        return {
-            showModal: false,
-            taxRule: null,
-            currentTaxRuleType: null
-        };
+        ...mapPropertyErrors('taxRule', ['taxRuleTypeId', 'countryId', 'taxRate']),
     },
 
     created() {
@@ -82,6 +83,6 @@ Component.register('sw-settings-tax-rule-modal', {
             }).catch(() => {
                 this.isLoading = false;
             });
-        }
-    }
+        },
+    },
 });

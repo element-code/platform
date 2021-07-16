@@ -8,11 +8,11 @@ const { Criteria } = Shopware.Data;
 Component.register('sw-product-stream-detail', {
     template,
 
-    inject: ['repositoryFactory', 'productStreamConditionService', 'acl'],
+    inject: ['repositoryFactory', 'productStreamConditionService', 'acl', 'customFieldDataProviderService'],
 
     provide() {
         return {
-            productCustomFields: this.productCustomFields
+            productCustomFields: this.productCustomFields,
         };
     },
 
@@ -29,20 +29,21 @@ Component.register('sw-product-stream-detail', {
     mixins: [
         Mixin.getByName('placeholder'),
         Mixin.getByName('notification'),
-        Mixin.getByName('discard-detail-page-changes')('productStream')
+        Mixin.getByName('discard-detail-page-changes')('productStream'),
+        Mixin.getByName('sw-inline-snippet'),
     ],
 
     shortcuts: {
         'SYSTEMKEY+S': 'onSave',
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     props: {
         productStreamId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     data() {
@@ -55,13 +56,14 @@ Component.register('sw-product-stream-detail', {
             deletedProductStreamFilters: [],
             productCustomFields: {},
             showModalPreview: false,
-            languageId: null
+            languageId: null,
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -81,7 +83,7 @@ Component.register('sw-product-stream-detail', {
 
             return this.repositoryFactory.create(
                 this.productStream.filters.entity,
-                this.productStream.filters.source
+                this.productStream.filters.source,
             );
         },
 
@@ -94,7 +96,7 @@ Component.register('sw-product-stream-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     appearance: 'dark',
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -102,14 +104,14 @@ Component.register('sw-product-stream-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
@@ -121,7 +123,11 @@ Component.register('sw-product-stream-detail', {
             return this.isSystemLanguage;
         },
 
-        ...mapPropertyErrors('productStream', ['name'])
+        ...mapPropertyErrors('productStream', ['name']),
+
+        showCustomFields() {
+            return this.productStream && this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
@@ -137,8 +143,8 @@ Component.register('sw-product-stream-detail', {
                 this.loadEntityData(this.productStreamId).then(() => {
                     this.isLoading = false;
                 });
-            }
-        }
+            },
+        },
     },
 
     created() {
@@ -149,12 +155,21 @@ Component.register('sw-product-stream-detail', {
         createdComponent() {
             this.languageId = Context.api.languageId;
             this.getProductCustomFields();
+            this.loadCustomFieldSets();
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('product_stream').then((sets) => {
+                this.customFieldSets = sets;
+            });
         },
 
         createProductStream() {
-            Context.api.languageId = Context.api.systemLanguageId;
-            this.productStream = this.productStreamRepository.create(Context.api);
-            this.productStreamFilters = this.productStream.filters;
+            this.getProductCustomFields().then(() => {
+                Context.api.languageId = Context.api.systemLanguageId;
+                this.productStream = this.productStreamRepository.create(Context.api);
+                this.productStreamFilters = this.productStream.filters;
+            });
         },
 
         loadEntityData(productStreamId) {
@@ -245,8 +260,8 @@ Component.register('sw-product-stream-detail', {
         showErrorNotification() {
             this.createNotificationError({
                 message: this.$tc(
-                    'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid'
-                )
+                    'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid',
+                ),
             });
         },
 
@@ -286,20 +301,24 @@ Component.register('sw-product-stream-detail', {
                 .addAssociation('customFields')
                 .addAssociation('relations');
 
-            this.customFieldSetRepository.search(customFieldsCriteria, Context.api).then((customFieldSets) => {
+            return this.customFieldSetRepository.search(customFieldsCriteria, Context.api).then((customFieldSets) => {
                 customFieldSets.forEach((customFieldSet) => {
                     const customFields = customFieldSet.customFields
                         .reduce((acc, customField) => {
                             acc[customField.name] = this.mapCustomFieldType({
                                 type: customField.type,
-                                value: customField.name,
-                                label: customField.name
+                                value: `customFields.${customField.name}`,
+                                label: this.getCustomFieldLabel(customField),
                             });
                             return acc;
                         }, {});
                     Object.assign(this.productCustomFields, customFields);
                 });
             });
+        },
+
+        getCustomFieldLabel(customField) {
+            return this.getInlineSnippet(customField.config.label) || customField.name;
         },
 
         mapCustomFieldType(customField) {
@@ -325,7 +344,7 @@ Component.register('sw-product-stream-detail', {
             this.productStreamFiltersTree = conditions;
             this.deletedProductStreamFilters = [
                 ...this.deletedProductStreamFilters,
-                ...deletedIds
+                ...deletedIds,
             ];
         },
 
@@ -335,8 +354,8 @@ Component.register('sw-product-stream-detail', {
                 message: this.$tc('sw-privileges.tooltip.warning'),
                 appearance: 'dark',
                 showOnDisabledElements,
-                disabled: this.acl.can(role)
+                disabled: this.acl.can(role),
             };
-        }
-    }
+        },
+    },
 });

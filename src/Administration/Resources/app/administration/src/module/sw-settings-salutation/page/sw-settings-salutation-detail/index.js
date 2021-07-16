@@ -9,20 +9,20 @@ const utils = Shopware.Utils;
 Component.register('sw-settings-salutation-detail', {
     template,
 
-    inject: ['repositoryFactory', 'acl'],
+    inject: ['repositoryFactory', 'acl', 'customFieldDataProviderService'],
 
     mixins: [
         Mixin.getByName('notification'),
         Mixin.getByName('placeholder'),
-        Mixin.getByName('discard-detail-page-changes')('salutation')
+        Mixin.getByName('discard-detail-page-changes')('salutation'),
     ],
 
     props: {
         salutationId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     shortcuts: {
@@ -30,10 +30,10 @@ Component.register('sw-settings-salutation-detail', {
             active() {
                 return this.allowSave;
             },
-            method: 'onSave'
+            method: 'onSave',
         },
 
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     data() {
@@ -43,13 +43,14 @@ Component.register('sw-settings-salutation-detail', {
             salutation: null,
             invalidKey: false,
             isKeyChecking: false,
-            isSaveSuccessful: false
+            isSaveSuccessful: false,
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -66,7 +67,7 @@ Component.register('sw-settings-salutation-detail', {
             return this.placeholder(
                 this.salutation,
                 'salutationKey',
-                this.$tc('sw-settings-salutation.detail.placeholderNewSalutation')
+                this.$tc('sw-settings-salutation.detail.placeholderNewSalutation'),
             );
         },
 
@@ -88,7 +89,7 @@ Component.register('sw-settings-salutation-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.allowSave,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -96,18 +97,22 @@ Component.register('sw-settings-salutation-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
-        ...mapPropertyErrors('salutation', ['displayName', 'letterName'])
+        ...mapPropertyErrors('salutation', ['displayName', 'letterName']),
+
+        showCustomFields() {
+            return this.salutation && this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
@@ -115,7 +120,7 @@ Component.register('sw-settings-salutation-detail', {
             if (!this.salutationId) {
                 this.createdComponent();
             }
-        }
+        },
     },
 
     created() {
@@ -126,16 +131,23 @@ Component.register('sw-settings-salutation-detail', {
         createdComponent() {
             this.isLoading = true;
             if (this.salutationId) {
-                this.salutationRepository.get(this.salutationId, Shopware.Context.api).then((salutation) => {
+                this.salutationRepository.get(this.salutationId).then((salutation) => {
                     this.salutation = salutation;
                     this.isLoading = false;
                 });
+                this.loadCustomFieldSets();
                 return;
             }
 
             Shopware.State.commit('context/resetLanguageToDefault');
-            this.salutation = this.salutationRepository.create(Shopware.Context.api);
+            this.salutation = this.salutationRepository.create();
             this.isLoading = false;
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('salutation').then((sets) => {
+                this.customFieldSets = sets;
+            });
         },
 
         onChangeLanguage() {
@@ -150,20 +162,20 @@ Component.register('sw-settings-salutation-detail', {
             this.isLoading = true;
             this.isSaveSuccessful = false;
 
-            return this.salutationRepository.save(this.salutation, Shopware.Context.api).then(() => {
+            return this.salutationRepository.save(this.salutation).then(() => {
                 this.isSaveSuccessful = true;
                 if (!this.salutationId) {
                     this.$router.push({ name: 'sw.settings.salutation.detail', params: { id: this.salutation.id } });
                 }
 
-                this.salutationRepository.get(this.salutation.id, Shopware.Context.api).then((updatedSalutation) => {
+                this.salutationRepository.get(this.salutation.id).then((updatedSalutation) => {
                     this.salutation = updatedSalutation;
                     this.isLoading = false;
                 });
             }).catch(() => {
                 this.createNotificationError({
                     title: this.$tc('global.default.error'),
-                    message: this.$tc('sw-settings-salutation.detail.notificationErrorMessage')
+                    message: this.$tc('sw-settings-salutation.detail.notificationErrorMessage'),
                 });
             });
         },
@@ -196,18 +208,18 @@ Component.register('sw-settings-salutation-detail', {
                     'AND',
                     [
                         Criteria.equals('salutationKey', this.salutation.salutationKey),
-                        Criteria.not('AND', [Criteria.equals('id', this.salutation.id)])
-                    ]
-                )
+                        Criteria.not('AND', [Criteria.equals('id', this.salutation.id)]),
+                    ],
+                ),
             );
 
-            this.salutationRepository.search(criteria, Shopware.Context.api).then(({ total }) => {
+            this.salutationRepository.search(criteria).then(({ total }) => {
                 this.invalidKey = total > 0;
                 this.isKeyChecking = false;
             }).catch(() => {
                 this.invalidKey = true;
                 this.isKeyChecking = false;
             });
-        }, 500)
-    }
+        }, 500),
+    },
 });

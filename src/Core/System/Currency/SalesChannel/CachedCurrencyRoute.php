@@ -26,12 +26,17 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  */
 class CachedCurrencyRoute extends AbstractCurrencyRoute
 {
+    public const ALL_TAG = 'currency-route';
+
     private AbstractCurrencyRoute $decorated;
 
     private TagAwareAdapterInterface $cache;
 
     private EntityCacheKeyGenerator $generator;
 
+    /**
+     * @var AbstractCacheTracer<CurrencyRouteResponse>
+     */
     private AbstractCacheTracer $tracer;
 
     private array $states;
@@ -40,6 +45,9 @@ class CachedCurrencyRoute extends AbstractCurrencyRoute
 
     private LoggerInterface $logger;
 
+    /**
+     * @param AbstractCacheTracer<CurrencyRouteResponse> $tracer
+     */
     public function __construct(
         AbstractCurrencyRoute $decorated,
         TagAwareAdapterInterface $cache,
@@ -73,14 +81,27 @@ class CachedCurrencyRoute extends AbstractCurrencyRoute
      * @Entity("currency")
      * @OA\Post(
      *      path="/currency",
-     *      summary="Loads all available currency",
+     *      summary="Fetch currencies",
+     *      description="Perform a filtered search for currencies.",
      *      operationId="readCurrency",
-     *      tags={"Store API", "Currency"},
+     *      tags={"Store API", "System & Context"},
      *      @OA\Parameter(name="Api-Basic-Parameters"),
      *      @OA\Response(
      *          response="200",
-     *          description="All available currency",
-     *          @OA\JsonContent(ref="#/components/schemas/currency_flat")
+     *          description="Entity search result containing currencies.",
+     *          @OA\JsonContent(
+     *              type="object",
+     *              allOf={
+     *                  @OA\Schema(ref="#/components/schemas/EntitySearchResult"),
+     *                  @OA\Schema(type="object",
+     *                      @OA\Property(
+     *                          type="array",
+     *                          property="elements",
+     *                          @OA\Items(ref="#/components/schemas/Currency")
+     *                      )
+     *                  )
+     *              }
+     *          )
      *     )
      * )
      * @Route("/store-api/currency", name="store-api.currency", methods={"GET", "POST"})
@@ -141,7 +162,7 @@ class CachedCurrencyRoute extends AbstractCurrencyRoute
     {
         $tags = array_merge(
             $this->tracer->get(self::buildName($context->getSalesChannelId())),
-            [self::buildName($context->getSalesChannelId())]
+            [self::buildName($context->getSalesChannelId()), self::ALL_TAG],
         );
 
         $event = new CurrencyRouteCacheTagsEvent($tags, $request, $response, $context, $criteria);

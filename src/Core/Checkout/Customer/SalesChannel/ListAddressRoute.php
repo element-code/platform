@@ -48,17 +48,18 @@ class ListAddressRoute extends AbstractListAddressRoute
      * @Entity("customer_address")
      * @OA\Post(
      *      path="/account/list-address",
-     *      summary="List address",
+     *      summary="Fetch addresses of a customer",
+     *      description="Lists all addresses of the current customer and allows filtering them based on a criteria.",
      *      operationId="listAddress",
-     *      tags={"Store API", "Account", "Address"},
+     *      tags={"Store API", "Address"},
      *      @OA\Parameter(name="Api-Basic-Parameters"),
      *      @OA\Response(
      *          response="200",
      *          description="",
-     *          @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/customer_address_flat"))
+     *          @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/CustomerAddress"))
      *     )
      * )
-     * @LoginRequired()
+     * @LoginRequired(allowGuest=true)
      * @Route(path="/store-api/account/list-address", name="store-api.account.address.list.get", methods={"GET", "POST"})
      */
     public function load(Criteria $criteria, SalesChannelContext $context, CustomerEntity $customer): ListAddressRouteResponse

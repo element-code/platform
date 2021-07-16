@@ -14,28 +14,40 @@ Component.register('sw-product-detail-cross-selling', {
         allowEdit: {
             type: Boolean,
             required: false,
-            default: true
-        }
+            default: true,
+        },
     },
 
     data() {
         return {
-            crossSelling: null
+            crossSelling: null,
         };
     },
 
     computed: {
         ...mapState('swProductDetail', [
-            'product'
+            'product',
         ]),
 
         ...mapGetters('swProductDetail', [
-            'isLoading'
+            'isLoading',
+        ]),
+
+        ...mapGetters('context', [
+            'isSystemDefaultLanguage',
         ]),
 
         showCrossSellingCard() {
             return !this.isLoading && this.product.crossSellings && this.product.crossSellings.length > 0;
-        }
+        },
+
+        onAddCrossSellingTooltipMessage() {
+            if (this.isSystemDefaultLanguage) {
+                return this.$tc('sw-privileges.tooltip.warning');
+            }
+
+            return this.$tc('sw-product.crossselling.buttonAddCrossSellingLanguageWarning');
+        },
     },
 
     watch: {
@@ -47,14 +59,14 @@ Component.register('sw-product-detail-cross-selling', {
 
                 this.loadAssignedProducts(item);
             });
-        }
+        },
     },
 
     methods: {
         loadAssignedProducts(crossSelling) {
             const repository = this.repositoryFactory.create(
                 crossSelling.assignedProducts.entity,
-                crossSelling.assignedProducts.source
+                crossSelling.assignedProducts.source,
             );
 
             const criteria = new Criteria();
@@ -64,7 +76,7 @@ Component.register('sw-product-detail-cross-selling', {
 
             repository.search(
                 criteria,
-                { ...Shopware.Context.api, inheritance: true }
+                { ...Shopware.Context.api, inheritance: true },
             ).then((assignedProducts) => {
                 crossSelling.assignedProducts = assignedProducts;
             });
@@ -75,9 +87,9 @@ Component.register('sw-product-detail-cross-selling', {
         onAddCrossSelling() {
             const crossSellingRepository = this.repositoryFactory.create(
                 this.product.crossSellings.entity,
-                this.product.crossSellings.source
+                this.product.crossSellings.source,
             );
-            this.crossSelling = crossSellingRepository.create(Shopware.Context.api);
+            this.crossSelling = crossSellingRepository.create();
             this.crossSelling.productId = this.product.id;
             this.crossSelling.position = this.product.crossSellings.length + 1;
             this.crossSelling.type = 'productStream';
@@ -86,6 +98,6 @@ Component.register('sw-product-detail-cross-selling', {
             this.crossSelling.limit = 24;
 
             this.product.crossSellings.push(this.crossSelling);
-        }
-    }
+        },
+    },
 });

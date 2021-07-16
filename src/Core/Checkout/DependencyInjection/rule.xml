@@ -104,6 +104,10 @@
             <tag name="shopware.rule.definition"/>
         </service>
 
+        <service id="Shopware\Core\Checkout\Customer\Rule\CustomerLoggedInRule">
+            <tag name="shopware.rule.definition"/>
+        </service>
+
         <service id="Shopware\Core\Checkout\Cart\Rule\LineItemsInCartCountRule">
             <tag name="shopware.rule.definition"/>
         </service>
@@ -205,6 +209,14 @@
         </service>
 
         <service id="Shopware\Core\Checkout\Cart\Rule\ShippingMethodRule">
+            <tag name="shopware.rule.definition"/>
+        </service>
+
+        <service id="Shopware\Core\Checkout\Cart\Rule\LineItemGoodsTotalRule">
+            <tag name="shopware.rule.definition"/>
+        </service>
+
+        <service id="Shopware\Core\Checkout\Customer\Rule\OrderTotalAmountRule">
             <tag name="shopware.rule.definition"/>
         </service>
 

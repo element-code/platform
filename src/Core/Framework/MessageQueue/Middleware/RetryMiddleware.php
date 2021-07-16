@@ -11,6 +11,9 @@ use Shopware\Core\Framework\MessageQueue\Message\RetryMessage;
 use Shopware\Core\Framework\MessageQueue\ScheduledTask\ScheduledTask;
 use Shopware\Core\Framework\MessageQueue\Stamp\DecryptedStamp;
 use Shopware\Core\Framework\Uuid\Uuid;
+use Shopware\Core\Framework\Webhook\Event\RetryWebhookMessageFailedEvent;
+use Shopware\Core\Framework\Webhook\Message\WebhookEventMessage;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
@@ -18,20 +21,18 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 
 class RetryMiddleware implements MiddlewareInterface
 {
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $deadMessageRepository;
+    private EntityRepositoryInterface $deadMessageRepository;
 
-    /**
-     * @var Context
-     */
-    private $context;
+    private Context $context;
 
-    public function __construct(EntityRepositoryInterface $deadMessageRepository)
+    private EventDispatcherInterface $eventDispatcher;
+
+    public function __construct(EntityRepositoryInterface $deadMessageRepository, EventDispatcherInterface $eventDispatcher)
     {
         $this->deadMessageRepository = $deadMessageRepository;
         $this->context = Context::createDefaultContext();
+
+        $this->eventDispatcher = $eventDispatcher;
     }
 
     public function handle(Envelope $envelope, StackInterface $stack): Envelope
@@ -50,6 +51,7 @@ class RetryMiddleware implements MiddlewareInterface
                 }
                 if ($deadMessage) {
                     $this->handleExistingDeadMessage($deadMessage, $nestedException);
+                    $this->handleRetryWebhookMessageFailed($deadMessage);
                 } else {
                     $this->createDeadMessageFromEnvelope($envelope, $nestedException);
                 }
@@ -166,5 +168,16 @@ class RetryMiddleware implements MiddlewareInterface
             ->get($envelope->getMessage()->getDeadMessageId());
 
         return $deadMessage;
+    }
+
+    private function handleRetryWebhookMessageFailed(DeadMessageEntity $deadMessage): void
+    {
+        if (!($deadMessage->getOriginalMessage() instanceof WebhookEventMessage)) {
+            return;
+        }
+
+        $this->eventDispatcher->dispatch(
+            new RetryWebhookMessageFailedEvent($deadMessage, $this->context)
+        );
     }
 }

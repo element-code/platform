@@ -20,6 +20,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Field\TranslatedField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\VersionField;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\CriteriaPartInterface;
+use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Uuid\Uuid;
 
 /**
@@ -355,15 +356,7 @@ class EntityDefinitionQueryHelper
 
         $inherited = $context->considerInheritance() && $definition->isInheritanceAware();
 
-        $alias = $root . '.' . $translationDefinition->getEntityName();
-        $query->addSelect(self::escape($alias) . '.*');
-
-        if ($inherited) {
-            $alias = $root . '.' . $translationDefinition->getEntityName() . '.parent';
-            $query->addSelect(self::escape($alias) . '.*');
-        }
-
-        $chain = self::buildTranslationChain($root, $context, $inherited);
+        $chain = EntityDefinitionQueryHelper::buildTranslationChain($root, $context, $inherited);
 
         /** @var TranslatedField $field */
         foreach ($fields as $field) {
@@ -377,6 +370,12 @@ class EntityDefinitionQueryHelper
                     '#root#' => $select,
                     '#field#' => $field->getPropertyName(),
                 ];
+
+                $query->addSelect(str_replace(
+                    array_keys($vars),
+                    array_values($vars),
+                    EntityDefinitionQueryHelper::escape('#root#.#field#')
+                ));
 
                 $selects[] = str_replace(
                     array_keys($vars),
@@ -434,6 +433,11 @@ class EntityDefinitionQueryHelper
     public static function getTranslatedField(EntityDefinition $definition, TranslatedField $translatedField): Field
     {
         $translationDefinition = $definition->getTranslationDefinition();
+
+        if ($translationDefinition === null) {
+            throw new \RuntimeException(sprintf('Entity %s has no translation definition', $definition->getEntityName()));
+        }
+
         $field = $translationDefinition->getFields()->get($translatedField->getPropertyName());
 
         if ($field === null || !$field instanceof StorageAware || !$field instanceof Field) {
@@ -480,7 +484,10 @@ class EntityDefinitionQueryHelper
 
         if (!\is_array($primaryKeys[0]) || \count($primaryKeys[0]) === 1) {
             $primaryKeyField = $definition->getPrimaryKeys()->first();
-            if ($primaryKeyField instanceof IdField) {
+            /** @feature-deprecated (flag:FEATURE_NEXT_14872) remove FeatureCheck
+             * if ($primaryKeyField instanceof IdField || $primaryKeyField instanceof FkField) {
+             */
+            if ($primaryKeyField instanceof IdField || (Feature::isActive('FEATURE_NEXT_14872') && $primaryKeyField instanceof FkField)) {
                 $primaryKeys = array_map(function ($id) {
                     if (\is_array($id)) {
                         /** @var string $shiftedId */

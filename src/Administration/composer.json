@@ -10,9 +10,16 @@
     },
     "config": {
         "platform": {
-            "php": "7.4.0"
+            "php": "7.4.3"
         },
         "sort-packages": true
+    },
+    "support": {
+        "issues": "https://issues.shopware.com",
+        "forum": "https://forum.shopware.com",
+        "wiki": "https://developer.shopware.com",
+        "docs": "https://developer.shopware.com",
+        "chat": "https://slack.shopware.com"
     },
     "extra": {
         "branch-alias": {
@@ -21,10 +28,11 @@
         }
     },
     "require": {
+        "php": "^7.4.3 || ^8.0",
         "shopware/core": "*",
-        "symfony/framework-bundle": "~5.2.3",
-        "symfony/http-foundation": "~5.2.3",
-        "symfony/routing": "~5.2.3",
-        "symfony/mime": "~5.2.3"
+        "symfony/framework-bundle": "~5.3.0",
+        "symfony/http-foundation": "~5.3.0",
+        "symfony/routing": "~5.3.0",
+        "symfony/mime": "~5.3.0"
     }
 }

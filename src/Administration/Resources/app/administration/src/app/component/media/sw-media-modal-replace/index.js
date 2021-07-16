@@ -15,24 +15,25 @@ const { Component, Mixin } = Shopware;
 Component.register('sw-media-modal-replace', {
     template,
 
-    mixins: [
-        Mixin.getByName('notification')
-    ],
-
     inject: ['mediaService', 'repositoryFactory'],
+
+    mixins: [
+        Mixin.getByName('notification'),
+    ],
 
     props: {
         itemToReplace: {
             type: Object,
-            required: false
-        }
+            required: false,
+            default: null,
+        },
     },
 
     data() {
         return {
             uploadTag: null,
             isUploadDataSet: false,
-            newFileExtension: ''
+            newFileExtension: '',
         };
     },
 
@@ -61,6 +62,6 @@ Component.register('sw-media-modal-replace', {
 
             this.itemToReplace.isLoading = false;
             this.$emit('media-replace-modal-item-replaced');
-        }
-    }
+        },
+    },
 });

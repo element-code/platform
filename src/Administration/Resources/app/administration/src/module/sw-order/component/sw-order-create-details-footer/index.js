@@ -6,19 +6,25 @@ const { Criteria } = Shopware.Data;
 Component.register('sw-order-create-details-footer', {
     template,
 
+    inject: ['feature'],
+
     props: {
+        // FIXME: add required attribute and or default value
+        // eslint-disable-next-line vue/require-default-prop
         customer: {
-            type: Object
+            type: Object,
         },
 
         isCustomerActive: {
             type: Boolean,
-            default: false
+            default: false,
         },
 
+        // FIXME: add required attribute and or default value
+        // eslint-disable-next-line vue/require-default-prop
         cart: {
-            type: Object
-        }
+            type: Object,
+        },
     },
 
     computed: {
@@ -29,7 +35,7 @@ Component.register('sw-order-create-details-footer', {
 
             set(context) {
                 if (this.customer) this.customer.salesChannel = context;
-            }
+            },
         },
 
         salesChannelId: {
@@ -39,7 +45,7 @@ Component.register('sw-order-create-details-footer', {
 
             set(salesChannelId) {
                 if (this.customer) this.customer.salesChannelId = salesChannelId;
-            }
+            },
         },
 
         salesChannelCriteria() {
@@ -66,7 +72,7 @@ Component.register('sw-order-create-details-footer', {
 
         isCartTokenAvailable() {
             return State.getters['swOrder/isCartTokenAvailable'];
-        }
+        },
     },
 
     watch: {
@@ -81,7 +87,7 @@ Component.register('sw-order-create-details-footer', {
                 this.updateContext();
 
                 this.updateOrderContext();
-            }
+            },
         },
 
         isCartTokenAvailable: {
@@ -90,8 +96,8 @@ Component.register('sw-order-create-details-footer', {
                 if (this.isCartTokenAvailable && this.customer) {
                     this.updateOrderContext();
                 }
-            }
-        }
+            },
+        },
     },
 
     methods: {
@@ -106,7 +112,7 @@ Component.register('sw-order-create-details-footer', {
             State.dispatch('swOrder/updateOrderContext', {
                 context: this.context,
                 salesChannelId: this.customer.salesChannelId,
-                contextToken: this.cart.token
+                contextToken: this.cart.token,
             }).then(() => {
                 // Make sure updateCustomerContext() is run when updateOrderContext() completed
                 this.updateCustomerContext();
@@ -122,7 +128,7 @@ Component.register('sw-order-create-details-footer', {
             State.dispatch('swOrder/updateCustomerContext', {
                 customerId: this.customer.id,
                 salesChannelId: this.customer.salesChannelId,
-                contextToken: this.cart.token
+                contextToken: this.cart.token,
             }).then((response) => {
                 if (response.status === 200) {
                     this.getCart();
@@ -135,16 +141,16 @@ Component.register('sw-order-create-details-footer', {
 
             State.dispatch('swOrder/getCart', {
                 salesChannelId: this.customer.salesChannelId,
-                contextToken: this.cart.token
+                contextToken: this.cart.token,
             }).finally(() => {
                 this.$emit('loading-change', false);
             });
         },
 
         getCurrency() {
-            return this.currencyRepository.get(this.context.currencyId, Shopware.Context.api).then((currency) => {
+            return this.currencyRepository.get(this.context.currencyId).then((currency) => {
                 State.commit('swOrder/setCurrency', currency);
             });
-        }
-    }
+        },
+    },
 });

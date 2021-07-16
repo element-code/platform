@@ -21,7 +21,7 @@ Component.extend('sw-sales-channel-create', 'sw-sales-channel-detail', {
     computed: {
         allowSaving() {
             return this.acl.can('sales_channel.creator');
-        }
+        },
     },
 
     methods: {
@@ -34,7 +34,7 @@ Component.extend('sw-sales-channel-create', 'sw-sales-channel-detail', {
                 Shopware.State.commit('context/resetLanguageToDefault');
             }
 
-            this.salesChannel = this.salesChannelRepository.create(Shopware.Context.api);
+            this.salesChannel = this.salesChannelRepository.create();
             this.salesChannel.typeId = this.$route.params.typeId;
             this.salesChannel.active = false;
 
@@ -48,6 +48,6 @@ Component.extend('sw-sales-channel-create', 'sw-sales-channel-detail', {
 
         onSave() {
             this.$super('onSave');
-        }
-    }
+        },
+    },
 });

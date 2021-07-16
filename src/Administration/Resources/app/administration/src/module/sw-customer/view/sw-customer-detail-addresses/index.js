@@ -8,21 +8,21 @@ const { Criteria } = Shopware.Data;
 Component.register('sw-customer-detail-addresses', {
     template,
 
-    mixins: [
-        Mixin.getByName('notification')
-    ],
-
     inject: ['repositoryFactory'],
+
+    mixins: [
+        Mixin.getByName('notification'),
+    ],
 
     props: {
         customer: {
             type: Object,
-            required: true
+            required: true,
         },
         customerEditMode: {
             type: Boolean,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
@@ -35,7 +35,7 @@ Component.register('sw-customer-detail-addresses', {
             addressSortProperty: null,
             addressSortDirection: '',
             currentAddress: null,
-            customerAddressCustomFieldSets: null
+            customerAddressCustomFieldSets: null,
         };
     },
 
@@ -59,12 +59,13 @@ Component.register('sw-customer-detail-addresses', {
         addressRepository() {
             return this.repositoryFactory.create(
                 this.activeCustomer.addresses.entity,
-                this.activeCustomer.addresses.source
+                this.activeCustomer.addresses.source,
             );
         },
 
         sortedAddresses() {
             if (this.addressSortProperty) {
+                // eslint-disable-next-line vue/no-side-effects-in-computed-properties
                 return this.activeCustomer.addresses.sort((a, b) => {
                     const aValue = a[this.addressSortProperty];
                     const bValue = b[this.addressSortProperty];
@@ -92,7 +93,7 @@ Component.register('sw-customer-detail-addresses', {
             }
 
             return this.activeCustomer.addresses;
-        }
+        },
     },
 
     created() {
@@ -104,7 +105,7 @@ Component.register('sw-customer-detail-addresses', {
             this.isLoading = true;
 
             if (!this.activeCustomer.id && this.$route.params.id) {
-                this.customerRepository.get(this.$route.params.id, Shopware.Context.api).then((customer) => {
+                this.customerRepository.get(this.$route.params.id).then((customer) => {
                     this.activeCustomer = customer;
                     this.isLoading = false;
                 });
@@ -119,7 +120,7 @@ Component.register('sw-customer-detail-addresses', {
             customFieldSetCriteria.addFilter(Criteria.equals('relations.entityName', 'customer_address'))
                 .addAssociation('customFields');
 
-            this.customFieldSetRepository.search(customFieldSetCriteria, Shopware.Context.api).then((customFieldSets) => {
+            this.customFieldSetRepository.search(customFieldSetCriteria).then((customFieldSets) => {
                 this.customerAddressCustomFieldSets = customFieldSets;
             });
 
@@ -131,31 +132,31 @@ Component.register('sw-customer-detail-addresses', {
                 property: 'defaultShippingAddress',
                 label: this.$tc('sw-customer.detailAddresses.columnDefaultShippingAddress'),
                 align: 'center',
-                iconLabel: 'default-shopping-cart'
+                iconLabel: 'default-shopping-cart',
             }, {
                 property: 'defaultBillingAddress',
                 label: this.$tc('sw-customer.detailAddresses.columnDefaultBillingAddress'),
                 align: 'center',
-                iconLabel: 'default-documentation-file'
+                iconLabel: 'default-documentation-file',
             }, {
                 property: 'lastName',
-                label: this.$tc('sw-customer.detailAddresses.columnLastName')
+                label: this.$tc('sw-customer.detailAddresses.columnLastName'),
             }, {
                 property: 'firstName',
-                label: this.$tc('sw-customer.detailAddresses.columnFirstName')
+                label: this.$tc('sw-customer.detailAddresses.columnFirstName'),
             }, {
                 property: 'company',
-                label: this.$tc('sw-customer.detailAddresses.columnCompany')
+                label: this.$tc('sw-customer.detailAddresses.columnCompany'),
             }, {
                 property: 'street',
-                label: this.$tc('sw-customer.detailAddresses.columnStreet')
+                label: this.$tc('sw-customer.detailAddresses.columnStreet'),
             }, {
                 property: 'zipcode',
                 label: this.$tc('sw-customer.detailAddresses.columnZipCode'),
-                align: 'right'
+                align: 'right',
             }, {
                 property: 'city',
-                label: this.$tc('sw-customer.detailAddresses.columnCity')
+                label: this.$tc('sw-customer.detailAddresses.columnCity'),
             }];
         },
 
@@ -178,7 +179,7 @@ Component.register('sw-customer-detail-addresses', {
         },
 
         createNewCustomerAddress() {
-            const newAddress = this.addressRepository.create(Shopware.Context.api);
+            const newAddress = this.addressRepository.create();
             newAddress.customerId = this.activeCustomer.id;
 
             this.currentAddress = newAddress;
@@ -191,7 +192,7 @@ Component.register('sw-customer-detail-addresses', {
 
             if (!this.isValidAddress(this.currentAddress)) {
                 this.createNotificationError({
-                    message: this.$tc('sw-customer.notification.requiredFields')
+                    message: this.$tc('sw-customer.notification.requiredFields'),
                 });
                 return;
             }
@@ -261,7 +262,7 @@ Component.register('sw-customer-detail-addresses', {
         onConfirmDeleteAddress(id) {
             this.onCloseDeleteAddressModal();
 
-            return this.customerAddressRepository.delete(id, Shopware.Context.api).then(() => {
+            return this.customerAddressRepository.delete(id).then(() => {
                 this.refreshList();
             });
         },
@@ -286,7 +287,7 @@ Component.register('sw-customer-detail-addresses', {
         },
 
         onDuplicateAddress(addressId) {
-            this.customerAddressRepository.clone(addressId, Shopware.Context.api).then(() => {
+            this.customerAddressRepository.clone(addressId).then(() => {
                 this.refreshList();
             });
         },
@@ -319,6 +320,6 @@ Component.register('sw-customer-detail-addresses', {
             const preFix = string.replace(replace, '');
 
             return `${preFix.charAt(0).toUpperCase()}${preFix.slice(1)}`;
-        }
-    }
+        },
+    },
 });

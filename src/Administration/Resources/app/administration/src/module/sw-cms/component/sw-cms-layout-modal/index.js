@@ -10,14 +10,14 @@ Component.register('sw-cms-layout-modal', {
     inject: ['repositoryFactory'],
 
     mixins: [
-        Mixin.getByName('listing')
+        Mixin.getByName('listing'),
     ],
 
     props: {
         headline: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
 
         cmsPageTypes: {
@@ -25,8 +25,8 @@ Component.register('sw-cms-layout-modal', {
             required: false,
             default() {
                 return [];
-            }
-        }
+            },
+        },
     },
 
     data() {
@@ -38,7 +38,7 @@ Component.register('sw-cms-layout-modal', {
             sortDirection: 'DESC',
             term: null,
             total: null,
-            pages: []
+            pages: [],
         };
     },
 
@@ -63,14 +63,14 @@ Component.register('sw-cms-layout-modal', {
             }
 
             return criteria;
-        }
+        },
     },
 
     methods: {
         getList() {
             this.isLoading = true;
 
-            return this.pageRepository.search(this.cmsPageCriteria, Shopware.Context.api).then((searchResult) => {
+            return this.pageRepository.search(this.cmsPageCriteria).then((searchResult) => {
                 this.total = searchResult.total;
                 this.pages = searchResult;
                 this.isLoading = false;
@@ -113,6 +113,6 @@ Component.register('sw-cms-layout-modal', {
             this.selected = null;
             this.selectedPageObject = null;
             this.term = null;
-        }
-    }
+        },
+    },
 });

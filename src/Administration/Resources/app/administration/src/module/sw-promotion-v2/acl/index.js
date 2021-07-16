@@ -23,9 +23,12 @@ Service('privileges')
                     'promotion_setgroup_rule:read',
                     'user_config:read',
                     'user_config:create',
-                    'user_config:update'
+                    'user_config:update',
+                    'custom_field_set:read',
+                    'custom_field:read',
+                    'custom_field_set_relation:read',
                 ],
-                dependencies: []
+                dependencies: [],
             },
             editor: {
                 privileges: [
@@ -49,28 +52,28 @@ Service('privileges')
                     'promotion_individual_code:delete',
                     'promotion_setgroup:create',
                     'promotion_setgroup_rule:create',
-                    Shopware.Service('privileges').getPrivileges('rule.creator')
-                ],
-                dependencies: [
-                    'promotion.viewer'
-                ]
-            },
-            creator: {
-                privileges: [
-                    'promotion:create'
+                    Shopware.Service('privileges').getPrivileges('rule.creator'),
                 ],
                 dependencies: [
                     'promotion.viewer',
-                    'promotion.editor'
-                ]
+                ],
+            },
+            creator: {
+                privileges: [
+                    'promotion:create',
+                ],
+                dependencies: [
+                    'promotion.viewer',
+                    'promotion.editor',
+                ],
             },
             deleter: {
                 privileges: [
-                    'promotion:delete'
+                    'promotion:delete',
                 ],
                 dependencies: [
-                    'promotion.viewer'
-                ]
-            }
-        }
+                    'promotion.viewer',
+                ],
+            },
+        },
     });

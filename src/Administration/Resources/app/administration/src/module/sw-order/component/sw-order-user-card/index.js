@@ -11,36 +11,37 @@ Component.register('sw-order-user-card', {
 
     inject: [
         'orderService',
-        'repositoryFactory'
+        'repositoryFactory',
+        'feature',
     ],
 
     mixins: [
-        Mixin.getByName('salutation')
+        Mixin.getByName('salutation'),
     ],
 
     props: {
         currentOrder: {
             type: Object,
-            required: true
+            required: true,
         },
         versionContext: {
             type: Object,
-            required: true
+            required: true,
         },
         isLoading: {
             type: Boolean,
-            required: true
+            required: true,
         },
         isEditing: {
             type: Boolean,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
         return {
             addressBeingEdited: null,
-            countries: null
+            countries: null,
         };
     },
 
@@ -56,7 +57,7 @@ Component.register('sw-order-user-card', {
         OrderTagRepository() {
             return this.repositoryFactory.create(
                 this.currentOrder.tags.entity,
-                this.currentOrder.tags.source
+                this.currentOrder.tags.source,
             );
         },
 
@@ -94,12 +95,12 @@ Component.register('sw-order-user-card', {
             if (this.currentOrder) {
                 if (this.currentOrder.updatedAt) {
                     return format.date(
-                        this.currentOrder.updatedAt
+                        this.currentOrder.updatedAt,
                     );
                 }
 
                 return format.date(
-                    this.currentOrder.orderDateTime
+                    this.currentOrder.orderDateTime,
                 );
             }
             return '';
@@ -112,11 +113,11 @@ Component.register('sw-order-user-card', {
         fullName() {
             const name = {
                 name: this.salutation(this.currentOrder.orderCustomer),
-                company: this.currentOrder.orderCustomer.company
+                company: this.currentOrder.orderCustomer.company,
             };
 
             return Object.values(name).filter(item => item !== null).join(' - ').trim();
-        }
+        },
     },
 
     created() {
@@ -129,7 +130,7 @@ Component.register('sw-order-user-card', {
         },
 
         reload() {
-            this.countryRepository.search(this.countryCriteria(), Shopware.Context.api).then((response) => {
+            this.countryRepository.search(this.countryCriteria()).then((response) => {
                 this.countries = response;
             });
         },
@@ -175,7 +176,7 @@ Component.register('sw-order-user-card', {
                     oldAddressId,
                     address.id,
                     {},
-                    ApiService.getVersionHeader(this.currentOrder.versionId)
+                    ApiService.getVersionHeader(this.currentOrder.versionId),
                 ).then(() => {
                     this.emitChange();
                 }).catch((error) => {
@@ -191,7 +192,7 @@ Component.register('sw-order-user-card', {
 
             this.orderAddressRepository.clone(
                 this.delivery.shippingOrderAddressId,
-                this.versionContext
+                this.versionContext,
             ).then((response) => {
                 this.delivery.shippingOrderAddressId = response.id;
                 this.emitChange();
@@ -211,7 +212,7 @@ Component.register('sw-order-user-card', {
         },
 
         onRemoveTag(item) {
-            this.OrderTagRepository.delete(item.id, Shopware.Context.api).then(() => {
+            this.OrderTagRepository.delete(item.id).then(() => {
                 this.emitChange();
             });
         },
@@ -220,7 +221,7 @@ Component.register('sw-order-user-card', {
             const urlTemplate = shippingMethod ? shippingMethod.trackingUrl : null;
 
             return urlTemplate ? urlTemplate.replace('%s', encodeURIComponent(trackingCode)) : '';
-        }
-    }
+        },
+    },
 
 });

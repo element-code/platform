@@ -17,19 +17,36 @@ class MailApiService extends ApiService {
         return this.httpClient.post(
             apiRoute,
             {
-                contentHtml: mailTemplate.contentHtml,
-                contentPlain: mailTemplate.contentPlain,
+                contentHtml: mailTemplate.contentHtml ?? mailTemplate.translated?.contentHtml,
+                contentPlain: mailTemplate.contentPlain ?? mailTemplate.translated?.contentPlain,
                 recipients: { [recipient]: recipient },
                 salesChannelId: salesChannelId,
                 mediaIds: mailTemplateMedia.getIds(),
-                subject: mailTemplate.subject,
+                subject: mailTemplate.subject ?? mailTemplate.translated?.subject,
                 senderMail: mailTemplate.senderMail,
-                senderName: mailTemplate.senderName,
-                testMode: true
+                senderName: mailTemplate.senderName ?? mailTemplate.translated?.senderName,
+                testMode: true,
             },
             {
-                headers: this.getBasicHeaders()
-            }
+                headers: this.getBasicHeaders(),
+            },
+        ).then((response) => {
+            return ApiService.handleResponse(response);
+        });
+    }
+
+    buildRenderPreview(mailTemplateType, mailTemplate) {
+        const apiRoute = `/_action/${this.getApiBasePath()}/build`;
+
+        return this.httpClient.post(
+            apiRoute,
+            {
+                mailTemplateType: mailTemplateType,
+                mailTemplate: mailTemplate,
+            },
+            {
+                headers: this.getBasicHeaders(),
+            },
         ).then((response) => {
             return ApiService.handleResponse(response);
         });

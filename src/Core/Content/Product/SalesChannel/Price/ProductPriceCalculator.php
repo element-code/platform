@@ -54,6 +54,7 @@ class ProductPriceCalculator extends AbstractProductPriceCalculator
     {
         $reference = ReferencePriceDto::createFromProduct($product);
 
+        \assert($product->getPrice() !== null);
         $definition = $this->buildDefinition($product, $product->getPrice(), $context, $units, $reference);
 
         $price = $this->calculator->calculate($definition, $context);
@@ -96,6 +97,7 @@ class ProductPriceCalculator extends AbstractProductPriceCalculator
         if (!$price instanceof CheapestPrice) {
             $reference = ReferencePriceDto::createFromProduct($product);
 
+            \assert($product->getPrice() !== null);
             $definition = $this->buildDefinition($product, $product->getPrice(), $context, $units, $reference);
 
             $cheapest = CalculatedCheapestPrice::createFrom(
@@ -132,6 +134,7 @@ class ProductPriceCalculator extends AbstractProductPriceCalculator
     ): QuantityPriceDefinition {
         $price = $this->getPriceValue($prices, $context);
 
+        \assert($product->getTaxId() !== null);
         $definition = new QuantityPriceDefinition($price, $context->buildTaxRules($product->getTaxId()), $quantity);
         $definition->setReferencePriceDefinition(
             $this->buildReferencePriceDefinition($reference, $units)
@@ -188,13 +191,13 @@ class ProductPriceCalculator extends AbstractProductPriceCalculator
 
     private function buildReferencePriceDefinition(ReferencePriceDto $definition, UnitCollection $units): ?ReferencePriceDefinition
     {
-        if ($definition->getPurchase() === null) {
+        if ($definition->getPurchase() === null || $definition->getPurchase() <= 0) {
             return null;
         }
         if ($definition->getUnitId() === null) {
             return null;
         }
-        if ($definition->getReference() === null) {
+        if ($definition->getReference() === null || $definition->getReference() <= 0) {
             return null;
         }
         if ($definition->getPurchase() === $definition->getReference()) {

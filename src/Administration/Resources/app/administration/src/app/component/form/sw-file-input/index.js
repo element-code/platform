@@ -1,3 +1,4 @@
+/* eslint-disable vue/require-default-prop */
 import template from './sw-file-input.html.twig';
 import './sw-file-input.scss';
 
@@ -20,47 +21,51 @@ Component.register('sw-file-input', {
     template,
 
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     model: {
         prop: 'value',
-        event: 'change'
+        event: 'change',
     },
 
     props: {
         maxFileSize: {
             type: Number,
             required: false,
-            default: null
+            default: null,
         },
 
         allowedMimeTypes: {
             type: Array,
-            required: false
+            required: false,
+            default: null,
         },
 
         label: {
             type: String,
-            required: false
+            required: false,
+            default: null,
         },
 
+        // FIXME: add property type and prop default value
+        // eslint-disable-next-line vue/require-prop-types
         value: {
-            required: false
-        }
+            required: false,
+        },
     },
 
     data() {
         return {
             selectedFile: null,
-            utilsId: utils.createId()
+            utilsId: utils.createId(),
         };
     },
 
     computed: {
         id() {
             return `sw-file-input--${this.utilsId}`;
-        }
+        },
     },
 
     methods: {
@@ -98,8 +103,8 @@ Component.register('sw-file-input', {
                 title: this.$tc('global.default.error'),
                 message: this.$tc('global.sw-file-input.notification.invalidFileSize.message', 0, {
                     name: file.name,
-                    limit: fileSize(this.maxFileSize)
-                })
+                    limit: fileSize(this.maxFileSize),
+                }),
             });
             return false;
         },
@@ -113,10 +118,10 @@ Component.register('sw-file-input', {
                 title: this.$tc('global.default.error'),
                 message: this.$tc('global.sw-file-input.notification.invalidFileType.message', 0, {
                     name: file.name,
-                    supportedTypes: this.allowedMimeTypes.join(', ')
-                })
+                    supportedTypes: this.allowedMimeTypes.join(', '),
+                }),
             });
             return false;
-        }
-    }
+        },
+    },
 });

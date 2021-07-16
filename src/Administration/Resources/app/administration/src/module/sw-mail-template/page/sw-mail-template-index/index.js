@@ -6,21 +6,21 @@ const { Component, Mixin } = Shopware;
 Component.register('sw-mail-template-index', {
     template,
 
+    inject: ['acl'],
+
     mixins: [
-        Mixin.getByName('listing')
+        Mixin.getByName('listing'),
     ],
 
     data() {
         return {
-            term: ''
+            term: '',
         };
     },
 
-    inject: ['acl'],
-
     metaInfo() {
         return {
-            title: this.$createTitle()
+            title: this.$createTitle(),
         };
     },
 
@@ -33,6 +33,6 @@ Component.register('sw-mail-template-index', {
 
         onSearch(value) {
             this.term = value;
-        }
-    }
+        },
+    },
 });

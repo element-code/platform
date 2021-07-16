@@ -12,6 +12,7 @@ use Shopware\Core\Checkout\Payment\PaymentMethodEntity;
 use Shopware\Core\Checkout\Promotion\PromotionCollection;
 use Shopware\Core\Content\Product\Aggregate\ProductReview\ProductReviewCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityCustomFieldsTrait;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityIdTrait;
 use Shopware\Core\System\Language\LanguageEntity;
 use Shopware\Core\System\SalesChannel\SalesChannelEntity;
@@ -21,6 +22,7 @@ use Shopware\Core\System\Tag\TagCollection;
 class CustomerEntity extends Entity
 {
     use EntityIdTrait;
+    use EntityCustomFieldsTrait;
 
     public const ACCOUNT_TYPE_PRIVATE = 'private';
     public const ACCOUNT_TYPE_BUSINESS = 'business';
@@ -175,6 +177,8 @@ class CustomerEntity extends Entity
      */
     protected $orderCount;
 
+    protected float $orderTotalAmount;
+
     /**
      * @var \DateTimeInterface|null
      */
@@ -279,11 +283,6 @@ class CustomerEntity extends Entity
      * @var CustomerRecoveryEntity|null
      */
     protected $recoveryCustomer;
-
-    /**
-     * @var array|null
-     */
-    protected $customFields;
 
     /**
      * @var ProductReviewCollection|null
@@ -605,6 +604,16 @@ class CustomerEntity extends Entity
         $this->orderCount = $orderCount;
     }
 
+    public function getOrderTotalAmount(): float
+    {
+        return $this->orderTotalAmount;
+    }
+
+    public function setOrderTotalAmount(float $orderTotalAmount): void
+    {
+        $this->orderTotalAmount = $orderTotalAmount;
+    }
+
     public function getLegacyEncoder(): ?string
     {
         return $this->legacyEncoder;
@@ -766,16 +775,6 @@ class CustomerEntity extends Entity
     public function setAutoIncrement(int $autoIncrement): void
     {
         $this->autoIncrement = $autoIncrement;
-    }
-
-    public function getCustomFields(): ?array
-    {
-        return $this->customFields;
-    }
-
-    public function setCustomFields(?array $customFields): void
-    {
-        $this->customFields = $customFields;
     }
 
     public function getTags(): ?TagCollection

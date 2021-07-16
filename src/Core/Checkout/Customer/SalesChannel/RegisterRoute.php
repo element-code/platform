@@ -5,6 +5,7 @@ namespace Shopware\Core\Checkout\Customer\SalesChannel;
 use OpenApi\Annotations as OA;
 use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Checkout\Customer\CustomerEvents;
+use Shopware\Core\Checkout\Customer\Event\CustomerConfirmRegisterUrlEvent;
 use Shopware\Core\Checkout\Customer\Event\CustomerDoubleOptInRegistrationEvent;
 use Shopware\Core\Checkout\Customer\Event\CustomerLoginEvent;
 use Shopware\Core\Checkout\Customer\Event\CustomerRegisterEvent;
@@ -132,25 +133,101 @@ class RegisterRoute extends AbstractRegisterRoute
      * @Since("6.2.0.0")
      * @OA\Post(
      *      path="/account/register",
-     *      summary="Register",
+     *      summary="Register a customer",
+     *      description="Registers a customer. Used both for normal customers and guest customers.
+
+See the Guide ""Register a customer"" for more information on customer registration.",
      *      operationId="register",
-     *      tags={"Store API", "Account"},
-     *      @OA\Parameter(name="guest", description="Create guest user", in="query", @OA\Schema(type="boolean")),
-     *      @OA\Parameter(name="title", description="Title", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="salutationId", description="Salutation", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="firstName", description="Firstname", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="lastName", description="Lastname", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="email", description="email", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="affiliateCode", description="Affilicate Code", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="campaignCode", description="Campaign Code", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="password", description="Password", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="acceptedDataProtection", description="Accepted Data Protection policy", in="query", @OA\Schema(type="boolean")),
-     *      @OA\Parameter(name="billingAddress", description="Billingaddress", in="query", @OA\JsonContent(ref="#/components/schemas/customer_address_flat")),
-     *      @OA\Parameter(name="shippingAddress", description="Shippingaddress", in="query", @OA\JsonContent(ref="#/components/schemas/customer_address_flat")),
+     *      tags={"Store API", "Login & Registration"},
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\JsonContent(
+     *              required={
+     *                  "email",
+     *                  "password",
+     *                  "salutationId",
+     *                  "firstName",
+     *                  "lastName",
+     *                  "acceptedDataProtection",
+     *                  "storefrontUrl",
+     *                  "billingAddress"
+     *              },
+     *              @OA\Property(
+     *                  property="email",
+     *                  type="string",
+     *                  description="Email of the customer. Has to be unique, unless `guest` is `true`"),
+     *              @OA\Property(
+     *                  property="password",
+     *                  type="string",
+     *                  description="Password for the customer. Required, unless `guest` is `true`"),
+     *              @OA\Property(
+     *                  property="salutationId",
+     *                  type="string",
+     *                  description="Id of the salutation for the customer account. Fetch options using `salutation` endpoint."),
+     *              @OA\Property(
+     *                  property="firstName",
+     *                  type="string",
+     *                  description="Customer first name. Value will be reused for shipping and billing address if not provided explicitly."),
+     *              @OA\Property(
+     *                  property="lastName",
+     *                  type="string",
+     *                  description="Customer last name. Value will be reused for shipping and billing address if not provided explicitly."),
+     *              @OA\Property(
+     *                  property="acceptedDataProtection",
+     *                  type="boolean",
+     *                  description="Flag indicating accepted data protection"),
+     *              @OA\Property(
+     *                  property="storefrontUrl",
+     *                  type="string",
+     *                  description="URL of the storefront for that registration. Used in confirmation emails. Has to be one of the configured domains of the sales channel."),
+     *              @OA\Property(
+     *                  property="billingAddress",
+     *                  ref="#/components/schemas/CustomerAddress",
+     *                  description="Billing address of the customer. Values will be reused for shipping address if not provided explicitly."),
+     *              @OA\Property(
+     *                  property="shippingAddress",
+     *                  ref="#/components/schemas/CustomerAddress",
+     *                  description="Shipping address of the customer. If not set, billing address will be used."),
+     *              @OA\Property(
+     *                  property="accountType",
+     *                  type="string",
+     *                  default="private",
+     *                  description="Account type of the customer which can be either `private` or `business`."),
+     *              @OA\Property(
+     *                  property="guest",
+     *                  type="boolean",
+     *                  default=false,
+     *                  description="If set, will create a guest customer. Guest customers can re-use an email address and don't need a password."),
+     *              @OA\Property(
+     *                  property="birthdayDay",
+     *                  type="integer",
+     *                  description="Birthday day"),
+     *              @OA\Property(
+     *                  property="birthdayMonth",
+     *                  type="integer",
+     *                  description="Birthday month"),
+     *              @OA\Property(
+     *                  property="birthdayYear",
+     *                  type="integer",
+     *                  description="Birthday year"),
+     *              @OA\Property(
+     *                  property="title",
+     *                  type="string",
+     *                  description="(Academic) title of the customer"),
+     *              @OA\Property(
+     *                  property="affiliateCode",
+     *                  type="string",
+     *                  description="Field can be used to store an affiliate tracking code"),
+     *              @OA\Property(
+     *                  property="campaignCode",
+     *                  type="string",
+     *                  description="Field can be used to store a campaign tracking code")
+     *          )
+     *      ),
      *      @OA\Response(
      *          response="200",
      *          description="Success",
-     *          @OA\JsonContent(ref="#/components/schemas/customer_flat")
+     *          @OA\JsonContent(ref="#/components/schemas/Customer")
      *     )
      * )
      * @Route("/store-api/account/register", name="store-api.account.register", methods={"POST"})
@@ -191,7 +268,6 @@ class RegisterRoute extends AbstractRegisterRoute
             $customer['company'] = $billingAddress['company'];
 
             if ($data->get('vatIds')) {
-                /* @var array $vatIds */
                 $vatIds = $data->get('vatIds');
                 $customer['vatIds'] = empty($vatIds) ? null : $vatIds;
             }
@@ -206,6 +282,7 @@ class RegisterRoute extends AbstractRegisterRoute
         $criteria = new Criteria([$customer['id']]);
         $criteria->addAssociation('addresses');
         $criteria->addAssociation('salutation');
+        $criteria->addAssociation('defaultBillingAddress');
 
         /** @var CustomerEntity $customerEntity */
         $customerEntity = $this->customerRepository->search($criteria, $context->getContext())->first();
@@ -248,7 +325,7 @@ class RegisterRoute extends AbstractRegisterRoute
 
     private function getDoubleOptInEvent(CustomerEntity $customer, SalesChannelContext $context, string $url, ?string $redirectTo = null): Event
     {
-        $url .= sprintf('/registration/confirm?em=%s&hash=%s', hash('sha1', $customer->getEmail()), $customer->getHash());
+        $url .= $this->getConfirmUrl($context, $customer);
 
         if ($redirectTo) {
             $url .= '&redirectTo=' . $redirectTo;
@@ -538,5 +615,27 @@ class RegisterRoute extends AbstractRegisterRoute
         }
 
         return $country->getVatIdRequired();
+    }
+
+    private function getConfirmUrl(SalesChannelContext $context, CustomerEntity $customer): string
+    {
+        $urlTemplate = $this->systemConfigService->get(
+            'core.loginRegistration.confirmationUrl',
+            $context->getSalesChannelId()
+        );
+        if (!\is_string($urlTemplate)) {
+            $urlTemplate = '/registration/confirm?em=%%HASHEDEMAIL%%&hash=%%SUBSCRIBEHASH%%';
+        }
+
+        $emailHash = hash('sha1', $customer->getEmail());
+
+        $urlEvent = new CustomerConfirmRegisterUrlEvent($context, $urlTemplate, $emailHash, $customer->getHash(), $customer);
+        $this->eventDispatcher->dispatch($urlEvent);
+
+        return str_replace(
+            ['%%HASHEDEMAIL%%', '%%SUBSCRIBEHASH%%'],
+            [$emailHash, $customer->getHash()],
+            $urlEvent->getConfirmUrl()
+        );
     }
 }

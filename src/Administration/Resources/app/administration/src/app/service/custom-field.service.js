@@ -1,4 +1,6 @@
 const { remove } = Shopware.Utils.array;
+const { Service } = Shopware;
+const { Criteria } = Shopware.Data;
 
 /**
  * @module app/service/custom-field
@@ -15,27 +17,27 @@ export default function createCustomFieldService() {
     const $typeStore = {
         select: {
             configRenderComponent: 'sw-custom-field-type-select',
-            config: {}
+            config: {},
         },
         entity: {
             configRenderComponent: 'sw-custom-field-type-entity',
             type: 'select',
-            config: {}
+            config: {},
         },
         text: {
             configRenderComponent: 'sw-custom-field-type-text',
             type: 'text',
             config: {
                 componentName: 'sw-field',
-                type: 'text'
-            }
+                type: 'text',
+            },
         },
         media: {
             configRenderComponent: 'sw-custom-field-type-base',
             type: 'text',
             config: {
-                componentName: 'sw-media-field'
-            }
+                componentName: 'sw-media-field',
+            },
         },
         number: {
             configRenderComponent: 'sw-custom-field-type-number',
@@ -43,8 +45,8 @@ export default function createCustomFieldService() {
             config: {
                 componentName: 'sw-field',
                 type: 'number',
-                numberType: 'float'
-            }
+                numberType: 'float',
+            },
         },
         date: {
             configRenderComponent: 'sw-custom-field-type-date',
@@ -52,40 +54,40 @@ export default function createCustomFieldService() {
             config: {
                 componentName: 'sw-field',
                 type: 'date',
-                dateType: 'datetime'
-            }
+                dateType: 'datetime',
+            },
         },
         checkbox: {
             configRenderComponent: 'sw-custom-field-type-checkbox',
             type: 'bool',
             config: {
                 componentName: 'sw-field',
-                type: 'checkbox'
-            }
+                type: 'checkbox',
+            },
         },
         switch: {
             configRenderComponent: 'sw-custom-field-type-checkbox',
             type: 'bool',
             config: {
                 componentName: 'sw-field',
-                type: 'switch'
-            }
+                type: 'switch',
+            },
         },
         textEditor: {
             configRenderComponent: 'sw-custom-field-type-text-editor',
             type: 'html',
             config: {
-                componentName: 'sw-text-editor'
-            }
+                componentName: 'sw-text-editor',
+            },
         },
         colorpicker: {
             configRenderComponent: 'sw-custom-field-type-base',
             type: 'text',
             config: {
                 componentName: 'sw-field',
-                type: 'colorpicker'
-            }
-        }
+                type: 'colorpicker',
+            },
+        },
     };
 
     const $entityNameStore = [
@@ -97,7 +99,24 @@ export default function createCustomFieldService() {
         'order',
         'sales_channel',
         'media',
-        'landing_page'
+        'landing_page',
+        'promotion',
+        'product_stream',
+        'property_group',
+        'product_review',
+        'event_action',
+        'country',
+        'currency',
+        'customer_group',
+        'delivery_time',
+        'document_base_config',
+        'language',
+        'number_range',
+        'payment_method',
+        'rule',
+        'salutation',
+        'shipping_method',
+        'tax',
     ];
 
     return {
@@ -106,7 +125,8 @@ export default function createCustomFieldService() {
         getTypes,
         getEntityNames,
         addEntityName,
-        removeEntityName
+        removeEntityName,
+        getCustomFieldSets,
     };
 
     function getTypeByName(type) {
@@ -131,5 +151,22 @@ export default function createCustomFieldService() {
 
     function removeEntityName(entityName) {
         remove($entityNameStore, (storeItem) => { return storeItem === entityName; });
+    }
+
+    function getCustomFieldSets(entityName) {
+        const customFieldSetRepository = Service('repositoryFactory').create('custom_field_set');
+
+        return customFieldSetRepository.search(customFieldSetCriteria(entityName), Shopware.Context.api).then((sets) => {
+            return sets.filter((set) => set.customFields.length > 0);
+        });
+    }
+
+    function customFieldSetCriteria(entityName) {
+        const criteria = new Criteria();
+
+        criteria.addFilter(Criteria.equals('relations.entityName', entityName));
+        criteria.getAssociation('customFields').addSorting(Criteria.sort('config.customFieldPosition'));
+
+        return criteria;
     }
 }

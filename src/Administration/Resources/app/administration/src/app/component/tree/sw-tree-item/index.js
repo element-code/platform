@@ -15,116 +15,118 @@ Component.register('sw-tree-item', {
             required: true,
             default() {
                 return {};
-            }
+            },
         },
 
         draggedItem: {
             type: Object,
             required: false,
-            default: null
+            default: null,
         },
 
         newElementId: {
             type: String,
             required: false,
-            default: null
+            default: null,
         },
 
         translationContext: {
             type: String,
-            default: 'sw-tree'
+            default: 'sw-tree',
         },
 
         onChangeRoute: {
             type: Function,
-            default: null
+            default: null,
         },
 
         disableContextMenu: {
             type: Boolean,
-            default: false
+            default: false,
         },
 
         contextMenuTooltipText: {
             type: String,
             required: false,
-            default: null
+            default: null,
         },
 
         activeParentIds: {
             type: Array,
-            required: false
+            required: false,
+            default: null,
         },
 
         activeItemIds: {
             type: Array,
-            required: false
+            required: false,
+            default: null,
         },
 
         sortable: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         markInactive: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         shouldFocus: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         shouldShowActiveState: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         activeFocusId: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
 
         displayCheckbox: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         allowNewCategories: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         allowDeleteCategories: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         allowCreateWithoutPosition: {
             type: Boolean,
             default: false,
-            required: false
+            required: false,
         },
 
         allowDuplicate: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         getItemUrl: {
             type: Function,
             required: false,
-            default: null
+            default: null,
         },
 
         getIsHighlighted: {
@@ -132,8 +134,8 @@ Component.register('sw-tree-item', {
             required: false,
             default: () => {
                 return false;
-            }
-        }
+            },
+        },
     },
 
     data() {
@@ -149,41 +151,21 @@ Component.register('sw-tree-item', {
             mouseStartX: 0,
             mouseStartY: 0,
             rootParent: null,
-            checked: false,
             checkedGhost: false,
-            currentEditElement: null
+            currentEditElement: null,
         };
     },
 
-    watch: {
-        activeElementId(newId) {
-            this.active = newId === this.item.id;
-        },
-
-        newElementId(newId) {
-            this.currentEditElement = newId;
-        },
-
-        activeParentIds: {
-            handler() {
-                if (this.activeParentIds) {
-                    this.checkedGhost = this.activeParentIds.indexOf(this.item.id) >= 0;
-                }
-            },
-            immediate: true
-        },
-
-        activeItemIds: {
-            handler() {
-                if (this.activeItemIds) {
-                    this.checked = this.activeItemIds.indexOf(this.item.id) >= 0;
-                }
-            },
-            immediate: true
-        }
-    },
-
     computed: {
+        checked: {
+            get() {
+                return this.item.checked;
+            },
+            set(isChecked) {
+                this.item.checked = isChecked;
+            },
+        },
+
         activeElementId() {
             return this.$route.params[this.item.activeElementId] || null;
         },
@@ -192,6 +174,7 @@ Component.register('sw-tree-item', {
             if (this.item.initialOpened) {
                 this.openTreeItem(true);
                 this.getTreeItemChildren(this.item);
+                // eslint-disable-next-line vue/no-side-effects-in-computed-properties
                 this.item.initialOpened = false;
             }
             return this.opened;
@@ -213,7 +196,7 @@ Component.register('sw-tree-item', {
                 'is--marked-inactive': this.markInactive && !this.item.data.active,
                 'is--focus': this.shouldFocus && this.activeFocusId === this.item.id,
                 'is--no-checkbox': !this.displayCheckbox,
-                'is--highlighted': this.isHighlighted
+                'is--highlighted': this.isHighlighted,
             };
         },
 
@@ -227,16 +210,22 @@ Component.register('sw-tree-item', {
                 onDragEnter: this.onMouseEnter,
                 onDrop: this.dragEnd,
                 preventEvent: true,
-                disabled: !this.sortable
+                disabled: !this.sortable,
             };
         },
 
         parentScope() {
             let parentNode = this.$parent;
+
             // eslint-disable-next-line
             while (parentNode.$options._componentTag !== 'sw-tree') {
-                parentNode = parentNode.$parent;
+                if (parentNode.$parent) {
+                    parentNode = parentNode.$parent;
+                }
+
+                break;
             }
+
             return parentNode;
         },
 
@@ -245,14 +234,14 @@ Component.register('sw-tree-item', {
                 return {
                     showDelay: 300,
                     message: this.contextMenuTooltipText,
-                    disabled: !this.disableContextMenu
+                    disabled: !this.disableContextMenu,
                 };
             }
 
             return {
                 showDelay: 300,
                 message: this.$tc(`${this.translationContext}.general.actions.actionsDisabledInLanguage`),
-                disabled: !this.disableContextMenu
+                disabled: !this.disableContextMenu,
             };
         },
 
@@ -262,7 +251,35 @@ Component.register('sw-tree-item', {
 
         isHighlighted() {
             return this.getIsHighlighted(this.item);
-        }
+        },
+    },
+
+    watch: {
+        activeElementId(newId) {
+            this.active = newId === this.item.id;
+        },
+
+        newElementId(newId) {
+            this.currentEditElement = newId;
+        },
+
+        activeParentIds: {
+            handler() {
+                if (this.activeParentIds) {
+                    this.checkedGhost = this.activeParentIds.indexOf(this.item.id) >= 0;
+                }
+            },
+            immediate: true,
+        },
+
+        activeItemIds: {
+            handler() {
+                if (this.activeItemIds) {
+                    this.checked = this.activeItemIds.indexOf(this.item.id) >= 0;
+                }
+            },
+            immediate: true,
+        },
     },
 
     updated() {
@@ -424,7 +441,7 @@ Component.register('sw-tree-item', {
         },
 
         getActiveIconColor(item) {
-            if (item.data && item.data.active) {
+            if (item.data?.active) {
                 return item.data.active === true ? '#37d046' : '#d1d9e0';
             }
 
@@ -437,6 +454,6 @@ Component.register('sw-tree-item', {
             }
 
             return false;
-        }
-    }
+        },
+    },
 });

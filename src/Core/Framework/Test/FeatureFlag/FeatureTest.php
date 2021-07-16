@@ -10,6 +10,9 @@ use Shopware\Core\Framework\Test\TestCaseBase\KernelTestBehaviour;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 
+/**
+ * @group skip-paratest
+ */
 class FeatureTest extends TestCase
 {
     use KernelTestBehaviour;
@@ -70,6 +73,14 @@ class FeatureTest extends TestCase
         static::assertFalse(Feature::isActive('FEATURE_NEXT_102'));
         $_SERVER['FEATURE_NEXT_102'] = '1';
         static::assertTrue(Feature::isActive('FEATURE_NEXT_102'));
+    }
+
+    public function testHasFunction(): void
+    {
+        $this->setUpFixtures();
+
+        static::assertFalse(Feature::has('not-existing'));
+        static::assertTrue(Feature::has('FEATURE_NEXT_102'));
     }
 
     public function testTheCallableGetsExecutes(): void

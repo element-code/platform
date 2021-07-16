@@ -36,10 +36,10 @@ use Shopware\Core\Checkout\Promotion\Cart\Discount\DiscountCalculatorResult;
 use Shopware\Core\Checkout\Promotion\Cart\Discount\DiscountLineItem;
 use Shopware\Core\Checkout\Promotion\Cart\Discount\DiscountPackageCollection;
 use Shopware\Core\Checkout\Promotion\Cart\Discount\DiscountPackager;
-use Shopware\Core\Checkout\Promotion\Cart\Discount\Filter\AdvancedPackageFilter;
 use Shopware\Core\Checkout\Promotion\Cart\Discount\Filter\AdvancedPackagePicker;
-use Shopware\Core\Checkout\Promotion\Cart\Discount\Filter\AdvancedPackageRules;
-use Shopware\Core\Checkout\Promotion\Cart\Error\PromotionNotEligibleError;
+use Shopware\Core\Checkout\Promotion\Cart\Discount\Filter\PackageFilter;
+use Shopware\Core\Checkout\Promotion\Cart\Discount\Filter\SetGroupScopeFilter;
+use Shopware\Core\Checkout\Promotion\Cart\Error\PromotionExcludedError;
 use Shopware\Core\Checkout\Promotion\Exception\DiscountCalculatorNotFoundException;
 use Shopware\Core\Checkout\Promotion\Exception\InvalidPriceDefinitionException;
 use Shopware\Core\Checkout\Promotion\Exception\InvalidScopeDefinitionException;
@@ -53,74 +53,38 @@ class PromotionCalculator
 {
     use PromotionCartInformationTrait;
 
-    /**
-     * @var AmountCalculator
-     */
-    private $amountCalculator;
+    private AmountCalculator $amountCalculator;
 
-    /**
-     * @var AbsolutePriceCalculator
-     */
-    private $absolutePriceCalculator;
+    private AbsolutePriceCalculator $absolutePriceCalculator;
 
-    /**
-     * @var LineItemGroupBuilder
-     */
-    private $groupBuilder;
+    private LineItemGroupBuilder $groupBuilder;
 
-    /**
-     * @var AdvancedPackageFilter
-     */
-    private $advancedFilter;
+    private PackageFilter $advancedFilter;
 
-    /**
-     * @var AdvancedPackagePicker
-     */
-    private $advancedPicker;
+    private AdvancedPackagePicker $advancedPicker;
 
-    /**
-     * @var AdvancedPackageRules
-     */
-    private $advancedRules;
+    private SetGroupScopeFilter $advancedRules;
 
-    /**
-     * @var LineItemQuantitySplitter
-     */
-    private $lineItemQuantitySplitter;
+    private LineItemQuantitySplitter $lineItemQuantitySplitter;
 
-    /**
-     * @var DiscountCompositionBuilder
-     */
-    private $discountCompositionBuilder;
+    private DiscountCompositionBuilder $discountCompositionBuilder;
 
-    /**
-     * @var PercentagePriceCalculator
-     */
-    private $percentagePriceCalculator;
+    private PercentagePriceCalculator $percentagePriceCalculator;
 
-    /**
-     * @var DiscountPackager
-     */
-    private $cartScopeDiscountPackager;
+    private DiscountPackager $cartScopeDiscountPackager;
 
-    /**
-     * @var DiscountPackager
-     */
-    private $setGroupScopeDiscountPackager;
+    private DiscountPackager $setGroupScopeDiscountPackager;
 
-    /**
-     * @var DiscountPackager
-     */
-    private $setScopeDiscountPackager;
+    private DiscountPackager $setScopeDiscountPackager;
 
     public function __construct(
         AmountCalculator $amountCalculator,
         AbsolutePriceCalculator $absolutePriceCalculator,
         LineItemGroupBuilder $groupBuilder,
         DiscountCompositionBuilder $compositionBuilder,
-        AdvancedPackageFilter $filter,
+        PackageFilter $filter,
         AdvancedPackagePicker $picker,
-        AdvancedPackageRules $advancedRules,
+        SetGroupScopeFilter $advancedRules,
         LineItemQuantitySplitter $lineItemQuantitySplitter,
         PercentagePriceCalculator $percentagePriceCalculator,
         DiscountPackager $cartScopeDiscountPackager,
@@ -162,7 +126,7 @@ class PromotionCalculator
         $exclusions = $this->buildExclusions($discountLineItems, $calculated, $context);
 
         // @todo order $discountLineItems by priority
-        /* @var LineItem $discountLineItem */
+
         foreach ($discountLineItems as $discountItem) {
             // if we dont have a scope
             // then skip it, it might not belong to us
@@ -180,7 +144,7 @@ class PromotionCalculator
             if (!$this->isRequirementValid($discountItem, $calculated, $context)) {
                 // hide the notEligibleErrors on automatic discounts
                 if (!$this->isAutomaticDisount($discountItem)) {
-                    $this->addPromotionNotEligibleError($discountItem->getLabel(), $calculated);
+                    $this->addPromotionNotEligibleError($discountItem->getLabel() ?? $discountItem->getId(), $calculated);
                 }
 
                 continue;
@@ -194,7 +158,7 @@ class PromotionCalculator
             $promotionId = $discountItem->getPayloadValue('promotionId');
 
             if (\array_key_exists($promotionId, $exclusions)) {
-                $calculated->addErrors(new PromotionNotEligibleError($discountItem->getDescription()));
+                $calculated->addErrors(new PromotionExcludedError($discountItem->getDescription() ?? $discountItem->getId()));
 
                 continue;
             }
@@ -219,7 +183,7 @@ class PromotionCalculator
             );
 
             // add our discount item to the cart
-            $calculated->addLineItems(new LineItemCollection([$discountItem]));
+            $calculated->add($discountItem);
 
             $this->addPromotionAddedNotice($original, $calculated, $discountItem);
 
@@ -240,7 +204,6 @@ class PromotionCalculator
         // if a promotion has exclusions they are added on the stack
         $exclusions = [];
 
-        /* @var LineItem $discountLineItem */
         foreach ($discountLineItems as $discountItem) {
             // if we dont have a scope
             // then skip it, it might not belong to us
@@ -256,6 +219,24 @@ class PromotionCalculator
                 // this avoids cycles that both promotions exclude each other
                 if (isset($exclusions[$promotionId])) {
                     continue;
+                }
+
+                if ($discountItem->getPayloadValue('preventCombination')) {
+                    $payloadExclusions = [];
+                    foreach ($discountLineItems as $exclusionItem) {
+                        if (!$exclusionItem->hasPayloadValue('promotionId')) {
+                            continue;
+                        }
+
+                        $promotionIdToExclude = $exclusionItem->getPayloadValue('promotionId');
+                        if ($promotionIdToExclude === $promotionId) {
+                            continue;
+                        }
+
+                        $payloadExclusions[] = $promotionIdToExclude;
+                    }
+
+                    $discountItem->setPayloadValue('exclusions', $payloadExclusions);
                 }
             }
 

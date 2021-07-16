@@ -31,6 +31,9 @@
 
         <service id="Shopware\Core\Checkout\Payment\Controller\PaymentController" public="true">
             <argument type="service" id="Shopware\Core\Checkout\Payment\PaymentService"/>
+            <argument type="service" id="Shopware\Core\Checkout\Cart\Order\OrderConverter"/>
+            <argument type="service" id="Shopware\Core\Checkout\Payment\Cart\Token\JWTFactoryV2"/>
+            <argument type="service" id="order.repository"/>
             <call method="setContainer">
                 <argument type="service" id="service_container"/>
             </call>
@@ -41,6 +44,7 @@
             <argument type="service" id="order.repository"/>
             <argument type="service" id="router"/>
             <argument type="service" id="Shopware\Core\Checkout\Payment\Cart\PaymentHandler\PaymentHandlerRegistry"/>
+            <argument type="service" id="Shopware\Core\System\StateMachine\StateMachineRegistry"/>
         </service>
 
         <service id="shopware.jwt_signer" class="Lcobucci\JWT\Signer\Rsa\Sha256"/>
@@ -55,6 +59,7 @@
 
         <service id="Shopware\Core\Checkout\Payment\Cart\Token\JWTFactoryV2">
             <argument type="service" id="shopware.jwt_config"/>
+            <argument type="service" id="Doctrine\DBAL\Connection"/>
         </service>
 
         <service id="Shopware\Core\Checkout\Payment\Cart\PaymentHandler\PaymentHandlerRegistry">
@@ -96,6 +101,23 @@
             <tag name="kernel.event_subscriber"/>
         </service>
 
+        <service id="Shopware\Core\Checkout\Payment\DataAbstractionLayer\PaymentDistinguishableNameSubscriber">
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service id="Shopware\Core\Checkout\Payment\DataAbstractionLayer\PaymentMethodIndexer">
+            <argument type="service" id="Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory"/>
+            <argument type="service" id="event_dispatcher"/>
+            <argument type="service" id="payment_method.repository"/>
+            <argument type="service" id="Shopware\Core\Checkout\Payment\DataAbstractionLayer\PaymentDistinguishableNameGenerator"/>
+
+            <tag name="shopware.entity_indexer"/>
+        </service>
+
+        <service id="Shopware\Core\Checkout\Payment\DataAbstractionLayer\PaymentDistinguishableNameGenerator">
+            <argument type="service" id="payment_method.repository"/>
+        </service>
+
         <!--Repository Decorators-->
         <service id="Shopware\Core\Checkout\Payment\DataAbstractionLayer\PaymentMethodRepositoryDecorator" decorates="payment_method.repository">
             <argument type="service" id="Shopware\Core\Checkout\Payment\DataAbstractionLayer\PaymentMethodRepositoryDecorator.inner"/>
@@ -110,7 +132,7 @@
             <argument type="service" id="sales_channel.payment_method.repository"/>
         </service>
 
-        <service id="Shopware\Core\Checkout\Payment\SalesChannel\CachedPaymentMethodRoute" decorates="Shopware\Core\Checkout\Payment\SalesChannel\PaymentMethodRoute" decoration-priority="-1000">
+        <service id="Shopware\Core\Checkout\Payment\SalesChannel\CachedPaymentMethodRoute" decorates="Shopware\Core\Checkout\Payment\SalesChannel\PaymentMethodRoute" decoration-priority="-1000" public="true">
             <argument type="service" id="Shopware\Core\Checkout\Payment\SalesChannel\CachedPaymentMethodRoute.inner"/>
             <argument type="service" id="cache.object"/>
             <argument type="service" id="Shopware\Core\Framework\DataAbstractionLayer\Cache\EntityCacheKeyGenerator"/>
@@ -118,6 +140,10 @@
             <argument type="service" id="event_dispatcher"/>
             <argument>%shopware.cache.invalidation.payment_method_route%</argument>
             <argument type="service" id="logger" />
+        </service>
+
+        <service id="Shopware\Core\Checkout\Payment\SalesChannel\SortedPaymentMethodRoute" decorates="Shopware\Core\Checkout\Payment\SalesChannel\PaymentMethodRoute" decoration-priority="-2000" public="true">
+            <argument type="service" id="Shopware\Core\Checkout\Payment\SalesChannel\SortedPaymentMethodRoute.inner"/>
         </service>
 
         <service id="Shopware\Core\Checkout\Payment\SalesChannel\HandlePaymentMethodRoute" public="true">

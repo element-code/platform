@@ -7,6 +7,7 @@ use OpenApi\Annotations as OA;
 use Shopware\Core\Checkout\Customer\Aggregate\CustomerRecovery\CustomerRecoveryEntity;
 use Shopware\Core\Checkout\Customer\CustomerEntity;
 use Shopware\Core\Checkout\Customer\Event\CustomerAccountRecoverRequestEvent;
+use Shopware\Core\Checkout\Customer\Event\PasswordRecoveryUrlEvent;
 use Shopware\Core\Checkout\Customer\Exception\CustomerNotFoundException;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
@@ -27,6 +28,7 @@ use Shopware\Core\Framework\Validation\Exception\ConstraintViolationException;
 use Shopware\Core\System\SalesChannel\Aggregate\SalesChannelDomain\SalesChannelDomainEntity;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Shopware\Core\System\SalesChannel\SuccessResponse;
+use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Constraints\Choice;
 use Symfony\Component\Validator\Constraints\Email;
@@ -62,16 +64,20 @@ class SendPasswordRecoveryMailRoute extends AbstractSendPasswordRecoveryMailRout
      */
     private $validator;
 
+    private SystemConfigService $systemConfigService;
+
     public function __construct(
         EntityRepositoryInterface $customerRepository,
         EntityRepositoryInterface $customerRecoveryRepository,
         EventDispatcherInterface $eventDispatcher,
-        DataValidator $validator
+        DataValidator $validator,
+        SystemConfigService $systemConfigService
     ) {
         $this->customerRepository = $customerRepository;
         $this->customerRecoveryRepository = $customerRecoveryRepository;
         $this->eventDispatcher = $eventDispatcher;
         $this->validator = $validator;
+        $this->systemConfigService = $systemConfigService;
     }
 
     public function getDecorated(): AbstractSendPasswordRecoveryMailRoute
@@ -83,19 +89,34 @@ class SendPasswordRecoveryMailRoute extends AbstractSendPasswordRecoveryMailRout
      * @Since("6.2.0.0")
      * @OA\Post(
      *      path="/account/recovery-password",
-     *      summary="Sends a recovery email for password recovery",
+     *      summary="Send a password recovery mail",
+     *      description="This operation is Step 1 of the password reset flow. Make sure to implement Step 2 ""Reset password with recovery credentials"" in order to allow for the complete flow in your application
+
+Sends a recovery mail containing a link with credentials that allows a customer to reset their password.",
      *      operationId="sendRecoveryMail",
-     *      tags={"Store API", "Account"},
+     *      tags={"Store API", "Profile"},
      *      @OA\RequestBody(
      *          required=true,
      *          @OA\JsonContent(
-     *              @OA\Property(property="email", description="E-Mail", type="string"),
-     *              @OA\Property(property="storefrontUrl", description="BaseUrl for the url in mail", type="string")
+     *              required={
+                        "email",
+     *                  "storefrontUrl"
+     *              },
+     *              @OA\Property(
+     *                  property="email",
+     *                  description="E-Mail address to identify the customer",
+     *                  type="string"),
+     *              @OA\Property(
+     *                  property="storefrontUrl",
+     *                  description="URL of the storefront to use for the generated reset link. It has to be a domain that is configured in the sales channel domain settings.",
+     *                  type="string")
      *          )
      *      ),
      *      @OA\Response(
      *          response="200",
-     *          description="",
+     *          description="If email corresponds to an existing customer, a mail will be sent out to that customer containing a link assembled using the following schema:
+
+Returns a success indicating a successful initialisation of the reset flow.",
      *          @OA\JsonContent(ref="#/components/schemas/SuccessResponse")
      *     )
      * )
@@ -128,7 +149,8 @@ class SendPasswordRecoveryMailRoute extends AbstractSendPasswordRecoveryMailRout
         $customerRecovery = $this->customerRecoveryRepository->search($customerIdCriteria, $repoContext)->first();
 
         $hash = $customerRecovery->getHash();
-        $recoverUrl = rtrim($data->get('storefrontUrl'), '/') . '/account/recover/password?hash=' . $hash;
+
+        $recoverUrl = $this->getRecoverUrl($context, $hash, $data->get('storefrontUrl'), $customerRecovery);
 
         $event = new CustomerAccountRecoverRequestEvent($context, $customerRecovery, $recoverUrl);
         $this->eventDispatcher->dispatch($event, CustomerAccountRecoverRequestEvent::EVENT_NAME);
@@ -242,5 +264,29 @@ class SendPasswordRecoveryMailRoute extends AbstractSendPasswordRecoveryMailRout
         ];
 
         $this->customerRecoveryRepository->delete([$recoveryData], $context);
+    }
+
+    private function getRecoverUrl(
+        SalesChannelContext $context,
+        string $hash,
+        string $storefrontUrl,
+        CustomerRecoveryEntity $customerRecovery
+    ): string {
+        $urlTemplate = $this->systemConfigService->get(
+            'core.loginRegistration.pwdRecoverUrl',
+            $context->getSalesChannelId()
+        );
+        if (!\is_string($urlTemplate)) {
+            $urlTemplate = '/account/recover/password?hash=%%RECOVERHASH%%';
+        }
+
+        $urlEvent = new PasswordRecoveryUrlEvent($context, $urlTemplate, $hash, $storefrontUrl, $customerRecovery);
+        $this->eventDispatcher->dispatch($urlEvent);
+
+        return rtrim($storefrontUrl, '/') . str_replace(
+            '%%RECOVERHASH%%',
+            $hash,
+            $urlEvent->getRecoveryUrl()
+        );
     }
 }

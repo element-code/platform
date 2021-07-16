@@ -24,6 +24,7 @@ use Shopware\Core\Content\Media\File\FileSaver;
 use Shopware\Core\Content\Media\File\MediaFile;
 use Shopware\Core\Content\Newsletter\Aggregate\NewsletterRecipient\NewsletterRecipientDefinition;
 use Shopware\Core\Content\Newsletter\SalesChannel\NewsletterSubscribeRoute;
+use Shopware\Core\Content\Product\Aggregate\ProductCrossSelling\ProductCrossSellingDefinition;
 use Shopware\Core\Content\Product\Aggregate\ProductVisibility\ProductVisibilityDefinition;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Content\Product\ProductEntity;
@@ -34,6 +35,8 @@ use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexerRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\NotFilter;
+use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Struct\ArrayEntity;
 use Shopware\Core\Framework\Test\TestCaseBase\BasicTestDataBehaviour;
 use Shopware\Core\Framework\Test\TestCaseBase\CacheTestBehaviour;
@@ -578,6 +581,221 @@ class ImportExportTest extends TestCase
         static::assertSame(Progress::STATE_SUCCEEDED, $progress->getState());
     }
 
+    /**
+     * @group slow
+     */
+    public function testProductsWithVariantsCsv(): void
+    {
+        if (!Feature::isActive('FEATURE_NEXT_8097')) {
+            static::markTestSkipped();
+        }
+
+        $connection = $this->getContainer()->get(Connection::class);
+        $connection->executeUpdate('DELETE FROM `product`');
+
+        $context = Context::createDefaultContext();
+        $context->addExtension(EntityIndexerRegistry::DISABLE_INDEXING, new ArrayEntity());
+
+        $factory = $this->getContainer()->get(ImportExportFactory::class);
+
+        $importExportService = $this->getContainer()->get(ImportExportService::class);
+
+        $profileId = $this->getDefaultProfileId(ProductDefinition::ENTITY_NAME);
+
+        $expireDate = new \DateTimeImmutable('2099-01-01');
+        $file = new UploadedFile(__DIR__ . '/fixtures/products_with_variants.csv', 'products_with_variants.csv', 'text/csv');
+
+        $logEntity = $importExportService->prepareImport(
+            $context,
+            $profileId,
+            $expireDate,
+            $file
+        );
+
+        $progress = new Progress($logEntity->getId(), Progress::STATE_PROGRESS, 0, null);
+        $importExport = $factory->create($logEntity->getId(), 5, 5);
+
+        do {
+            $progress = $importExport->import($context, $progress->getOffset());
+        } while (!$progress->isFinished());
+
+        static::assertSame(Progress::STATE_SUCCEEDED, $progress->getState());
+        static::assertEquals(2, $progress->getProcessedRecords());
+
+        $productRepository = $this->getContainer()->get('product.repository');
+        $criteria = new Criteria();
+        $criteria->addAssociation('options.group');
+        $criteria->addFilter(new NotFilter(NotFilter::CONNECTION_AND, [new EqualsFilter('parentId', null)]));
+
+        $result = $productRepository->search($criteria, Context::createDefaultContext());
+        static::assertEquals(32, $result->count());
+        static::assertCount(3, $result->first()->getVariation());
+        static::assertContains('color', array_column($result->first()->getVariation(), 'group'));
+        static::assertContains('size', array_column($result->first()->getVariation(), 'group'));
+        static::assertContains('material', array_column($result->first()->getVariation(), 'group'));
+
+        $criteria = new Criteria();
+        $criteria->addAssociation('configuratorSettings');
+        $criteria->addFilter(new EqualsFilter('parentId', null));
+
+        $result = $productRepository->search($criteria, Context::createDefaultContext());
+        static::assertEquals(10, $result->first()->getConfiguratorSettings()->count());
+    }
+
+    /**
+     * @group slow
+     */
+    public function testProductsWithInvalidVariantsCsv(): void
+    {
+        if (!Feature::isActive('FEATURE_NEXT_8097')) {
+            static::markTestSkipped();
+        }
+
+        $connection = $this->getContainer()->get(Connection::class);
+        $connection->executeUpdate('DELETE FROM `product`');
+
+        $context = Context::createDefaultContext();
+        $context->addExtension(EntityIndexerRegistry::DISABLE_INDEXING, new ArrayEntity());
+
+        $factory = $this->getContainer()->get(ImportExportFactory::class);
+
+        $importExportService = $this->getContainer()->get(ImportExportService::class);
+
+        $profileId = $this->getDefaultProfileId(ProductDefinition::ENTITY_NAME);
+
+        $expireDate = new \DateTimeImmutable('2099-01-01');
+        $file = new UploadedFile(__DIR__ . '/fixtures/products_with_invalid_variants.csv', 'products_with_invalid_variants.csv', 'text/csv');
+
+        $logEntity = $importExportService->prepareImport(
+            $context,
+            $profileId,
+            $expireDate,
+            $file
+        );
+
+        $progress = new Progress($logEntity->getId(), Progress::STATE_PROGRESS, 0, null);
+        $importExport = $factory->create($logEntity->getId(), 5, 5);
+
+        do {
+            $progress = $importExport->import($context, $progress->getOffset());
+        } while (!$progress->isFinished());
+
+        static::assertSame(Progress::STATE_FAILED, $progress->getState());
+
+        $config = Config::fromLog($importExport->getLogEntity()->getInvalidRecordsLog());
+        $reader = new CsvReader();
+        $filesystem = $this->getContainer()->get('shopware.filesystem.private');
+        $resource = $filesystem->readStream($logEntity->getFile()->getPath() . '_invalid');
+        $invalid = iterator_to_array($reader->read($config, $resource, 0));
+
+        static::assertCount(2, $invalid);
+
+        $first = $invalid[0];
+        static::assertStringContainsString('size: M, L, XL, XXL | oops', $first['_error']);
+        $second = $invalid[1];
+        static::assertStringContainsString('size: , | color: Green, White, Black, Purple', $second['_error']);
+    }
+
+    public function testProductsWithOwnIdentifier(): void
+    {
+        if (!Feature::isActive('FEATURE_NEXT_8097')) {
+            static::markTestSkipped('NEXT-8097');
+        }
+
+        $context = Context::createDefaultContext();
+        $context->addExtension(EntityIndexerRegistry::DISABLE_INDEXING, new ArrayEntity());
+
+        $productIds = [
+            Uuid::fromStringToHex('product1'),
+            Uuid::fromStringToHex('product2'),
+            Uuid::fromStringToHex('product3'),
+            Uuid::fromStringToHex('product4'),
+        ];
+
+        /** @var EntityRepositoryInterface $categoryRepository */
+        $categoryRepository = $this->getContainer()->get(CategoryDefinition::ENTITY_NAME . '.repository');
+        $category1Id = Uuid::fromStringToHex('category1');
+        $category2Id = '0a600a2648b3486fbfdbc60993050103';
+        $category3Id = Uuid::fromStringToHex('category3');
+        $categoryRepository->upsert([
+            [
+                'id' => $category1Id,
+                'name' => 'First category',
+            ],
+
+            [
+                'id' => $category2Id,
+                'name' => 'Second category',
+            ],
+
+            [
+                'id' => $category3Id,
+                'name' => 'Third category',
+            ],
+        ], $context);
+
+        $factory = $this->getContainer()->get(ImportExportFactory::class);
+        $importExportService = $this->getContainer()->get(ImportExportService::class);
+        $profileId = $this->getDefaultProfileId(ProductDefinition::ENTITY_NAME);
+
+        $expireDate = new \DateTimeImmutable('2099-01-01');
+        $file = new UploadedFile(__DIR__ . '/fixtures/products_with_own_identifier.csv', 'products.csv', 'text/csv');
+
+        $logEntity = $importExportService->prepareImport(
+            $context,
+            $profileId,
+            $expireDate,
+            $file
+        );
+
+        $progress = new Progress($logEntity->getId(), Progress::STATE_PROGRESS, 0, null);
+        $importExport = $factory->create($logEntity->getId(), 5, 5);
+        do {
+            $progress = $importExport->import($context, $progress->getOffset());
+        } while (!$progress->isFinished());
+
+        static::assertSame(Progress::STATE_SUCCEEDED, $progress->getState());
+
+        /** @var EntityRepositoryInterface $productRepository */
+        $productRepository = $this->getContainer()->get(ProductDefinition::ENTITY_NAME . '.repository');
+        $count = $productRepository->search(new Criteria($productIds), $context)->count();
+        static::assertSame(4, $count);
+
+        $name = 'Name has changed';
+        $productRepository->upsert([
+            [
+                'id' => $productIds[0],
+                'name' => $name,
+            ],
+        ], $context);
+
+        $logEntity = $importExportService->prepareImport(
+            $context,
+            $profileId,
+            $expireDate,
+            $file
+        );
+
+        $progress = new Progress($logEntity->getId(), Progress::STATE_PROGRESS, 0, null);
+        $importExport = $factory->create($logEntity->getId(), 5, 5);
+        do {
+            $progress = $importExport->import($context, $progress->getOffset());
+        } while (!$progress->isFinished());
+
+        /** @var ProductEntity $product */
+        $criteria = new Criteria([$productIds[0]]);
+        $criteria->addAssociation('categories');
+        $product = $productRepository->search($criteria, $context)->first();
+
+        static::assertNotSame($name, $product->getName());
+        static::assertSame(Uuid::fromStringToHex('tax19'), $product->getTaxId());
+        static::assertSame(Uuid::fromStringToHex('manufacturer1'), $product->getManufacturerId());
+        static::assertSame(3, $product->getCategories()->count());
+        static::assertSame($category1Id, $product->getCategories()->get($category1Id)->getId());
+        static::assertSame($category2Id, $product->getCategories()->get($category2Id)->getId());
+        static::assertSame($category3Id, $product->getCategories()->get($category3Id)->getId());
+    }
+
     public function testInvalidFile(): void
     {
         $connection = $this->getContainer()->get(Connection::class);
@@ -769,6 +987,103 @@ class ImportExportTest extends TestCase
         static::assertCount(0, $productC->getVisibilities());
         static::assertNull($productC->getVisibilities()->filterBySalesChannelId($salesChannelAId)->first());
         static::assertNull($productC->getVisibilities()->filterBySalesChannelId($salesChannelBId)->first());
+    }
+
+    /**
+     * @group slow
+     */
+    public function testCrossSellingCsv(): void
+    {
+        $context = Context::createDefaultContext();
+        $context->addExtension(EntityIndexerRegistry::DISABLE_INDEXING, new ArrayEntity());
+
+        $factory = $this->getContainer()->get(ImportExportFactory::class);
+
+        $importExportService = $this->getContainer()->get(ImportExportService::class);
+        $expireDate = new \DateTimeImmutable('2099-01-01');
+
+        $profileId = $this->getDefaultProfileId(ProductDefinition::ENTITY_NAME);
+
+        if (Feature::isActive('FEATURE_NEXT_8097')) {
+            $csvPath = __DIR__ . '/fixtures/cross_selling_products_with_own_identifier.csv';
+        } else {
+            $csvPath = __DIR__ . '/fixtures/cross_selling_products.csv';
+        }
+
+        $file = new UploadedFile($csvPath, 'products.csv', 'text/csv');
+        $logEntity = $importExportService->prepareImport(
+            $context,
+            $profileId,
+            $expireDate,
+            $file
+        );
+
+        $progress = new Progress($logEntity->getId(), Progress::STATE_PROGRESS, 0, null);
+        $importExport = $factory->create($logEntity->getId(), 5, 5);
+        do {
+            $progress = $importExport->import($context, $progress->getOffset());
+        } while (!$progress->isFinished());
+
+        static::assertSame(Progress::STATE_SUCCEEDED, $progress->getState());
+
+        $profileId = $this->getDefaultProfileId(ProductCrossSellingDefinition::ENTITY_NAME);
+
+        if (Feature::isActive('FEATURE_NEXT_8097')) {
+            $csvPath = __DIR__ . '/fixtures/cross_selling_with_own_identifier.csv';
+        } else {
+            $csvPath = __DIR__ . '/fixtures/cross_selling.csv';
+        }
+
+        $file = new UploadedFile($csvPath, 'cross_selling.csv', 'text/csv');
+        $logEntity = $importExportService->prepareImport(
+            $context,
+            $profileId,
+            $expireDate,
+            $file
+        );
+
+        $progress = new Progress($logEntity->getId(), Progress::STATE_PROGRESS, 0, null);
+        $importExport = $factory->create($logEntity->getId(), 5, 5);
+        do {
+            $progress = $importExport->import($context, $progress->getOffset());
+        } while (!$progress->isFinished());
+
+        static::assertSame(Progress::STATE_SUCCEEDED, $progress->getState());
+
+        $criteria = new Criteria(['cf682b73be1afad47d0f32559ac34627', 'c9a70321b66449abb54ba9306ad02835']);
+        $criteria->addAssociation('crossSellings.assignedProducts');
+
+        /** @var ProductEntity $productA */
+        $productA = $this->productRepository->search($criteria, Context::createDefaultContext())->get('cf682b73be1afad47d0f32559ac34627');
+        /** @var ProductEntity $productB */
+        $productB = $this->productRepository->search($criteria, Context::createDefaultContext())->get('c9a70321b66449abb54ba9306ad02835');
+
+        static::assertEquals('Lorem', $productA->getCrossSellings()->first()->getName());
+        static::assertEquals(3, $productA->getCrossSellings()->first()->getAssignedProducts()->count());
+        static::assertEquals('Ipsum', $productB->getCrossSellings()->first()->getName());
+        static::assertEquals(3, $productB->getCrossSellings()->first()->getAssignedProducts()->count());
+
+        $logEntity = $importExportService->prepareExport(Context::createDefaultContext(), $profileId, $expireDate);
+        $progress = new Progress($logEntity->getId(), Progress::STATE_PROGRESS, 0, null);
+        do {
+            $importExport = $factory->create($logEntity->getId(), 5, 5);
+            $progress = $importExport->export(Context::createDefaultContext(), new Criteria(), $progress->getOffset());
+        } while (!$progress->isFinished());
+
+        static::assertSame(Progress::STATE_SUCCEEDED, $progress->getState());
+
+        $filesystem = $this->getContainer()->get('shopware.filesystem.private');
+        $csv = $filesystem->read($logEntity->getFile()->getPath());
+
+        static::assertStringContainsString(
+            'f26b0d8f252a76f2f99337cced08314b|c1ace7586faa4342a4d3b33e6dd33b7c|c9a70321b66449abb54ba9306ad02835',
+            $csv
+        );
+
+        static::assertStringContainsString(
+            'c1ace7586faa4342a4d3b33e6dd33b7c|f26b0d8f252a76f2f99337cced08314b|cf682b73be1afad47d0f32559ac34627',
+            $csv
+        );
     }
 
     private function getDefaultProfileId(string $entity): string

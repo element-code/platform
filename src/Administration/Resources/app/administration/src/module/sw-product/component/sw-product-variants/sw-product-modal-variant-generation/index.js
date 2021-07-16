@@ -13,18 +13,18 @@ Component.register('sw-product-modal-variant-generation', {
     props: {
         product: {
             type: Object,
-            required: true
+            required: true,
         },
 
         groups: {
             type: Array,
-            required: true
+            required: true,
         },
 
         selectedGroups: {
             type: Array,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
@@ -37,17 +37,13 @@ Component.register('sw-product-modal-variant-generation', {
             notificationInfos: {},
             progressType: '',
             variantsNumber: 0,
-            variantsGenerator: new VariantsGenerator()
+            variantsGenerator: new VariantsGenerator(),
         };
-    },
-
-    created() {
-        this.createdComponent();
     },
 
     computed: {
         ...mapState('swProductDetail', [
-            'currencies'
+            'currencies',
         ]),
 
         productRepository() {
@@ -69,7 +65,11 @@ Component.register('sw-product-modal-variant-generation', {
                 return this.$tc('sw-product.variations.progressTypeCalculated');
             }
             return '';
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -96,7 +96,7 @@ Component.register('sw-product-modal-variant-generation', {
 
             this.variantsGenerator.createNewVariants(forceGenerating, this.currencies, this.product).then(() => {
                 // Save the product after generating
-                this.productRepository.save(this.product, Shopware.Context.api).then(() => {
+                this.productRepository.save(this.product).then(() => {
                     this.$emit('variations-finish-generate');
                     this.$emit('modal-close');
                     this.isLoading = false;
@@ -144,6 +144,6 @@ Component.register('sw-product-modal-variant-generation', {
         onCloseNotificationModal() {
             this.notificationModal = false;
             this.isLoading = false;
-        }
-    }
+        },
+    },
 });

@@ -8,8 +8,9 @@ use PHPUnit\Framework\TestCase;
 use Shopware\Core\Checkout\Payment\PaymentMethodEntity;
 use Shopware\Core\Content\Media\File\FileLoader;
 use Shopware\Core\Defaults;
-use Shopware\Core\Framework\Api\Context\AdminApiSource;
+use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\App\Aggregate\ActionButton\ActionButtonEntity;
+use Shopware\Core\Framework\App\Aggregate\CmsBlock\AppCmsBlockEntity;
 use Shopware\Core\Framework\App\AppCollection;
 use Shopware\Core\Framework\App\AppEntity;
 use Shopware\Core\Framework\App\Event\AppDeletedEvent;
@@ -44,30 +45,15 @@ class AppLifecycleTest extends TestCase
     use GuzzleTestClientBehaviour;
     use SystemConfigTestBehaviour;
 
-    /**
-     * @var AppLifecycle
-     */
-    private $appLifecycle;
+    private AppLifecycle $appLifecycle;
 
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $appRepository;
+    private EntityRepositoryInterface $appRepository;
 
-    /**
-     * @var Context
-     */
-    private $context;
+    private Context $context;
 
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $actionButtonRepository;
+    private EntityRepositoryInterface $actionButtonRepository;
 
-    /**
-     * @var EventDispatcherInterface
-     */
-    private $eventDispatcher;
+    private EventDispatcherInterface $eventDispatcher;
 
     public function setUp(): void
     {
@@ -76,11 +62,7 @@ class AppLifecycleTest extends TestCase
 
         $this->appLifecycle = $this->getContainer()->get(AppLifecycle::class);
 
-        $userRepository = $this->getContainer()->get('user.repository');
-        $userId = $userRepository->searchIds(new Criteria(), Context::createDefaultContext())->firstId();
-        $source = new AdminApiSource($userId);
-        $source->setIsAdmin(true);
-        $this->context = Context::createDefaultContext($source);
+        $this->context = new Context(new SystemSource(), [], Defaults::CURRENCY, [Defaults::LANGUAGE_SYSTEM]);
 
         $this->eventDispatcher = $this->getContainer()->get('event_dispatcher');
     }
@@ -133,6 +115,7 @@ class AppLifecycleTest extends TestCase
         $this->assertDefaultWebhooks($apps->first()->getId());
         $this->assertDefaultTemplate($apps->first()->getId());
         $this->assertDefaultPaymentMethods($apps->first()->getId());
+        $this->assertDefaultCmsBlocks($apps->first()->getId());
     }
 
     public function testInstallRollbacksRegistrationFailure(): void
@@ -325,36 +308,30 @@ class AppLifecycleTest extends TestCase
                     'active' => false,
                 ],
             ],
-        ]], Context::createDefaultContext());
-
-        if (Feature::isActive('FEATURE_NEXT_14357')) {
-            $this->appRepository->update([[
-                'id' => $id,
-                'paymentMethods' => [
-                    [
-                        'paymentMethod' => [
-                            'handlerIdentifier' => 'app\\test\\myMethod',
-                            'name' => 'My method',
-                            'active' => false,
-                            'media' => [
-                                'private' => true,
-                            ],
+            'paymentMethods' => [
+                [
+                    'paymentMethod' => [
+                        'handlerIdentifier' => 'app\\test\\myMethod',
+                        'name' => 'My method',
+                        'active' => false,
+                        'media' => [
+                            'private' => true,
                         ],
-                        'appName' => 'test',
-                        'identifier' => 'myMethod',
                     ],
-                    [
-                        'paymentMethod' => [
-                            'handlerIdentifier' => 'app\\test\\toBeRemoved',
-                            'name' => 'This method shall be removed',
-                            'active' => false,
-                        ],
-                        'appName' => 'test',
-                        'identifier' => 'toBeRemoved',
-                    ],
+                    'appName' => 'test',
+                    'identifier' => 'myMethod',
                 ],
-            ]], Context::createDefaultContext());
-        }
+                [
+                    'paymentMethod' => [
+                        'handlerIdentifier' => 'app\\test\\toBeRemoved',
+                        'name' => 'This method shall be removed',
+                        'active' => false,
+                    ],
+                    'appName' => 'test',
+                    'identifier' => 'toBeRemoved',
+                ],
+            ],
+        ]], Context::createDefaultContext());
 
         $permissionPersister = $this->getContainer()->get(PermissionPersister::class);
         $permissions = Permissions::fromArray([
@@ -480,36 +457,30 @@ class AppLifecycleTest extends TestCase
                     'active' => true,
                 ],
             ],
-        ]], Context::createDefaultContext());
-
-        if (Feature::isActive('FEATURE_NEXT_14357')) {
-            $this->appRepository->update([[
-                'id' => $id,
-                'paymentMethods' => [
-                    [
-                        'paymentMethod' => [
-                            'handlerIdentifier' => 'app\\test\\myMethod',
-                            'name' => 'My method',
-                            'active' => true,
-                            'media' => [
-                                'private' => false,
-                            ],
+            'paymentMethods' => [
+                [
+                    'paymentMethod' => [
+                        'handlerIdentifier' => 'app\\test\\myMethod',
+                        'name' => 'My method',
+                        'active' => true,
+                        'media' => [
+                            'private' => false,
                         ],
-                        'appName' => 'test',
-                        'identifier' => 'myMethod',
                     ],
-                    [
-                        'paymentMethod' => [
-                            'handlerIdentifier' => 'app\\test\\toBeRemoved',
-                            'name' => 'This method shall be removed',
-                            'active' => true,
-                        ],
-                        'appName' => 'test',
-                        'identifier' => 'toBeRemoved',
-                    ],
+                    'appName' => 'test',
+                    'identifier' => 'myMethod',
                 ],
-            ]], Context::createDefaultContext());
-        }
+                [
+                    'paymentMethod' => [
+                        'handlerIdentifier' => 'app\\test\\toBeRemoved',
+                        'name' => 'This method shall be removed',
+                        'active' => true,
+                    ],
+                    'appName' => 'test',
+                    'identifier' => 'toBeRemoved',
+                ],
+            ],
+        ]], Context::createDefaultContext());
 
         $permissionPersister = $this->getContainer()->get(PermissionPersister::class);
         $permissions = Permissions::fromArray([
@@ -621,9 +592,7 @@ class AppLifecycleTest extends TestCase
         $criteria = new Criteria();
         $criteria->addAssociation('actionButtons');
         $criteria->addAssociation('webhooks');
-        if (Feature::isActive('FEATURE_NEXT_14357')) {
-            $criteria->addAssociation('paymentMethods');
-        }
+        $criteria->addAssociation('paymentMethods');
         /** @var AppCollection $apps */
         $apps = $this->appRepository->search($criteria, $this->context)->getEntities();
 
@@ -832,12 +801,12 @@ class AppLifecycleTest extends TestCase
         /** @var EntityRepositoryInterface $aclRoleRepository */
         $aclRoleRepository = $this->getContainer()->get('acl_role.repository');
         $roles = $aclRoleRepository->searchIds(new Criteria([$roleId]), $this->context)->getIds();
-        static::assertCount(0, $roles);
+        static::assertCount(1, $roles);
 
         /** @var EntityRepositoryInterface $integrationRepository */
         $integrationRepository = $this->getContainer()->get('integration.repository');
         $integrations = $integrationRepository->searchIds(new Criteria([$integrationId]), $this->context)->getIds();
-        static::assertCount(0, $integrations);
+        static::assertCount(1, $integrations);
 
         $criteria = new Criteria();
         $criteria->addFilter(new EqualsFilter('appId', $appId));
@@ -914,6 +883,69 @@ class AppLifecycleTest extends TestCase
 
         $apps = $this->appRepository->searchIds(new Criteria(), $this->context)->getIds();
         static::assertCount(0, $apps);
+    }
+
+    public function testInstallWithUpdateAclRole(): void
+    {
+        $connection = $this->getContainer()->get(Connection::class);
+        $userId = Uuid::randomHex();
+        $this->createUser($userId);
+
+        $aclRoleId = Uuid::randomHex();
+        $this->createAclRole($aclRoleId, ['app.all']);
+
+        $this->createAclUserRole($userId, $aclRoleId);
+
+        $manifest = Manifest::createFromXmlFile(__DIR__ . '/../Manifest/_fixtures/test/manifest.xml');
+
+        $this->appLifecycle->install($manifest, true, $this->context);
+
+        $criteria = new Criteria();
+        $criteria->addAssociation('integration');
+        /** @var AppCollection $apps */
+        $apps = $this->appRepository->search($criteria, $this->context)->getEntities();
+
+        static::assertCount(1, $apps);
+        static::assertEquals('test', $apps->first()->getName());
+
+        $privileges = $connection->fetchColumn('
+            SELECT `privileges`
+            FROM `acl_role`
+            WHERE `id` = :aclRoleId
+        ', ['aclRoleId' => Uuid::fromHexToBytes($aclRoleId)]);
+
+        $privileges = json_decode($privileges, true);
+
+        static::assertContains('app.' . $apps->first()->getName(), $privileges);
+    }
+
+    public function testDeleteWithDeleteAclRole(): void
+    {
+        $manifest = Manifest::createFromXmlFile(__DIR__ . '/../Manifest/_fixtures/test/manifest.xml');
+        $this->appLifecycle->install($manifest, true, $this->context);
+
+        $apps = $this->appRepository->search(new Criteria(), $this->context)->getEntities();
+        static::assertCount(1, $apps);
+
+        $aclRoleId = Uuid::randomHex();
+        $appPrivilege = 'app.' . $apps->first()->getName();
+        $this->createAclRole($aclRoleId, [$appPrivilege]);
+
+        $app = [
+            'id' => $apps->first()->getId(),
+            'roleId' => $apps->first()->getAclRoleId(),
+        ];
+
+        $this->appLifecycle->delete('test', $app, $this->context);
+
+        $apps = $this->appRepository->searchIds(new Criteria(), $this->context)->getIds();
+        static::assertCount(0, $apps);
+
+        /** @var EntityRepositoryInterface $aclRoleRepository */
+        $aclRoleRepository = $this->getContainer()->get('acl_role.repository');
+        $aclRole = $aclRoleRepository->search(new Criteria([$aclRoleId]), $this->context)->first();
+
+        static::assertNotContains($appPrivilege, $aclRole->getPrivileges());
     }
 
     private function assertDefaultActionButtons(): void
@@ -1080,10 +1112,6 @@ class AppLifecycleTest extends TestCase
 
     private function assertDefaultPaymentMethods(string $appId): void
     {
-        if (!Feature::isActive('FEATURE_NEXT_14357')) {
-            return;
-        }
-
         /** @var EntityRepositoryInterface $paymentMethodRepository */
         $paymentMethodRepository = $this->getContainer()->get('payment_method.repository');
 
@@ -1109,6 +1137,58 @@ class AppLifecycleTest extends TestCase
         static::assertSame('myMethod', $appPaymentMethod->getIdentifier());
         static::assertSame('https://payment.app/payment/process', $appPaymentMethod->getPayUrl());
         static::assertSame('https://payment.app/payment/finalize', $appPaymentMethod->getFinalizeUrl());
+    }
+
+    private function assertDefaultCmsBlocks(string $appId): void
+    {
+        if (!Feature::isActive('FEATURE_NEXT_14408')) {
+            return;
+        }
+
+        /** @var EntityRepositoryInterface $cmsBlockRepository */
+        $cmsBlockRepository = $this->getContainer()->get('app_cms_block.repository');
+
+        $criteria = new Criteria();
+        $criteria->addFilter(
+            new EqualsFilter('appId', $appId)
+        );
+
+        $cmsBlocks = $cmsBlockRepository->search($criteria, $this->context)->getEntities();
+        static::assertCount(2, $cmsBlocks);
+
+        /** @var AppCmsBlockEntity|null $firstCmsBlock */
+        $firstCmsBlock = $cmsBlocks->filterByProperty('name', 'my-first-block')->first();
+        static::assertEquals('my-first-block', $firstCmsBlock->getName());
+        static::assertEquals('First block from app', $firstCmsBlock->getLabel());
+        static::assertJsonStringEqualsJsonFile(
+            __DIR__ . '/_fixtures/cms/expectedFirstCmsBlock.json',
+            json_encode($firstCmsBlock->getBlock())
+        );
+        static::assertEquals(
+            file_get_contents(__DIR__ . '/../Manifest/_fixtures/test/Resources/cms/blocks/my-first-block/preview.html'),
+            $firstCmsBlock->getTemplate()
+        );
+        static::assertEquals(
+            file_get_contents(__DIR__ . '/../Manifest/_fixtures/test/Resources/cms/blocks/my-first-block/styles.css'),
+            $firstCmsBlock->getStyles()
+        );
+
+        /** @var AppCmsBlockEntity|null $secondCmsBlock */
+        $secondCmsBlock = $cmsBlocks->filterByProperty('name', 'my-second-block')->first();
+        static::assertEquals('my-second-block', $secondCmsBlock->getName());
+        static::assertEquals('Second block from app', $secondCmsBlock->getLabel());
+        static::assertJsonStringEqualsJsonFile(
+            __DIR__ . '/_fixtures/cms/expectedSecondCmsBlock.json',
+            json_encode($secondCmsBlock->getBlock())
+        );
+        static::assertEquals(
+            file_get_contents(__DIR__ . '/../Manifest/_fixtures/test/Resources/cms/blocks/my-second-block/preview.html'),
+            $secondCmsBlock->getTemplate()
+        );
+        static::assertEquals(
+            file_get_contents(__DIR__ . '/../Manifest/_fixtures/test/Resources/cms/blocks/my-second-block/styles.css'),
+            $secondCmsBlock->getStyles()
+        );
     }
 
     private function setNewSystemLanguage(string $iso): void
@@ -1141,5 +1221,40 @@ class AppLifecycleTest extends TestCase
         $isoId = $localeRepository->search($criteria, Context::createDefaultContext())->first()->getId();
 
         return $isoId;
+    }
+
+    private function createUser($userId): void
+    {
+        $this->getContainer()->get(Connection::class)->insert('user', [
+            'id' => Uuid::fromHexToBytes($userId),
+            'first_name' => 'test',
+            'last_name' => '',
+            'email' => 'test@example.com',
+            'username' => 'userTest',
+            'password' => password_hash('123456', \PASSWORD_BCRYPT),
+            'locale_id' => Uuid::fromHexToBytes($this->getLocaleIdOfSystemLanguage()),
+            'active' => 1,
+            'admin' => 1,
+            'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+        ]);
+    }
+
+    private function createAclRole($aclRoleId, $privileges): void
+    {
+        $this->getContainer()->get(Connection::class)->insert('acl_role', [
+            'id' => Uuid::fromHexToBytes($aclRoleId),
+            'name' => 'aclTest',
+            'privileges' => json_encode($privileges),
+            'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+        ]);
+    }
+
+    private function createAclUserRole($userId, $aclRoleId): void
+    {
+        $this->getContainer()->get(Connection::class)->insert('acl_user_role', [
+            'user_id' => Uuid::fromHexToBytes($userId),
+            'acl_role_id' => Uuid::fromHexToBytes($aclRoleId),
+            'created_at' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT),
+        ]);
     }
 }

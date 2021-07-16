@@ -66,9 +66,9 @@ class CustomFieldProtectionSubscriberTest extends TestCase
 
         $data = ['id' => $id, 'active' => false];
 
-        $client->request('PATCH', '/api/custom-field-set/' . $id, $data, [], [
+        $client->request('PATCH', '/api/custom-field-set/' . $id, [], [], [
             'HTTP_ACCEPT' => 'application/json',
-        ]);
+        ], json_encode($data));
 
         static::assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
     }
@@ -121,9 +121,9 @@ class CustomFieldProtectionSubscriberTest extends TestCase
 
         $data = ['id' => $id, 'active' => false];
 
-        $client->request('PATCH', '/api/custom-field-set/' . $id, $data, [], [
+        $client->request('PATCH', '/api/custom-field-set/' . $id, [], [], [
             'HTTP_ACCEPT' => 'application/json',
-        ]);
+        ], json_encode($data));
 
         static::assertEquals(Response::HTTP_NO_CONTENT, $client->getResponse()->getStatusCode());
     }
@@ -139,7 +139,7 @@ class CustomFieldProtectionSubscriberTest extends TestCase
         $connection->update('integration', [
             'write_access' => true,
             'access_key' => $accessKey,
-            'secret_access_key' => password_hash($secretAccessKey, PASSWORD_BCRYPT),
+            'secret_access_key' => password_hash($secretAccessKey, \PASSWORD_BCRYPT),
         ], ['id' => $id]);
 
         $this->apiIntegrations[] = $id;

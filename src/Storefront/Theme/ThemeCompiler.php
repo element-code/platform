@@ -8,7 +8,6 @@ use ScssPhp\ScssPhp\Compiler;
 use ScssPhp\ScssPhp\Formatter\Crunched;
 use ScssPhp\ScssPhp\Formatter\Expanded;
 use Shopware\Core\Content\Media\MediaCollection;
-use Shopware\Core\Content\Media\MediaEntity;
 use Shopware\Core\Framework\Adapter\Cache\CacheInvalidator;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
@@ -190,7 +189,7 @@ class ThemeCompiler implements ThemeCompilerInterface
                 if (mb_strpos($originalPath, $resolve) === 0) {
                     $dirname = $resolvePath . \dirname(mb_substr($originalPath, mb_strlen($resolve)));
                     $filename = basename($originalPath);
-                    $extension = pathinfo($filename, PATHINFO_EXTENSION) === '' ? '.scss' : '';
+                    $extension = pathinfo($filename, \PATHINFO_EXTENSION) === '' ? '.scss' : '';
                     $path = $dirname . \DIRECTORY_SEPARATOR . $filename . $extension;
                     if (file_exists($path)) {
                         return $path;
@@ -297,7 +296,7 @@ class ThemeCompiler implements ThemeCompilerInterface
 
                     continue;
                 }
-                /* @var MediaEntity $media */
+
                 $variables[$key] = '\'' . $media->getUrl() . '\'';
             }
         }
@@ -311,7 +310,7 @@ class ThemeCompiler implements ThemeCompilerInterface
 
         $dump = str_replace(
             ['#class#', '#variables#'],
-            [self::class, implode(PHP_EOL, $this->formatVariables($themeVariablesEvent->getVariables()))],
+            [self::class, implode(\PHP_EOL, $this->formatVariables($themeVariablesEvent->getVariables()))],
             $this->getVariableDumpTemplate()
         );
 

@@ -2,16 +2,16 @@ import Criteria from 'src/core/data/criteria.data';
 import template from './sw-cms-el-config-product-description-reviews.html.twig';
 import './sw-cms-el-config-product-description-reviews.scss';
 
-const { Component, Mixin, Utils } = Shopware;
+const { Component, Mixin } = Shopware;
 
 Component.register('sw-cms-el-config-product-description-reviews', {
     template,
 
-    mixins: [
-        Mixin.getByName('cms-element')
-    ],
-
     inject: ['repositoryFactory'],
+
+    mixins: [
+        Mixin.getByName('cms-element'),
+    ],
 
     computed: {
         productRepository() {
@@ -21,7 +21,7 @@ Component.register('sw-cms-el-config-product-description-reviews', {
         productSelectContext() {
             return {
                 ...Shopware.Context.api,
-                inheritance: true
+                inheritance: true,
             };
         },
 
@@ -40,8 +40,8 @@ Component.register('sw-cms-el-config-product-description-reviews', {
         },
 
         isProductPage() {
-            return Utils.get(this.cmsPageState, 'currentPage.type') === 'product_detail';
-        }
+            return this.cmsPageState?.currentPage?.type === 'product_detail';
+        },
     },
 
     created() {
@@ -62,7 +62,7 @@ Component.register('sw-cms-el-config-product-description-reviews', {
                 this.productRepository.get(
                     productId,
                     this.productSelectContext,
-                    this.selectedProductCriteria
+                    this.selectedProductCriteria,
                 ).then((product) => {
                     this.element.config.product.value = productId;
                     this.$set(this.element.data, 'productId', productId);
@@ -71,6 +71,6 @@ Component.register('sw-cms-el-config-product-description-reviews', {
             }
 
             this.$emit('element-update', this.element);
-        }
-    }
+        },
+    },
 });

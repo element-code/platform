@@ -9,24 +9,26 @@ Component.register('sw-sales-channel-detail-product-comparison-preview', {
     props: {
         content: {
             type: String,
-            required: false
+            required: false,
+            default: null,
         },
         errors: {
             type: Array,
-            required: false
-        }
+            required: false,
+            default: () => [],
+        },
     },
 
     computed: {
         editorConfig() {
             return {
-                readOnly: true
+                readOnly: true,
             };
         },
 
         displayErrors() {
             return this.errors.length > 0;
-        }
+        },
     },
 
     methods: {
@@ -43,6 +45,6 @@ Component.register('sw-sales-channel-detail-product-comparison-preview', {
 
             this.$refs.previewEditor.editor.scrollToLine(line, true, true, () => {});
             this.$refs.previewEditor.editor.gotoLine(line, 0, true);
-        }
-    }
+        },
+    },
 });

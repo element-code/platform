@@ -8,10 +8,10 @@ const { mapPropertyErrors } = Component.getComponentHelper();
 Component.register('sw-profile-index', {
     template,
 
-    inject: ['userService', 'loginService', 'repositoryFactory', 'acl'],
+    inject: ['userService', 'loginService', 'repositoryFactory', 'acl', 'feature'],
 
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     data() {
@@ -27,19 +27,19 @@ Component.register('sw-profile-index', {
             isLoading: false,
             isUserLoading: true,
             isSaveSuccessful: false,
-            confirmPasswordModal: false
+            confirmPasswordModal: false,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle()
+            title: this.$createTitle(),
         };
     },
 
     computed: {
         ...mapPropertyErrors('user', [
-            'email'
+            'email',
         ]),
 
         isDisabled() {
@@ -75,7 +75,7 @@ Component.register('sw-profile-index', {
 
         languageId() {
             return Shopware.State.get('session').languageId;
-        }
+        },
     },
 
     watch: {
@@ -87,7 +87,7 @@ Component.register('sw-profile-index', {
 
         languageId() {
             this.createdComponent();
-        }
+        },
     },
 
     created() {
@@ -110,7 +110,7 @@ Component.register('sw-profile-index', {
 
             const promises = [
                 languagePromise,
-                this.userPromise
+                this.userPromise,
             ];
 
             Promise.all(promises).then(() => {
@@ -138,7 +138,7 @@ Component.register('sw-profile-index', {
             languageCriteria.addFilter(Criteria.equalsAny('locale.code', registeredLocales));
             languageCriteria.limit = 500;
 
-            return this.languageRepository.search(languageCriteria, Shopware.Context.api).then((result) => {
+            return this.languageRepository.search(languageCriteria).then((result) => {
                 this.languages = [];
                 const localeIds = [];
                 let fallbackId = '';
@@ -166,11 +166,11 @@ Component.register('sw-profile-index', {
         async getUserData() {
             const routeUser = this.$route.params.user;
             if (routeUser) {
-                return this.userRepository.get(routeUser.id, Shopware.Context.api);
+                return this.userRepository.get(routeUser.id);
             }
 
             const user = await this.userService.getUser();
-            return this.userRepository.get(user.data.id, Shopware.Context.api);
+            return this.userRepository.get(user.data.id);
         },
 
         async saveFinish() {
@@ -216,7 +216,7 @@ Component.register('sw-profile-index', {
 
         createErrorMessage(errorMessage) {
             this.createNotificationError({
-                message: errorMessage
+                message: errorMessage,
             });
         },
 
@@ -266,7 +266,7 @@ Component.register('sw-profile-index', {
         },
 
         setMediaItem({ targetId }) {
-            this.mediaRepository.get(targetId, Shopware.Context.api).then((response) => {
+            this.mediaRepository.get(targetId).then((response) => {
                 this.avatarMediaItem = response;
             });
             this.user.avatarId = targetId;
@@ -285,8 +285,8 @@ Component.register('sw-profile-index', {
                 const authObject = {
                     ...this.loginService.getBearerAuthentication(),
                     ...{
-                        access: verifiedToken
-                    }
+                        access: verifiedToken,
+                    },
                 };
 
                 this.loginService.setBearerAuthentication(authObject);
@@ -324,9 +324,17 @@ Component.register('sw-profile-index', {
 
         handleUserSaveError() {
             this.createNotificationError({
-                message: this.$tc('sw-profile.index.notificationSaveErrorMessage')
+                message: this.$tc('sw-profile.index.notificationSaveErrorMessage'),
             });
             this.isLoading = false;
-        }
-    }
+        },
+
+        onChangeNewPassword(newPassword) {
+            this.newPassword = newPassword;
+        },
+
+        onChangeNewPasswordConfirm(newPasswordConfirm) {
+            this.newPasswordConfirm = newPasswordConfirm;
+        },
+    },
 });

@@ -17,6 +17,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\NotFilter;
 use Shopware\Core\Framework\Plugin\Composer\Factory;
 use Shopware\Core\Framework\Plugin\PluginCollection;
 use Shopware\Core\Framework\Plugin\PluginEntity;
+use Shopware\Core\Framework\Plugin\Requirement\Exception\ComposerNameMissingException;
 use Shopware\Core\Framework\Plugin\Requirement\Exception\ConflictingPackageException;
 use Shopware\Core\Framework\Plugin\Requirement\Exception\MissingRequirementException;
 use Shopware\Core\Framework\Plugin\Requirement\Exception\RequirementStackException;
@@ -144,7 +145,13 @@ class RequirementsValidator
         $packages = $composer->getRepositoryManager()->getLocalRepository()->getPackages();
 
         // Get PHP extension "packages"
-        $packages = array_merge($packages, (new PlatformRepository())->getPackages());
+        $packages = array_merge(
+            $packages,
+            (new PlatformRepository())->getPackages(),
+        );
+
+        // add root package
+        $packages[] = $composer->getPackage();
 
         foreach ($packages as $package) {
             // Ignore Shopware plugins. They are checked separately in `validateInstalledPlugins`
@@ -189,6 +196,12 @@ class RequirementsValidator
 
         foreach ($this->getInstalledPlugins($context) as $pluginEntity) {
             $pluginComposerName = $pluginEntity->getComposerName();
+            if ($pluginComposerName === null) {
+                $exceptionStack->add(new ComposerNameMissingException($pluginEntity->getName()));
+
+                continue;
+            }
+
             $pluginPath = sprintf('%s/%s', $this->projectDir, $pluginEntity->getPath());
 
             $installedPluginComposerPackage = $pluginPackages[$pluginComposerName] ?? $this->getComposer($pluginPath)->getPackage();

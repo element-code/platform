@@ -11,20 +11,20 @@ const domainPlaceholderId = '124c71d524604ccbad6042edce3ac799';
 Component.register('sw-settings-customer-group-detail', {
     template,
 
-    inject: ['repositoryFactory', 'acl'],
+    inject: ['repositoryFactory', 'acl', 'customFieldDataProviderService'],
 
     mixins: [
         Mixin.getByName('notification'),
         Mixin.getByName('placeholder'),
-        Mixin.getByName('discard-detail-page-changes')('customerGroup')
+        Mixin.getByName('discard-detail-page-changes')('customerGroup'),
     ],
 
     props: {
         customerGroupId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     shortcuts: {
@@ -32,10 +32,10 @@ Component.register('sw-settings-customer-group-detail', {
             active() {
                 return this.allowSave;
             },
-            method: 'onSave'
+            method: 'onSave',
         },
 
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     data() {
@@ -45,13 +45,14 @@ Component.register('sw-settings-customer-group-detail', {
             isSaveSuccessful: false,
             openSeoModal: false,
             registrationTitleError: null,
-            seoUrls: []
+            seoUrls: [],
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -72,7 +73,7 @@ Component.register('sw-settings-customer-group-detail', {
             return this.placeholder(
                 this.customerGroup,
                 'name',
-                this.$tc('sw-settings-customer-group.detail.placeholderNewCustomerGroup')
+                this.$tc('sw-settings-customer-group.detail.placeholderNewCustomerGroup'),
             );
         },
 
@@ -81,7 +82,7 @@ Component.register('sw-settings-customer-group-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.allowSave,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -89,14 +90,14 @@ Component.register('sw-settings-customer-group-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
@@ -106,11 +107,11 @@ Component.register('sw-settings-customer-group-detail', {
             },
             set(value) {
                 if (value) {
-                    this.customerGroup.registration = this.customerGroupRegistrationRepository.create(Shopware.Context.api);
+                    this.customerGroup.registration = this.customerGroupRegistrationRepository.create();
                 } else {
                     this.customerGroup.registration = null;
                 }
-            }
+            },
         },
 
         technicalUrl() {
@@ -123,7 +124,11 @@ Component.register('sw-settings-customer-group-detail', {
             return this.customerGroup && this.customerGroup.isNew()
                 ? this.acl.can('customer_groups.creator')
                 : this.acl.can('customer_groups.editor');
-        }
+        },
+
+        showCustomFields() {
+            return this.customerGroup && this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
@@ -134,7 +139,7 @@ Component.register('sw-settings-customer-group-detail', {
         },
         'customerGroup.registrationTitle'() {
             this.registrationTitleError = null;
-        }
+        },
     },
 
     created() {
@@ -146,6 +151,7 @@ Component.register('sw-settings-customer-group-detail', {
             this.isLoading = true;
             if (this.customerGroupId) {
                 this.loadSeoUrls();
+                this.loadCustomFieldSets();
                 const criteria = new Criteria();
                 criteria.addAssociation('registrationSalesChannels');
 
@@ -158,7 +164,7 @@ Component.register('sw-settings-customer-group-detail', {
             }
 
             Shopware.State.commit('context/resetLanguageToDefault');
-            this.customerGroup = this.customerGroupRepository.create(Shopware.Context.api);
+            this.customerGroup = this.customerGroupRepository.create();
             this.isLoading = false;
         },
 
@@ -171,7 +177,13 @@ Component.register('sw-settings-customer-group-detail', {
             criteria.addGroupField('seoPathInfo');
             criteria.addGroupField('salesChannelId');
 
-            this.seoUrls = await this.seoUrlRepository.search(criteria, Shopware.Context.api);
+            this.seoUrls = await this.seoUrlRepository.search(criteria);
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('customer_group').then((sets) => {
+                this.customFieldSets = sets;
+            });
         },
 
         onChangeLanguage() {
@@ -203,12 +215,12 @@ Component.register('sw-settings-customer-group-detail', {
                 this.customerGroup.registrationActive &&
                 types.isEmpty(this.customerGroup.registrationTitle)) {
                 this.createNotificationError({
-                    message: this.$tc('global.notification.notificationSaveErrorMessageRequiredFieldsInvalid')
+                    message: this.$tc('global.notification.notificationSaveErrorMessageRequiredFieldsInvalid'),
                 });
 
                 this.registrationTitleError = new ShopwareError({
                     code: 'CUSTOMER_GROUP_REGISTERATION_MISSING_TITLE',
-                    detail: this.$tc('global.notification.notificationSaveErrorMessageRequiredFieldsInvalid')
+                    detail: this.$tc('global.notification.notificationSaveErrorMessageRequiredFieldsInvalid'),
                 });
 
                 this.isLoading = false;
@@ -217,7 +229,7 @@ Component.register('sw-settings-customer-group-detail', {
             }
 
             try {
-                await this.customerGroupRepository.save(this.customerGroup, Shopware.Context.api);
+                await this.customerGroupRepository.save(this.customerGroup);
 
                 this.isSaveSuccessful = true;
                 if (!this.customerGroupId) {
@@ -228,11 +240,11 @@ Component.register('sw-settings-customer-group-detail', {
                 this.customerGroup = await this.createdComponent();
             } catch (err) {
                 this.createNotificationError({
-                    message: this.$tc('sw-settings-customer-group.detail.notificationErrorMessage')
+                    message: this.$tc('sw-settings-customer-group.detail.notificationErrorMessage'),
                 });
             }
 
             this.isLoading = false;
-        }
-    }
+        },
+    },
 });

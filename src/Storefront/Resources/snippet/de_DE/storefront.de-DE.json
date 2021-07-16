@@ -62,17 +62,15 @@
     "FRAMEWORK__INVALID_UUID": "Die gewählte Zahlungsart konnte nicht gefunden werden.",
     "CHECKOUT__UNKNOWN_PAYMENT_METHOD": "Die gewählte Zahlungsart konnte nicht gefunden werden.",
     "productNotFound": "Produkt \"%number%\" konnte nicht gefunden werden.",
-    "payment-method-blocked": "Die gewählte Zahlungsart %name% ist nicht verfügbar.",
-    "shipping-address-blocked": "Lieferungen an die gewählte Lieferadresse sind nicht möglich.",
-    "shipping-address-invalid": "Die gewählte Versandadresse ist nicht gültig oder unvollständig. Bitte prüfen Sie Ihre Eingaben.",
-    "billing-address-blocked": "Rechnungen können nicht an die gewählte Rechnungsadresse ausgestellt werden.",
-    "billing-address-invalid": "Die gewählte Rechnungsadresse ist nicht gültig oder unvollständig. Bitte prüfen Sie Ihre Eingaben.",
     "VIOLATION::TOO_SHORT_ERROR": "%field% ist zu kurz.",
     "product-not-found": "Das Produkt wurde nicht gefunden.",
     "message-403-ajax": "Die Sitzung ist abgelaufen. Bitte laden Sie die Seite neu und versuchen Sie es erneut.",
     "message-403": "Die Sitzung ist abgelaufen. Bitte kehren Sie zur letzten Seite zurück neu und versuchen Sie  es erneut.",
     "product-out-of-stock": "%name% ist momentan nicht verfügbar.",
-    "auto-promotion-not-found": "Promotion \"%name%\" was no longer valid!"
+    "auto-promotion-not-found": "Die Rabattaktion \"%name%\" ist nicht mehr gültig!",
+    "captcha" : {
+      "basic-captcha-invalid": "Eingabe ungültig. Bitte versuchen Sie es erneut."
+    }
   },
   "account": {
     "externalPaymentCanceled": "Wir haben Ihre Bestellung erhalten, aber die Zahlung wurde abgebrochen. Bitte ändern Sie Ihre Zahlungsmethode oder versuchen Sie es erneut",
@@ -94,7 +92,7 @@
     "registerAdvantagesHeader": "Vorteile einer Registrierung:",
     "registerAdvantage1": "Schnelles Einkaufen",
     "registerAdvantage2": "Speichern Sie Ihre Daten und Einstellungen.",
-    "registerAdvantage3": "Bestellungsübersicht und Versandinformationen",
+    "registerAdvantage3": "Bestellübersicht und Versandinformationen",
     "registerAdvantage4": "Verwalten Sie Ihr Newsletter-Abonnement",
     "registerPersonalHeader": "Ich bin Neukunde",
     "registerAddressBillingHeader": "Ihre Adresse",
@@ -158,6 +156,7 @@
     "overviewChangeShipping": "Lieferadresse ändern",
     "overviewNewestOrderHeader": "Letzte Bestellung",
     "overviewCustomerGroupRequest": "Anfrage zur Aufnahme in die Kundengruppe \"%group%\" gestellt.",
+    "overviewNotAbleToShip": "Wir können nicht in das Land liefern, welches in Ihrer Lieferadresse hinterlegt ist.",
     "paymentChangeSubmit": "Ändern",
     "profilePersonalTitle": "Persönliche Daten",
     "profileMailTitle": "E-Mail-Adresse",
@@ -294,6 +293,8 @@
     "cityPlaceholder": "Ort eingeben ...",
     "countryLabel": "Land",
     "countryPlaceholder": "Land auswählen ...",
+    "countryPostfixNoShipping": "(Keine Lieferung möglich)",
+    "countryNoShippingAlert": "Eine Lieferung in das Land ist nicht möglich.",
     "countryStateLabel": "Bundesland",
     "countryStatePlaceholder": "Bundesland auswählen ...",
     "phoneNumberLabel": "Telefonnummer",
@@ -392,9 +393,12 @@
     "promotion-discount-added": "Rabatt \"%name%\" wurde dem Warenkorb hinzugefügt",
     "promotion-not-found": "Der Gutschein-Code \"%code%\" existiert nicht.",
     "promotion-not-eligible": "Der Gutschein-Code wurde gespeichert, aber nicht auf den Warenkorb angewendet, da die Voraussetzungen dafür nicht zutreffen. Sobald die Voraussetzungen zutreffen, wird er automatisch hinzugefügt.",
+    "promotion-excluded": "Mindestens ein Rabatt wurde wegen Konflikten mit anderen Rabatten aus dem Warenkorb entfernt. Sobald die Bedingungen wieder zutreffen, wird der Rabatt automatisch hinzugefügt.",
     "auto-promotion-not-found": "Die Rabattaktion \"%name%\" ist nicht länger gültig!",
     "shipping-address-blocked": "Lieferungen an die gewählte Lieferadresse sind nicht möglich.",
     "billing-address-blocked": "Rechnungen können nicht an die gewählte Rechnungsadresse ausgestellt werden.",
+    "shipping-address-invalid": "Die gewählte Versandadresse ist nicht gültig oder unvollständig. Bitte prüfen Sie Ihre Eingaben.",
+    "billing-address-invalid": "Die gewählte Rechnungsadresse ist nicht gültig oder unvollständig. Bitte prüfen Sie Ihre Eingaben.",
     "customerCommentHeader": "Zusätzliche Informationen",
     "customerCommentLabel": "Möchten Sie uns etwas über Ihre Bestellung mitteilen?",
     "customerCommentPlaceholder": "Kommentieren Sie hier ...",
@@ -557,6 +561,12 @@
     "excludeVat": "* Alle Preise exkl. gesetzl. Mehrwertsteuer zzgl. <a data-toggle=\"modal\" href=\"%url%\" data-url=\"%url%\">Versandkosten</a> und ggf. Nachnahmegebühren, wenn nicht anders angegeben.",
     "copyrightInfo": "Realisiert mit Shopware"
   },
+  "captcha": {
+    "googleReCaptcha": {
+      "dataProtectionInformation": "Diese Seite ist durch reCAPTCHA geschützt und es gelten die <a href=\\\"https://policies.google.com/privacy?hl=de\\\">Datenschutzrichtlinie</a> und <a href=\\\"https://policies.google.com/terms?hl=de\\\">Nutzungsbedingungen</a>."
+    },
+    "basicCaptchaLabel" : "Bitte geben Sie die abgebildeten Zeichen ein*"
+  },
   "cookie": {
     "message": "Diese Website verwendet Cookies, um eine bestmögliche Erfahrung bieten zu können. <a data-toggle=\"modal\" data-url=\"%url%\" href=\"%url%\" title=\"Mehr Informationen\">Mehr Informationen ...</a>",
     "deny": "Ablehnen",
@@ -570,7 +580,7 @@
     "groupRequiredSession": "Sitzung",
     "groupRequiredCsrf": "CSRF-Schutz",
     "groupRequiredTimezone": "Zeitzone",
-    "groupRequiredGoogleReCaptcha": "Google reCAPTCHA",
+    "groupRequiredCaptcha": "CAPTCHA-Integration",
     "groupStatistical": "Statistiken",
     "groupStatisticalDescription": "Für Statistiken und Shop-Performance-Metriken genutzte Cookies.",
     "groupStatisticalGoogleAnalytics": "Google Analytics",

@@ -19,7 +19,7 @@ export default class Repository {
         changesetGenerator,
         entityFactory,
         errorResolver,
-        options
+        options,
     ) {
         this.route = route;
         this.entityName = entityName;
@@ -41,7 +41,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise}
      */
-    searchIds(criteria, context) {
+    searchIds(criteria, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
 
         const url = `/search-ids${this.route}`;
@@ -59,7 +59,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise}
      */
-    search(criteria, context) {
+    search(criteria, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
 
         const url = `/search${this.route}`;
@@ -67,7 +67,7 @@ export default class Repository {
         return this.httpClient
             .post(url, criteria.parse(), {
                 headers,
-                version: this.options.version
+                version: this.options.version,
             })
             .then((response) => {
                 return this.hydrator.hydrateSearchResult(this.route, this.entityName, response, context, criteria);
@@ -81,7 +81,7 @@ export default class Repository {
      * @param {Criteria} criteria
      * @returns {Promise}
      */
-    get(id, context, criteria) {
+    get(id, context = Shopware.Context.api, criteria) {
         criteria = criteria || new Criteria();
         criteria.setIds([id]);
 
@@ -99,7 +99,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise<any>}
      */
-    save(entity, context) {
+    save(entity, context = Shopware.Context.api) {
         const { changes, deletionQueue } = this.changesetGenerator.generate(entity);
 
         return this.errorResolver.resetApiErrors()
@@ -115,7 +115,7 @@ export default class Repository {
      * @param {Object} behavior
      * @returns {Promise<T>}
      */
-    clone(entityId, context, behavior) {
+    clone(entityId, context = Shopware.Context.api, behavior) {
         if (!entityId) {
             return Promise.reject(new Error('Missing required argument: id'));
         }
@@ -123,7 +123,7 @@ export default class Repository {
         return this.httpClient
             .post(`/_action/clone${this.route}/${entityId}`, behavior, {
                 headers: this.buildHeaders(context),
-                version: this.options.version
+                version: this.options.version,
             })
             .then((response) => {
                 return response.data;
@@ -148,7 +148,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise<any[]>}
      */
-    saveAll(entities, context) {
+    saveAll(entities, context = Shopware.Context.api) {
         const promises = [];
 
         entities.forEach((entity) => {
@@ -166,7 +166,7 @@ export default class Repository {
      * @param {Boolean} failOnError
      * @returns {Promise<any[]>}
      */
-    sync(entities, context, failOnError = true) {
+    sync(entities, context = Shopware.Context.api, failOnError = true) {
         const { changeset, deletions } = this.getSyncChangeset(entities);
 
         return this.errorResolver.resetApiErrors()
@@ -204,7 +204,7 @@ export default class Repository {
      * @param context
      * @returns {*}
      */
-    sendUpserts(changeset, failOnError, context) {
+    sendUpserts(changeset, failOnError, context = Shopware.Context.api) {
         if (changeset.length <= 0) {
             return Promise.resolve();
         }
@@ -219,10 +219,10 @@ export default class Repository {
                 [this.entityName]: {
                     entity: this.entityName,
                     action: 'upsert',
-                    payload
-                }
+                    payload,
+                },
             },
-            { headers, version: this.options.version }
+            { headers, version: this.options.version },
         ).then(({ data }) => {
             if (data.success === false) {
                 throw data;
@@ -232,7 +232,7 @@ export default class Repository {
             const errors = this.getSyncErrors(errorResponse);
             this.errorResolver.handleWriteErrors(
                 { errors },
-                changeset
+                changeset,
             );
             throw errorResponse;
         });
@@ -283,7 +283,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise}
      */
-    assign(id, context) {
+    assign(id, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
 
         return this.httpClient.post(`${this.route}`, { id }, { headers, version: this.options.version });
@@ -295,7 +295,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise}
      */
-    delete(id, context) {
+    delete(id, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
 
         const url = `${this.route}/${id}`;
@@ -312,12 +312,44 @@ export default class Repository {
     }
 
     /**
+     * Allows to iterate all ids of the provided criteria.
+     * @param {Criteria} criteria
+     * @param {function} callback
+     * @param context
+     * @returns {Promise}
+     */
+    iterateIds(criteria, callback, context = Shopware.Context.api) {
+        if (criteria.limit == null) {
+            criteria.setLimit(50);
+        }
+        criteria.setTotalCountMode(1);
+
+        return this.searchIds(criteria, context).then((response) => {
+            const ids = response.data;
+
+            if (ids.length <= 0) {
+                return Promise.resolve();
+            }
+
+            return callback(ids).then(() => {
+                if (ids.length < criteria.limit) {
+                    return Promise.resolve();
+                }
+
+                criteria.setPage(criteria.page + 1);
+
+                return this.iterateIds(criteria, callback);
+            });
+        });
+    }
+
+    /**
      * Sends a delete request for a set of ids
      * @param {Array} ids
      * @param {Object} context
      * @returns {Promise}
      */
-    syncDeleted(ids, context) {
+    syncDeleted(ids, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
 
         headers['fail-on-error'] = true;
@@ -331,10 +363,10 @@ export default class Repository {
                 [this.entityName]: {
                     entity: this.entityName,
                     action: 'delete',
-                    payload
-                }
+                    payload,
+                },
             },
-            { headers, version: this.options.version }
+            { headers, version: this.options.version },
         ).then(({ data }) => {
             if (data.success === false) {
                 throw data;
@@ -364,7 +396,7 @@ export default class Repository {
      * @param {String|null} id
      * @returns {Entity}
      */
-    create(context, id) {
+    create(context = Shopware.Context.api, id) {
         return this.entityFactory.create(this.entityName, id, context);
     }
 
@@ -379,7 +411,7 @@ export default class Repository {
      * @param {String|null} versionName
      * @returns {Promise}
      */
-    createVersion(entityId, context, versionId = null, versionName = null) {
+    createVersion(entityId, context = Shopware.Context.api, versionId = null, versionName = null) {
         const headers = this.buildHeaders(context);
         const params = {};
 
@@ -404,7 +436,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise}
      */
-    mergeVersion(versionId, context) {
+    mergeVersion(versionId, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
 
         const url = `_action/version/merge/${this.entityName.replace(/_/g, '-')}/${versionId}`;
@@ -419,7 +451,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise}
      */
-    deleteVersion(entityId, versionId, context) {
+    deleteVersion(entityId, versionId, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
 
         const url = `/_action/version/${versionId}/${this.entityName.replace(/_/g, '-')}/${entityId}`;
@@ -434,7 +466,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {*}
      */
-    sendChanges(entity, changes, context) {
+    sendChanges(entity, changes, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
 
         if (entity.isNew()) {
@@ -465,7 +497,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Promise}
      */
-    sendDeletions(queue, context) {
+    sendDeletions(queue, context = Shopware.Context.api) {
         const headers = this.buildHeaders(context);
         const requests = queue.map((deletion) => {
             return this.httpClient.delete(`${deletion.route}/${deletion.key}`, { headers, version: this.options.version })
@@ -483,7 +515,7 @@ export default class Repository {
      * @param {Object} context
      * @returns {Object}
      */
-    buildHeaders(context) {
+    buildHeaders(context = Shopware.Context.api) {
         const { hasOwnProperty } = Shopware.Utils.object;
         const compatibility = hasOwnProperty(this.options, 'compatibility') ? this.options.compatibility : true;
 
@@ -491,34 +523,34 @@ export default class Repository {
             Accept: 'application/vnd.api+json',
             Authorization: `Bearer ${context.authToken.access}`,
             'Content-Type': 'application/json',
-            'sw-api-compatibility': compatibility
+            'sw-api-compatibility': compatibility,
         };
 
         if (context.languageId) {
             headers = Object.assign(
                 { 'sw-language-id': context.languageId },
-                headers
+                headers,
             );
         }
 
         if (context.currencyId) {
             headers = Object.assign(
                 { 'sw-currency-id': context.currencyId },
-                headers
+                headers,
             );
         }
 
         if (context.versionId) {
             headers = Object.assign(
                 { 'sw-version-id': context.versionId },
-                headers
+                headers,
             );
         }
 
         if (context.inheritance) {
             headers = Object.assign(
                 { 'sw-inheritance': context.inheritance },
-                headers
+                headers,
             );
         }
 

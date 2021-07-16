@@ -11,24 +11,24 @@ const { warn } = Shopware.Utils.debug;
 Component.register('sw-settings-shipping-detail', {
     template,
 
-    inject: ['ruleConditionDataProviderService', 'repositoryFactory', 'acl'],
+    inject: ['ruleConditionDataProviderService', 'repositoryFactory', 'acl', 'customFieldDataProviderService'],
 
     mixins: [
         Mixin.getByName('notification'),
-        Mixin.getByName('placeholder')
+        Mixin.getByName('placeholder'),
     ],
 
     shortcuts: {
         'SYSTEMKEY+S': 'onSave',
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     props: {
         shippingMethodId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     data() {
@@ -38,25 +38,26 @@ Component.register('sw-settings-shipping-detail', {
             isSaveSuccessful: false,
             isProcessLoading: false,
             isLoading: false,
-            currenciesLoading: false
+            currenciesLoading: false,
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
     computed: {
         ...mapState('swShippingDetail', [
             'shippingMethod',
-            'currencies'
+            'currencies',
         ]),
         ...mapPropertyErrors('shippingMethod', [
             'name',
             'deliveryTimeId',
-            'availabilityRuleId'
+            'availabilityRuleId',
         ]),
 
         identifier() {
@@ -99,14 +100,14 @@ Component.register('sw-settings-shipping-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
@@ -116,8 +117,8 @@ Component.register('sw-settings-shipping-detail', {
                 'OR',
                 [
                     Criteria.contains('rule.moduleTypes.types', 'shipping'),
-                    Criteria.equals('rule.moduleTypes', null)
-                ]
+                    Criteria.equals('rule.moduleTypes', null),
+                ],
             ));
 
             return criteria;
@@ -131,19 +132,11 @@ Component.register('sw-settings-shipping-detail', {
             criteria.getAssociation('prices').addAssociation('rule');
 
             return criteria;
-        }
-    },
+        },
 
-    beforeCreate() {
-        Shopware.State.registerModule('swShippingDetail', swShippingDetailState);
-    },
-
-    created() {
-        this.createdComponent();
-    },
-
-    beforeDestroy() {
-        Shopware.State.unregisterModule('swShippingDetail');
+        showCustomFields() {
+            return this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
@@ -158,7 +151,19 @@ Component.register('sw-settings-shipping-detail', {
             if (this.shippingMethodId === null) {
                 this.createdComponent();
             }
-        }
+        },
+    },
+
+    beforeCreate() {
+        Shopware.State.registerModule('swShippingDetail', swShippingDetailState);
+    },
+
+    created() {
+        this.createdComponent();
+    },
+
+    beforeDestroy() {
+        Shopware.State.unregisterModule('swShippingDetail');
     },
 
     methods: {
@@ -166,8 +171,8 @@ Component.register('sw-settings-shipping-detail', {
             if (!this.shippingMethodId) {
                 Shopware.State.commit('context/resetLanguageToDefault');
 
-                const shippingMethod = this.shippingMethodRepository.create(Shopware.Context.api);
-                const shippingMethodPrice = this.shippingMethodPricesRepository.create(Shopware.Context.api);
+                const shippingMethod = this.shippingMethodRepository.create();
+                const shippingMethodPrice = this.shippingMethodPricesRepository.create();
                 shippingMethodPrice.calculation = 1;
                 shippingMethodPrice.quantityStart = 1;
                 shippingMethodPrice.shippingMethodId = shippingMethod.id;
@@ -176,6 +181,7 @@ Component.register('sw-settings-shipping-detail', {
                 Shopware.State.commit('swShippingDetail/setShippingMethod', shippingMethod);
             } else {
                 this.loadEntityData();
+                this.loadCustomFieldSets();
             }
             this.loadCurrencies();
         },
@@ -198,10 +204,16 @@ Component.register('sw-settings-shipping-detail', {
             this.shippingMethodRepository.get(
                 this.shippingMethodId,
                 Shopware.Context.api,
-                this.shippingMethodCriteria
+                this.shippingMethodCriteria,
             ).then(res => {
                 Shopware.State.commit('swShippingDetail/setShippingMethod', res);
                 this.isLoading = false;
+            });
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('shipping_method').then((sets) => {
+                this.customFieldSets = sets;
             });
         },
 
@@ -220,7 +232,7 @@ Component.register('sw-settings-shipping-detail', {
         onSave() {
             const titleSaveError = this.$tc('global.default.error');
             const messageSaveError = this.$tc(
-                'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid'
+                'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid',
             );
 
             this.filterIncompletePrices();
@@ -238,7 +250,7 @@ Component.register('sw-settings-shipping-detail', {
             }).catch((exception) => {
                 this.createNotificationError({
                     title: titleSaveError,
-                    message: messageSaveError
+                    message: messageSaveError,
                 });
                 warn(this._name, exception.message, exception.response);
                 this.isProcessLoading = false;
@@ -305,6 +317,6 @@ Component.register('sw-settings-shipping-detail', {
             });
 
             return currencies;
-        }
-    }
+        },
+    },
 });

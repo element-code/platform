@@ -13,6 +13,7 @@ use Shopware\Core\Framework\App\Exception\AppAlreadyInstalledException;
 use Shopware\Core\Framework\App\Exception\AppRegistrationException;
 use Shopware\Core\Framework\App\Exception\InvalidAppConfigurationException;
 use Shopware\Core\Framework\App\Lifecycle\Persister\ActionButtonPersister;
+use Shopware\Core\Framework\App\Lifecycle\Persister\CmsBlockPersister;
 use Shopware\Core\Framework\App\Lifecycle\Persister\CustomFieldPersister;
 use Shopware\Core\Framework\App\Lifecycle\Persister\PaymentMethodPersister;
 use Shopware\Core\Framework\App\Lifecycle\Persister\PermissionPersister;
@@ -26,6 +27,7 @@ use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\NotFilter;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Plugin\Exception\DecorationPatternException;
 use Shopware\Core\Framework\Uuid\Uuid;
@@ -35,7 +37,7 @@ use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
- * @internal only for use by the app-system, will be considered internal from v6.4.0 onward
+ * @internal
  */
 class AppLifecycle extends AbstractAppLifecycle
 {
@@ -59,10 +61,12 @@ class AppLifecycle extends AbstractAppLifecycle
 
     private WebhookPersister $webhookPersister;
 
+    private PaymentMethodPersister $paymentMethodPersister;
+
     /**
-     * @internal (flag:FEATURE_NEXT_14357) make persister not nullable on removal
+     * @internal (flag:FEATURE_NEXT_14408) make persister not nullable on removal
      */
-    private ?PaymentMethodPersister $paymentMethodPersister;
+    private ?CmsBlockPersister $cmsBlockPersister;
 
     private EntityRepositoryInterface $languageRepository;
 
@@ -74,6 +78,8 @@ class AppLifecycle extends AbstractAppLifecycle
 
     private EntityRepositoryInterface $integrationRepository;
 
+    private EntityRepositoryInterface $aclRoleRepository;
+
     public function __construct(
         EntityRepositoryInterface $appRepository,
         PermissionPersister $permissionPersister,
@@ -81,7 +87,8 @@ class AppLifecycle extends AbstractAppLifecycle
         ActionButtonPersister $actionButtonPersister,
         TemplatePersister $templatePersister,
         WebhookPersister $webhookPersister,
-        ?PaymentMethodPersister $paymentMethodPersister,
+        PaymentMethodPersister $paymentMethodPersister,
+        ?CmsBlockPersister $cmsBlockPersister,
         AbstractAppLoader $appLoader,
         EventDispatcherInterface $eventDispatcher,
         AppRegistrationService $registrationService,
@@ -90,6 +97,7 @@ class AppLifecycle extends AbstractAppLifecycle
         SystemConfigService $systemConfigService,
         ConfigValidator $configValidator,
         EntityRepositoryInterface $integrationRepository,
+        EntityRepositoryInterface $aclRoleRepository,
         string $projectDir
     ) {
         $this->appRepository = $appRepository;
@@ -97,6 +105,7 @@ class AppLifecycle extends AbstractAppLifecycle
         $this->customFieldPersister = $customFieldPersister;
         $this->webhookPersister = $webhookPersister;
         $this->paymentMethodPersister = $paymentMethodPersister;
+        $this->cmsBlockPersister = $cmsBlockPersister;
         $this->appLoader = $appLoader;
         $this->eventDispatcher = $eventDispatcher;
         $this->registrationService = $registrationService;
@@ -108,6 +117,7 @@ class AppLifecycle extends AbstractAppLifecycle
         $this->systemConfigService = $systemConfigService;
         $this->configValidator = $configValidator;
         $this->integrationRepository = $integrationRepository;
+        $this->aclRoleRepository = $aclRoleRepository;
     }
 
     public function getDecorated(): AbstractAppLifecycle
@@ -137,6 +147,8 @@ class AppLifecycle extends AbstractAppLifecycle
         if ($activate) {
             $this->appStateService->activateApp($appId, $context);
         }
+
+        $this->updateAclRole($app->getName(), $context);
     }
 
     public function update(Manifest $manifest, array $app, Context $context): void
@@ -150,7 +162,7 @@ class AppLifecycle extends AbstractAppLifecycle
         );
     }
 
-    public function delete(string $appName, array $app, Context $context): void
+    public function delete(string $appName, array $app, Context $context, bool $keepUserData = false): void
     {
         $appEntity = $this->loadApp($app['id'], $context);
 
@@ -158,7 +170,7 @@ class AppLifecycle extends AbstractAppLifecycle
             $this->appStateService->deactivateApp($appEntity->getId(), $context);
         }
 
-        $this->removeAppAndRole($appEntity, $context);
+        $this->removeAppAndRole($appEntity, $context, $keepUserData, true);
     }
 
     private function updateApp(
@@ -203,16 +215,22 @@ class AppLifecycle extends AbstractAppLifecycle
         // therefore we only install action-buttons, webhooks and modules if we have a secret
         if ($app->getAppSecret()) {
             $this->actionButtonPersister->updateActions($manifest, $id, $defaultLocale, $context);
-            $this->webhookPersister->updateWebhooks($manifest, $id, $defaultLocale, $context);
-            if (Feature::isActive('FEATURE_NEXT_14357') && $this->paymentMethodPersister !== null) {
-                // on removal of FEATURE_NEXT_14357: Make paymentMethodPersister not nullable
-                $this->paymentMethodPersister->updatePaymentMethods($manifest, $id, $defaultLocale, $context);
-            }
+            $context->scope(Context::SYSTEM_SCOPE, function (Context $context) use ($manifest, $id, $defaultLocale): void {
+                $this->webhookPersister->updateWebhooks($manifest, $id, $defaultLocale, $context);
+            });
+            $this->paymentMethodPersister->updatePaymentMethods($manifest, $id, $defaultLocale, $context);
             $this->updateModules($manifest, $id, $defaultLocale, $context);
         }
 
         $this->templatePersister->updateTemplates($manifest, $id, $context);
         $this->customFieldPersister->updateCustomFields($manifest, $id, $context);
+
+        if (Feature::isActive('FEATURE_NEXT_14408') && $this->cmsBlockPersister !== null) {
+            $cmsExtensions = $this->appLoader->getCmsExtensions($app);
+            if ($cmsExtensions) {
+                $this->cmsBlockPersister->updateCmsBlocks($cmsExtensions, $id, $defaultLocale, $context);
+            }
+        }
 
         $config = $this->appLoader->getConfiguration($app);
         if ($config) {
@@ -240,18 +258,28 @@ class AppLifecycle extends AbstractAppLifecycle
         return $app;
     }
 
-    private function removeAppAndRole(AppEntity $app, Context $context): void
+    private function removeAppAndRole(AppEntity $app, Context $context, bool $keepUserData = false, bool $softDelete = false): void
     {
         // throw event before deleting app from db as it may be delivered via webhook to the deleted app
         $this->eventDispatcher->dispatch(
-            new AppDeletedEvent($app->getId(), $context)
+            new AppDeletedEvent($app->getId(), $context, $keepUserData)
         );
 
-        $context->scope(Context::SYSTEM_SCOPE, function (Context $context) use ($app): void {
+        $context->scope(Context::SYSTEM_SCOPE, function (Context $context) use ($app, $softDelete): void {
             $this->appRepository->delete([['id' => $app->getId()]], $context);
-            $this->integrationRepository->delete([['id' => $app->getIntegrationId()]], $context);
+            if ($softDelete) {
+                $this->integrationRepository->update([[
+                    'id' => $app->getIntegrationId(),
+                    'deletedAt' => new \DateTimeImmutable(),
+                ]], $context);
+                $this->permissionPersister->softDeleteRole($app->getAclRoleId());
+            } else {
+                $this->integrationRepository->delete([['id' => $app->getIntegrationId()]], $context);
+                $this->permissionPersister->removeRole($app->getAclRoleId());
+            }
+
+            $this->deleteAclRole($app->getName(), $context);
         });
-        $this->permissionPersister->removeRole($app->getAclRoleId());
     }
 
     private function updateMetadata(array $metadata, Context $context): void
@@ -342,5 +370,65 @@ class AppLifecycle extends AbstractAppLifecycle
         $locale = $language->getLocale();
 
         return $locale->getCode();
+    }
+
+    private function updateAclRole(string $appName, Context $context): void
+    {
+        $criteria = new Criteria();
+        $criteria->addFilter(new NotFilter(
+            NotFilter::CONNECTION_AND,
+            [new EqualsFilter('users.id', null)]
+        ));
+        $roles = $this->aclRoleRepository->search($criteria, $context);
+
+        $newPrivileges = [
+            'app.' . $appName,
+        ];
+        $dataUpdate = [];
+
+        foreach ($roles as $role) {
+            $currentPrivileges = $role->getPrivileges();
+
+            if (\in_array('app.all', $currentPrivileges, true)) {
+                $currentPrivileges = array_merge($currentPrivileges, $newPrivileges);
+                $currentPrivileges = array_unique($currentPrivileges);
+
+                array_push($dataUpdate, [
+                    'id' => $role->getId(),
+                    'privileges' => $currentPrivileges,
+                ]);
+            }
+        }
+
+        if (\count($dataUpdate) > 0) {
+            $this->aclRoleRepository->update($dataUpdate, $context);
+        }
+    }
+
+    private function deleteAclRole(string $appName, Context $context): void
+    {
+        $criteria = new Criteria();
+        $criteria->addFilter(new EqualsFilter('app.id', null));
+        $roles = $this->aclRoleRepository->search($criteria, $context);
+
+        $appPrivileges = 'app.' . $appName;
+        $dataUpdate = [];
+
+        foreach ($roles as $role) {
+            $currentPrivileges = $role->getPrivileges();
+
+            if (($key = array_search($appPrivileges, $currentPrivileges, true)) !== false) {
+                unset($currentPrivileges[$key]);
+
+                array_push($dataUpdate, [
+                    'id' => $role->getId(),
+                    'privileges' => $currentPrivileges,
+                ]);
+            }
+        }
+
+        if (\count($dataUpdate) > 0) {
+            $this->aclRoleRepository->update($dataUpdate, $context);
+        }
     }
 }

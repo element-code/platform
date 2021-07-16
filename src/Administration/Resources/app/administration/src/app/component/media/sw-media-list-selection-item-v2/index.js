@@ -10,21 +10,23 @@ Shopware.Component.register('sw-media-list-selection-item-v2', {
     template,
 
     props: {
+        // FIXME: add type to property
+        // eslint-disable-next-line vue/require-prop-types
         item: {
-            required: true
+            required: true,
         },
 
         hideActions: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         hideTooltip: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
     },
 
     computed: {
@@ -34,12 +36,12 @@ Shopware.Component.register('sw-media-list-selection-item-v2', {
 
         productImageClasses() {
             return {
-                'is--placeholder': this.isPlaceholder
+                'is--placeholder': this.isPlaceholder,
             };
         },
 
         sourceId() {
             return this.item.mediaId || this.item.targetId || this.item.id;
-        }
-    }
+        },
+    },
 });

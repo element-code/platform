@@ -10,20 +10,20 @@ Component.register('sw-promotion-v2-cart-condition-form', {
     inject: [
         'repositoryFactory',
         'acl',
-        'promotionSyncService'
+        'promotionSyncService',
     ],
 
     props: {
         promotion: {
             type: Object,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
     data() {
         return {
             packagerKeys: [],
-            sorterKeys: []
+            sorterKeys: [],
         };
     },
     computed: {
@@ -36,8 +36,8 @@ Component.register('sw-promotion-v2-cart-condition-form', {
 
             criteria.addFilter(
                 Criteria.not('AND', [
-                    Criteria.equalsAny('conditions.type', ['cartCartAmount'])
-                ])
+                    Criteria.equalsAny('conditions.type', ['cartCartAmount']),
+                ]),
             );
 
             criteria.addSorting(Criteria.sort('name', 'ASC', false));
@@ -52,8 +52,8 @@ Component.register('sw-promotion-v2-cart-condition-form', {
                 result.push(
                     {
                         key: keyValue,
-                        name: this.$tc(`sw-promotion-v2.detail.conditions.setgroups.packager.${keyValue}`)
-                    }
+                        name: this.$tc(`sw-promotion-v2.detail.conditions.setgroups.packager.${keyValue}`),
+                    },
                 );
             });
             return result;
@@ -66,8 +66,8 @@ Component.register('sw-promotion-v2-cart-condition-form', {
                 result.push(
                     {
                         key: keyValue,
-                        name: this.$tc(`sw-promotion-v2.detail.conditions.setgroups.sorter.${keyValue}`)
-                    }
+                        name: this.$tc(`sw-promotion-v2.detail.conditions.setgroups.sorter.${keyValue}`),
+                    },
                 );
             });
 
@@ -76,13 +76,13 @@ Component.register('sw-promotion-v2-cart-condition-form', {
 
         isEditingDisabled() {
             return (this.promotion === null || !this.acl.can('promotion.editor'));
-        }
+        },
     },
 
     watch: {
         promotion() {
             this.loadSetGroups();
-        }
+        },
     },
 
     created() {
@@ -107,16 +107,16 @@ Component.register('sw-promotion-v2-cart-condition-form', {
         loadSetGroups() {
             const criteria = new Criteria();
             criteria.addFilter(
-                Criteria.equals('promotionId', this.promotion.id)
+                Criteria.equals('promotionId', this.promotion.id),
             );
 
-            this.promotionGroupRepository.search(criteria, Shopware.Context.api).then((groups) => {
+            this.promotionGroupRepository.search(criteria).then((groups) => {
                 this.promotion.setgroups = groups;
             });
         },
 
         addSetGroup() {
-            const newGroup = this.promotionGroupRepository.create(Shopware.Context.api);
+            const newGroup = this.promotionGroupRepository.create();
             newGroup.promotionId = this.promotion.id;
             newGroup.value = 2;
             newGroup.packagerKey = 'COUNT';
@@ -126,7 +126,7 @@ Component.register('sw-promotion-v2-cart-condition-form', {
         },
 
         duplicateSetGroup(group) {
-            const newGroup = this.promotionGroupRepository.create(Shopware.Context.api);
+            const newGroup = this.promotionGroupRepository.create();
             newGroup.promotionId = group.promotionId;
             newGroup.value = group.value;
             newGroup.packagerKey = group.packagerKey;
@@ -145,6 +145,6 @@ Component.register('sw-promotion-v2-cart-condition-form', {
             this.promotion.setgroups = this.promotion.setgroups.filter((setGroup) => {
                 return setGroup.id !== group.id;
             });
-        }
-    }
+        },
+    },
 });

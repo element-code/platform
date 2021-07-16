@@ -4,7 +4,7 @@
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
     <parameters>
-        <parameter key="env(SHOPWARE_UPDATE_TEST)">false</parameter>
+        <parameter key="env(SHOPWARE_UPDATE_TEST)" />
     </parameters>
     <services>
         <service id="Shopware\Core\Framework\Update\Api\UpdateController" public="true">
@@ -24,18 +24,25 @@
             </call>
         </service>
 
+        <service id="Shopware\Core\Framework\Update\Services\UpdateApiHttpClientFactory">
+            <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
+        </service>
+
+        <service id="shopware.update.http.client" class="GuzzleHttp\Client">
+            <factory service="Shopware\Core\Framework\Update\Services\UpdateApiHttpClientFactory" />
+        </service>
+
         <service id="Shopware\Core\Framework\Update\Services\ApiClient">
             <argument>%kernel.shopware_version%</argument>
-            <argument type="service" id="cache.object"/>
             <argument type="service" id="Shopware\Core\System\SystemConfig\SystemConfigService"/>
             <argument type="service" id="Shopware\Core\Framework\Store\Services\OpenSSLVerifier"/>
+            <argument type="service" id="shopware.update.http.client"/>
             <argument>%shopware.auto_update.enabled%</argument>
         </service>
 
         <service id="Shopware\Core\Framework\Update\Services\PluginCompatibility">
             <argument type="service" id="Shopware\Core\Framework\Store\Services\StoreClient"/>
             <argument type="service" id="plugin.repository"/>
-            <argument type="service" id="request_stack"/>
             <argument type="service" id="Shopware\Core\Framework\Store\Services\AbstractExtensionDataProvider" on-invalid="null"/>
         </service>
 
@@ -68,6 +75,11 @@
 
         <service id="Shopware\Core\Framework\Update\Services\UpdateHtaccess">
             <argument>%kernel.project_dir%/public/.htaccess</argument>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service id="Shopware\Core\Framework\Update\Services\CreateCustomAppsDir">
+            <argument>%kernel.app_dir%</argument>
             <tag name="kernel.event_subscriber"/>
         </service>
     </services>

@@ -7,34 +7,34 @@ Component.register('sw-promotion-v2-settings-trigger', {
     template,
 
     inject: [
-        'acl'
+        'acl',
     ],
 
     props: {
         discount: {
             type: Object,
-            required: true
-        }
+            required: true,
+        },
     },
 
-    watch: {
-        'discount.discountRules'(discountRules) {
-            this.discount.considerAdvancedRules = discountRules.length > 0;
-        }
+    data() {
+        return {
+            useTrigger: this.discount.discountRules.length > 0,
+            triggerType: 'single',
+        };
     },
 
     computed: {
         ruleCriteria() {
             return (new Criteria())
                 .addSorting(Criteria.sort('name', 'ASC', false));
-        }
+        },
     },
 
-    data() {
-        return {
-            useTrigger: this.discount.discountRules.length > 0,
-            triggerType: 'single'
-        };
+    watch: {
+        'discount.discountRules'(discountRules) {
+            this.discount.considerAdvancedRules = discountRules.length > 0;
+        },
     },
 
     methods: {
@@ -43,12 +43,12 @@ Component.register('sw-promotion-v2-settings-trigger', {
             return [{
                 value: 'single',
                 display: this.$tc(`${prefix}.displaySingleTrigger`),
-                disabled: false
+                disabled: false,
             }, {
                 value: 'multi',
                 display: this.$tc(`${prefix}.displayMultiTrigger`),
-                disabled: true
+                disabled: true,
             }];
-        }
-    }
+        },
+    },
 });

@@ -14,6 +14,8 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 class SalesChannelIndexer extends EntityIndexer
 {
+    public const MANY_TO_MANY_UPDATER = 'sales_channel.many-to-many';
+
     /**
      * @var IteratorFactory
      */
@@ -51,7 +53,12 @@ class SalesChannelIndexer extends EntityIndexer
         return 'sales_channel.indexer';
     }
 
-    public function iterate($offset): ?EntityIndexingMessage
+    /**
+     * @param array|null $offset
+     *
+     * @deprecated tag:v6.5.0 The parameter $offset will be native typed
+     */
+    public function iterate(/*?array */$offset): ?EntityIndexingMessage
     {
         $iterator = $this->iteratorFactory->createIterator($this->repository->getDefinition(), $offset);
 
@@ -84,8 +91,10 @@ class SalesChannelIndexer extends EntityIndexer
             return;
         }
 
-        $this->manyToManyUpdater->update(SalesChannelDefinition::ENTITY_NAME, $ids, $message->getContext());
+        if ($message->allow(self::MANY_TO_MANY_UPDATER)) {
+            $this->manyToManyUpdater->update(SalesChannelDefinition::ENTITY_NAME, $ids, $message->getContext());
+        }
 
-        $this->eventDispatcher->dispatch(new SalesChannelIndexerEvent($ids, $message->getContext()));
+        $this->eventDispatcher->dispatch(new SalesChannelIndexerEvent($ids, $message->getContext(), $message->getSkip()));
     }
 }

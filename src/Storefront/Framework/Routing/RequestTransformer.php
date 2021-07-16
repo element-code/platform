@@ -79,10 +79,11 @@ class RequestTransformer implements RequestTransformerInterface
     /**
      * @var string[]
      */
-    private $whitelist = [
+    private array $whitelist = [
         '/_wdt/',
         '/_profiler/',
         '/_error/',
+        '/payment/finalize-transaction',
     ];
 
     /**
@@ -213,9 +214,19 @@ class RequestTransformer implements RequestTransformerInterface
         );
 
         if (isset($resolved['canonicalPathInfo'])) {
+            $urlPath = parse_url($salesChannel['url'], \PHP_URL_PATH);
+            if ($urlPath === false || $urlPath === null) {
+                $urlPath = '';
+            }
+
+            $baseUrlPath = trim($urlPath, '/');
+            if (\strlen($baseUrlPath) > 1 && strpos($baseUrlPath, '/') !== 0) {
+                $baseUrlPath = '/' . $baseUrlPath;
+            }
+
             $transformedRequest->attributes->set(
                 SalesChannelRequest::ATTRIBUTE_CANONICAL_LINK,
-                $this->getSchemeAndHttpHost($request) . $baseUrl . $resolved['canonicalPathInfo']
+                $this->getSchemeAndHttpHost($request) . $baseUrlPath . $resolved['canonicalPathInfo']
             );
         }
 

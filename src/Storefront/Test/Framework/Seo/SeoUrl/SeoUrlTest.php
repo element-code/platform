@@ -23,6 +23,7 @@ use Shopware\Storefront\Framework\Seo\SeoUrlRoute\ProductPageSeoUrlRoute;
 
 /**
  * @group slow
+ * @group skip-paratest
  */
 class SeoUrlTest extends TestCase
 {
@@ -516,7 +517,6 @@ class SeoUrlTest extends TestCase
             'seoUrls' => [
                 [
                     'id' => $seoUrlId,
-                    'salesChannelId' => Defaults::SALES_CHANNEL,
                     'routeName' => ProductPageSeoUrlRoute::ROUTE_NAME,
                     'pathInfo' => $pathInfo,
                     'seoPathInfo' => 'awesome',

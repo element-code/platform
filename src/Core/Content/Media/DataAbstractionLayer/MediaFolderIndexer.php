@@ -17,6 +17,8 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 class MediaFolderIndexer extends EntityIndexer
 {
+    public const CHILD_COUNT_UPDATER = 'media_folder.child-count';
+
     /**
      * @var IteratorFactory
      */
@@ -61,7 +63,12 @@ class MediaFolderIndexer extends EntityIndexer
         return 'media_folder.indexer';
     }
 
-    public function iterate($offset): ?EntityIndexingMessage
+    /**
+     * @param array|null $offset
+     *
+     * @deprecated tag:v6.5.0 The parameter $offset will be native typed
+     */
+    public function iterate(/*?array */$offset): ?EntityIndexingMessage
     {
         $iterator = $this->iteratorFactory->createIterator($this->folderRepository->getDefinition(), $offset);
 
@@ -129,9 +136,11 @@ class MediaFolderIndexer extends EntityIndexer
             ]);
         }
 
-        $this->childCountUpdater->update(MediaFolderDefinition::ENTITY_NAME, $ids, $message->getContext());
+        if ($message->allow(self::CHILD_COUNT_UPDATER)) {
+            $this->childCountUpdater->update(MediaFolderDefinition::ENTITY_NAME, $ids, $message->getContext());
+        }
 
-        $this->eventDispatcher->dispatch(new MediaFolderIndexerEvent($ids, $message->getContext()));
+        $this->eventDispatcher->dispatch(new MediaFolderIndexerEvent($ids, $message->getContext(), $message->getSkip()));
     }
 
     private function fetchChildren(array $parentIds): array

@@ -9,16 +9,17 @@ Component.register('sw-sales-channel-detail', {
     inject: [
         'repositoryFactory',
         'exportTemplateService',
-        'acl'
+        'acl',
+        'feature',
     ],
 
     mixins: [
         Mixin.getByName('notification'),
-        Mixin.getByName('placeholder')
+        Mixin.getByName('placeholder'),
     ],
 
     shortcuts: {
-        'SYSTEMKEY+S': 'onSave'
+        'SYSTEMKEY+S': 'onSave',
     },
 
     data() {
@@ -35,14 +36,14 @@ Component.register('sw-sales-channel-detail', {
                 templates: null,
                 templateName: null,
                 showTemplateModal: false,
-                selectedTemplate: null
-            }
+                selectedTemplate: null,
+            },
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -60,8 +61,11 @@ Component.register('sw-sales-channel-detail', {
                 return this.productComparison.newProductExport;
             }
 
-            this.productComparison.newProductExport = this.productExportRepository.create(Shopware.Context.api);
+            // eslint-disable-next-line vue/no-side-effects-in-computed-properties
+            this.productComparison.newProductExport = this.productExportRepository.create();
+            // eslint-disable-next-line vue/no-side-effects-in-computed-properties
             this.productComparison.newProductExport.interval = 0;
+            // eslint-disable-next-line vue/no-side-effects-in-computed-properties
             this.productComparison.newProductExport.generateByCronjob = false;
 
             return this.productComparison.newProductExport;
@@ -81,6 +85,14 @@ Component.register('sw-sales-channel-detail', {
             }
 
             return this.salesChannel.typeId === Defaults.productComparisonTypeId;
+        },
+
+        isHeadless() {
+            if (!this.salesChannel) {
+                return this.$route.params.typeId === Defaults.apiSalesChannelTypeId;
+            }
+
+            return this.salesChannel.typeId === Defaults.apiSalesChannelTypeId;
         },
 
         salesChannelRepository() {
@@ -106,7 +118,7 @@ Component.register('sw-sales-channel-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.allowSaving,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -114,23 +126,23 @@ Component.register('sw-sales-channel-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         allowSaving() {
             return this.acl.can('sales_channel.editor');
-        }
-    },
-
-    created() {
-        this.createdComponent();
+        },
     },
 
     watch: {
         '$route.params.id'() {
             this.createdComponent();
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -224,7 +236,7 @@ Component.register('sw-sales-channel-detail', {
             this.onTemplateModalClose();
 
             this.createNotificationInfo({
-                message: this.$tc('sw-sales-channel.detail.productComparison.templates.message.template-applied-message')
+                message: this.$tc('sw-sales-channel.detail.productComparison.templates.message.template-applied-message'),
             });
         },
 
@@ -255,7 +267,7 @@ Component.register('sw-sales-channel-detail', {
 
         loadProductExportTemplates() {
             this.productComparison.templateOptions = Object.values(
-                this.exportTemplateService.getProductExportTemplateRegistry()
+                this.exportTemplateService.getProductExportTemplateRegistry(),
             );
             this.productComparison.templates = this.exportTemplateService.getProductExportTemplateRegistry();
         },
@@ -289,8 +301,8 @@ Component.register('sw-sales-channel-detail', {
 
                     this.createNotificationError({
                         message: this.$tc('sw-sales-channel.detail.messageSaveError', 0, {
-                            name: this.salesChannel.name || this.placeholder(this.salesChannel, 'name')
-                        })
+                            name: this.salesChannel.name || this.placeholder(this.salesChannel, 'name'),
+                        }),
                     });
                 });
         },
@@ -305,6 +317,6 @@ Component.register('sw-sales-channel-detail', {
 
         onChangeLanguage() {
             this.loadEntityData();
-        }
-    }
+        },
+    },
 });

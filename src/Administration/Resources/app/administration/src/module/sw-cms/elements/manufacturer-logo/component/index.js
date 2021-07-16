@@ -1,16 +1,16 @@
 import template from './sw-cms-el-manufacturer-logo.html.twig';
 
-const { Component, Mixin, Utils } = Shopware;
+const { Component, Mixin } = Shopware;
 
 Component.extend('sw-cms-el-manufacturer-logo', 'sw-cms-el-image', {
     template,
     mixins: [
-        Mixin.getByName('cms-element')
+        Mixin.getByName('cms-element'),
     ],
 
     computed: {
         isProductPage() {
-            return Utils.get(this.cmsPageState, 'currentPage.type', '') === 'product_detail';
+            return this.cmsPageState?.currentPage?.type ?? '' === 'product_detail';
         },
 
         styles() {
@@ -20,9 +20,9 @@ Component.extend('sw-cms-el-manufacturer-logo', 'sw-cms-el-image', {
                 'min-height': displayMode.value === 'cover' && minHeight.value && minHeight.value !== 0
                     ? minHeight.value
                     : '40px',
-                'align-self': verticalAlign.value || null
+                'align-self': verticalAlign.value || null,
             };
-        }
+        },
     },
 
     methods: {
@@ -31,11 +31,11 @@ Component.extend('sw-cms-el-manufacturer-logo', 'sw-cms-el-image', {
             this.initElementData('manufacturer-logo');
 
             if (this.isProductPage
-                && !Utils.get(this.element, 'translated.config.media')
-                && !Utils.get(this.element, 'data.media')) {
+                && !this.element?.translated?.config?.media
+                && !this.element?.data?.media) {
                 this.element.config.media.source = 'mapped';
                 this.element.config.media.value = 'product.manufacturer.media';
             }
-        }
-    }
+        },
+    },
 });

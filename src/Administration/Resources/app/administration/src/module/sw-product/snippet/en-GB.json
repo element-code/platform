@@ -3,13 +3,15 @@
     "visibility": {
       "textHeadline": "Product display modes per Sales Channel",
       "placeholderVisibility": "Select Sales Channel...",
-      "columnAll": "Universal",
-      "columnSearchOnly": "Search results only",
-      "columnLinkOnly": "Hidden",
-      "linkAdvancedVisibility": "Advanced assignment options",
+      "columnAll": "Visible",
+      "columnSearchOnly": "Hide in Listings",
+      "columnLinkOnly": "Hide in Listings and search",
+      "visibilityModalDescription": "“Hide in listing” will exclude the product from product overview listings but also from product sliders and cross selling lists. Selecting the option “Hide in listing and search” will also exclude the product from search actions. Products can still be reached via URL.",
+      "linkAdvancedVisibility": "Set visibility for selected Sales Channels",
       "labelVisibility": "Sales Channels",
       "closeModal": "Apply",
-      "bodyVisibility": "Add Sales channels where is product should be displayed. You're also able to further define the visibility of the product for each Storefront Sales Channel via de link below."
+      "bodyVisibility": "Add Sales Channels in which this product should be displayed. You may further define the product visibility for each Storefront Sales Channel via the link below.",
+      "errorMessage": "Unable to load default Sales Channel configuration."
     },
     "general": {
       "mainMenuItemGeneral": "Products",
@@ -297,7 +299,23 @@
       "linkPropertiesOfParent": "Show properties of parent product",
       "inheritSwitchLabel": "Use properties from parent product",
       "propertiesNotInherited": "You can now use custom properties for this variant.",
-      "propertiesNotExisting": "No properties have been assigned to this product yet."
+      "propertiesNotExisting": "No properties assigned to this product yet.",
+      "cardTitle": "Properties",
+      "buttonAddProperty": "Configure properties",
+      "buttonAddProperties": "Configure properties",
+      "titleEmptyState": "No properties assigned to this product yet.",
+      "titleEmptyStateList": "No matching properties found.",
+      "columnProperty": "Property",
+      "columnValue": "Property value",
+      "placeholderSearchAddedProperties": "Search added properties...",
+      "placeholderSearchProperties": "Search properties...",
+      "addPropertiesModal": {
+        "title": "Add properties",
+        "titleEmptyState": "Create properties and property values first, then return here to assign them.",
+        "selectedProperties": "{count} value selected | {count} values selected",
+        "titleEmptyPropertyValues": "No property values available.",
+        "titleNoPropertySelected": "No property selected."
+      }
     },
     "variations": {
       "emptyStateDescription": "This product has no variants yet.",
@@ -391,6 +409,7 @@
     "crossselling": {
       "cardTitleCrossSelling": "Cross Selling",
       "buttonAddCrossSelling": "Add new Cross Selling",
+      "buttonAddCrossSellingLanguageWarning": "You can only create new cross sellings in your default language",
       "buttonDeleteCrossSelling": "Delete",
       "inputCrossSellingTitle": "Name",
       "inputCrossSellingActive": "Active",

@@ -21,6 +21,7 @@ use Shopware\Core\Content\MailTemplate\Subscriber\MailSendSubscriber;
 use Shopware\Core\Content\MailTemplate\Subscriber\MailSendSubscriberConfig;
 use Shopware\Core\Content\Media\MediaService;
 use Shopware\Core\Defaults;
+use Shopware\Core\Framework\Adapter\Translation\Translator;
 use Shopware\Core\Framework\Adapter\Twig\StringTemplateRenderer;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
@@ -78,7 +79,10 @@ class MailSendSubscriberTest extends TestCase
             $this->getContainer()->get('document.repository'),
             $this->getContainer()->get(DocumentService::class),
             $this->getContainer()->get('logger'),
-            $this->getContainer()->get('event_dispatcher')
+            $this->getContainer()->get('event_dispatcher'),
+            $this->getContainer()->get('mail_template_type.repository'),
+            $this->getContainer()->get(Translator::class),
+            $this->getContainer()->get('language.repository')
         );
 
         $mailFilterEvent = null;
@@ -97,7 +101,7 @@ class MailSendSubscriberTest extends TestCase
             static::assertNull($mailService->data);
         } else {
             static::assertEquals(1, $mailService->calls);
-            if (empty($contactFormRecipients)) {
+            if (!empty($recipients)) {
                 static::assertEquals($mailService->data['recipients'], $recipients);
             } else {
                 static::assertEquals($mailService->data['recipients'], $contactFormRecipients);
@@ -114,9 +118,68 @@ class MailSendSubscriberTest extends TestCase
     {
         yield 'Test skip mail' => [true, null, ['test@example.com' => 'Shopware ag']];
         yield 'Test send mail' => [false, null, ['test@example.com' => 'Shopware ag']];
-        yield 'Test overwrite recipients' => [false, ['test2@example.com' => 'Overwrite'], ['test2@example.com' => 'Overwrite']];
+        yield 'Test overwrite recipients' => [false, ['test2@example.com' => 'Overwrite'], ['test@example.com' => 'Shopware ag']];
         yield 'Test extend TemplateData' => [false, null, ['test@example.com' => 'Shopware ag'], true, true];
         yield 'Test send mail without contact recipients' => [false, ['test@example.com' => 'Shopware ag']];
+    }
+
+    public function testTranslatorInjectionInMail(): void
+    {
+        $criteria = new Criteria();
+        $criteria->setLimit(1);
+
+        $context = Context::createDefaultContext();
+
+        $context->addExtension(MailSendSubscriber::MAIL_CONFIG_EXTENSION, new MailSendSubscriberConfig(false, [], []));
+
+        $mailTemplateId = $this->getContainer()
+            ->get('mail_template.repository')
+            ->searchIds($criteria, $context)
+            ->firstId();
+
+        static::assertNotEmpty($mailTemplateId);
+
+        $config = array_filter([
+            'mail_template_id' => $mailTemplateId,
+            'recipients' => ['test@example.com' => 'Shopware ag'],
+        ]);
+
+        $event = new ContactFormEvent($context, Defaults::SALES_CHANNEL, new MailRecipientStruct(['test@example.com' => 'Shopware ag']), new DataBag());
+        $translator = $this->getContainer()->get(Translator::class);
+
+        if ($translator->getSnippetSetId()) {
+            $translator->resetInjection();
+        }
+
+        $mailService = new TestEmailService();
+        $subscriber = new MailSendSubscriber(
+            $mailService,
+            $this->getContainer()->get('mail_template.repository'),
+            $this->getContainer()->get(MediaService::class),
+            $this->getContainer()->get('media.repository'),
+            $this->getContainer()->get('document.repository'),
+            $this->getContainer()->get(DocumentService::class),
+            $this->getContainer()->get('logger'),
+            $this->getContainer()->get('event_dispatcher'),
+            $this->getContainer()->get('mail_template_type.repository'),
+            $translator,
+            $this->getContainer()->get('language.repository')
+        );
+
+        $mailFilterEvent = null;
+        $snippetSetId = null;
+        $function = static function ($event) use (&$mailFilterEvent, $translator, &$snippetSetId): void {
+            $mailFilterEvent = $event;
+            $snippetSetId = $translator->getSnippetSetId();
+        };
+
+        $this->getContainer()->get('event_dispatcher')->addListener(MailSendSubscriberBridgeEvent::class, $function);
+
+        $subscriber->sendMail(new BusinessEvent('test', $event, $config));
+
+        static::assertIsObject($mailFilterEvent);
+        static::assertEmpty($translator->getSnippetSetId());
+        static::assertNotNull($snippetSetId);
     }
 
     private function createCustomer(Context $context): string

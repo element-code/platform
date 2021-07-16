@@ -8,75 +8,77 @@ const { debounce, get } = Shopware.Utils;
 Component.register('sw-entity-single-select', {
     template,
 
-    model: {
-        prop: 'value',
-        event: 'change'
-    },
-
-    mixins: [
-        Mixin.getByName('remove-api-error')
-    ],
-
     inject: { repositoryFactory: 'repositoryFactory', feature: 'feature' },
 
+    mixins: [
+        Mixin.getByName('remove-api-error'),
+    ],
+
+    model: {
+        prop: 'value',
+        event: 'change',
+    },
+
     props: {
+        // FIXME: add property type
+        // eslint-disable-next-line vue/require-prop-types
         value: {
-            required: true
+            required: true,
         },
         highlightSearchTerm: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
         placeholder: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
         resetOption: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
         labelProperty: {
             type: [String, Array],
             required: false,
-            default: 'name'
+            default: 'name',
         },
         labelCallback: {
             type: Function,
             required: false,
-            default: null
+            default: null,
         },
         entity: {
             required: true,
-            type: String
+            type: String,
         },
         resultLimit: {
             type: Number,
             required: false,
-            default: 25
+            default: 25,
         },
         criteria: {
             type: Object,
             required: false,
             default() {
                 return new Criteria(1, this.resultLimit);
-            }
+            },
         },
         context: {
             type: Object,
             required: false,
             default() {
                 return Shopware.Context.api;
-            }
+            },
         },
 
         disableAutoClose: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
     },
 
     data() {
@@ -88,20 +90,20 @@ Component.register('sw-entity-single-select', {
             isLoading: false,
             // used to track if an item was selected before closing the result list
             itemRecentlySelected: false,
-            lastSelection: null
+            lastSelection: null,
         };
     },
 
     computed: {
         inputClasses() {
             return {
-                'is--expanded': this.isExpanded
+                'is--expanded': this.isExpanded,
             };
         },
 
         selectionTextClasses() {
             return {
-                'is--placeholder': !this.singleSelection
+                'is--placeholder': !this.singleSelection,
             };
         },
         repository() {
@@ -113,7 +115,7 @@ Component.register('sw-entity-single-select', {
          */
         results() {
             return this.resultCollection;
-        }
+        },
     },
 
     watch: {
@@ -131,7 +133,7 @@ Component.register('sw-entity-single-select', {
             }
 
             this.loadSelected();
-        }
+        },
     },
 
     created() {
@@ -147,11 +149,11 @@ Component.register('sw-entity-single-select', {
          * Fetches the selected entity from the server
          */
         loadSelected() {
-            if (this.value === '' || this.value === null) {
+            if (!this.value) {
                 if (this.resetOption) {
                     this.singleSelection = {
                         id: null,
-                        name: this.resetOption
+                        name: this.resetOption,
                     };
                 }
 
@@ -237,7 +239,7 @@ Component.register('sw-entity-single-select', {
                 if (!this.resultCollection.has(null)) {
                     this.resultCollection.unshift({
                         id: null,
-                        name: this.resetOption
+                        name: this.resetOption,
                     });
                 }
             }
@@ -352,6 +354,6 @@ Component.register('sw-entity-single-select', {
 
         getKey(object, keyPath, defaultValue) {
             return get(object, keyPath, defaultValue);
-        }
-    }
+        },
+    },
 });

@@ -18,37 +18,38 @@ const lineBreak = '<br />';
 Component.register('sw-text-preview', {
     template,
 
-    data() {
-        return {
-            shortened: false,
-            showModal: false
-        };
-    },
-
     props: {
         text: {
             type: String,
-            required: true
+            required: true,
         },
         maximumLength: {
             type: Number,
-            required: true
+            required: true,
         },
         modalTitle: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
         maximumNewLines: {
             type: Number,
             required: false,
-            default: 0
-        }
+            default: 0,
+        },
+    },
+
+    data() {
+        return {
+            shortened: false,
+            showModal: false,
+        };
     },
 
     computed: {
         shortenedText() {
             let text = this.text;
+            // eslint-disable-next-line vue/no-side-effects-in-computed-properties
             this.shortened = false;
             if (this.maximumNewLines > 0) {
                 const splitted = text.split(lineExpr).filter((element) => {
@@ -56,17 +57,19 @@ Component.register('sw-text-preview', {
                 });
                 if (splitted.length > this.maximumNewLines) {
                     text = splitted.slice(0, this.maximumNewLines).join('\n');
+                    // eslint-disable-next-line vue/no-side-effects-in-computed-properties
                     this.shortened = true;
                 }
             }
             if (text.length > this.maximumLength) {
+                // eslint-disable-next-line vue/no-side-effects-in-computed-properties
                 this.shortened = true;
             }
             return text.slice(0, this.maximumLength).replace(lineExpr, lineBreak);
         },
         fullText() {
             return this.text.replace(lineExpr, lineBreak);
-        }
+        },
     },
 
     methods: {
@@ -76,6 +79,6 @@ Component.register('sw-text-preview', {
 
         openModal() {
             this.showModal = true;
-        }
-    }
+        },
+    },
 });

@@ -31,57 +31,39 @@ Component.register('sw-tabs-item', {
         route: {
             type: [String, Object],
             required: false,
-            default: ''
+            default: '',
         },
         active: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
         activeTab: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
         name: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
         hasError: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
         disabled: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
     },
 
     data() {
         return {
-            isActive: false
+            isActive: false,
         };
-    },
-
-    mounted() {
-        this.mountedComponent();
-    },
-
-    beforeUpdate() {
-        this.beforeUpdateComponent();
-    },
-
-    watch: {
-        '$route'() {
-            this.checkIfRouteMatchesLink();
-        }
-    },
-
-    created() {
-        this.createdComponent();
     },
 
     computed: {
@@ -93,9 +75,27 @@ Component.register('sw-tabs-item', {
             return {
                 'sw-tabs-item--active': this.isActive,
                 'sw-tabs-item--has-error': this.hasError,
-                'sw-tabs-item--is-disabled': this.disabled
+                'sw-tabs-item--is-disabled': this.disabled,
             };
-        }
+        },
+    },
+
+    watch: {
+        '$route'() {
+            this.checkIfRouteMatchesLink();
+        },
+    },
+
+    mounted() {
+        this.mountedComponent();
+    },
+
+    beforeUpdate() {
+        this.beforeUpdateComponent();
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -148,6 +148,6 @@ Component.register('sw-tabs-item', {
                     this.$parent.setActiveItem(this);
                 }
             });
-        }
-    }
+        },
+    },
 });

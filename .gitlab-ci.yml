@@ -3,182 +3,114 @@ variables:
     DOCKER_HOST: "tcp://docker:2375"
     DOCKER_TLS_CERTDIR: "/certs"
     MYSQL_ROOT_PASSWORD: app
-    WEB_DOCUMENT_ROOT: $CI_PROJECT_DIR/development/public
+    WEB_DOCUMENT_ROOT: $CI_PROJECT_DIR/public
     GIT_STRATEGY: clone
-    LOG_STDOUT: $CI_PROJECT_DIR/stdout.log
+    LOG_STDOUT: $CI_PROJECT_DIR/var/log/stdout.log
     MYSQL_CMD: mysqld
+    PROJECT_ROOT: $CI_PROJECT_DIR
+    ADMIN_PATH: $CI_PROJECT_DIR/src/Administration/Resources/app/administration
+    STOREFRONT_PATH: $CI_PROJECT_DIR/src/Storefront/Resources/app/storefront
+    COMPOSER_PROCESS_TIMEOUT: 7200 # 60s * 60 * 2 = 2 hours
 
 stages:
+    - lint
     - unit
     - E2E
-    - Build
-    - Generate docs
-    - Security
-    - Deploy
+    - security
+    - build
+    - deploy
+    - visual
 
 include:
     -   local: .gitlab/ci/split.yml
 
+workflow:
+    rules:
+        # do not run on push
+        -   if: '$CI_PIPELINE_SOURCE == "push"'
+            when: never
+        -   when: always
+
 default:
     image: shopware/development:7.4-composer-2
-    before_script:
-        - apt-install jq
-        - export CI_DEV_BRANCH=$(echo $CI_COMMIT_REF_NAME | cut -d'+' -f2-)
-        - zip -rq platform.zip .
-        - git clone http://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.shopware.com/shopware/6/product/development.git
-        - unzip -q platform.zip -d development/platform/
-        - cd development
-        - git -C platform checkout --quiet trunk
-        - git -C platform checkout --quiet $CI_COMMIT_SHA
-        - >
-            if [ "$(git ls-remote origin $CI_DEV_BRANCH | wc -l)" == 1 ]; then
-              echo "Development Branch: $CI_DEV_BRANCH (explicit)";
-              git checkout $CI_DEV_BRANCH;
-            elif [ "$(git ls-remote origin $CI_COMMIT_REF_NAME | wc -l)" == 1 ]; then
-              echo "Development Branch: $CI_COMMIT_REF_NAME (implicit by same branch name)";
-              git checkout $CI_COMMIT_REF_NAME;
-            else
-              export CI_TARGET_BRANCH_NAME=$(curl -LsS -H "PRIVATE-TOKEN: $CI_GITLAB_API_TOKEN" "https://gitlab.shopware.com/api/v4/projects/$CI_PROJECT_ID/merge_requests?source_branch=$CI_COMMIT_REF_NAME" | jq --raw-output ".[0].target_branch");
-              if [ "$(git ls-remote origin $CI_TARGET_BRANCH_NAME | wc -l)" == 1 ]; then
-                echo "Development Branch: $CI_TARGET_BRANCH_NAME (implicit by merge request target branch)";
-                git checkout $CI_TARGET_BRANCH_NAME;
-              else
-                echo "Development Branch: trunk (fallback)";
-              fi
-            fi
-        - cp -v dev-ops/gitlab/.psh.yaml.override .
-        - /entrypoint supervisord > /dev/null 2>&1 &
-    interruptible: true
-
-# stage: unit
-
-.phpunit_base:
-    stage: unit
-    variables:
-        TEST_SUITES: "administration storefront checkout content framework profiling migration system elasticsearch docs"
     timeout: 1h 00m
-    script:
-        - echo matrix config
-        - echo EACH_MR $EACH_MR
-        - echo Mysql $MYSQL_IMAGE
-        - echo Mysql cmd $MYSQL_CMD
-        - echo Dev template $DEV_IMAGE
-        - echo Features $FEATURE_ALL
-        - ./psh.phar init
-        - if [[ ! -h vendor/shopware/platform ]]; then echo 'vendor/shopware/platform should be a symlink'; exit 1; fi
-        - mkdir -p build/artifacts/
-        # run all code in test env
-        - ./psh.phar cache --APP_ENV=test
+    interruptible: true
+    before_script:
+        - composer run setup
         - chown -R application:application .
-        - curl http://docker.vm:8000/admin
-        # the coverage generation writes too much to the disks which causes timeouts if the bandwidth is throttled
-        #- if [[ $FEATURE_ALL == 'major' && $DEV_IMAGE =~ 'shopware/development:7.4' ]]; then COVERAGE=true; else COVERAGE=""; fi
-        - echo "Coverage $COVERAGE, feature $FEATURE_ALL"
-        - ./psh.phar unit --APP_ENV=test --PHP_TEST_COVERAGE="$COVERAGE"
-    coverage: '/^\s*Lines:\s*(\d+(?:\.\d+)?%)/'
-    artifacts:
-        when: always
-        paths:
-            - development/build/artifacts/phpunit.junit.xml
-            - development/var/log/*
-            - $CI_PROJECT_DIR/stdout.log
-        reports:
-            junit: development/build/artifacts/phpunit.junit.xml
+        - /entrypoint supervisord > /dev/null 2>&1 &
 
-PHP Unit:
-    extends: .phpunit_base
-    image: $DEV_IMAGE
-    stage: unit
-    services:
-        -   name: $MYSQL_IMAGE
-            alias: mysql
-            entrypoint: [ "sh", "-c", "docker-entrypoint.sh $MYSQL_CMD" ]
-        -   name: elastic/elasticsearch:7.3.0
-            alias: elasticsearch
-            command: [ "bin/elasticsearch", "-Expack.security.enabled=false", "-Ediscovery.type=single-node" ]
-        -   name: swaggerapi/swagger-validator-v2:v2.0.5
-            alias: swagger
+Danger:
+    stage: lint
+    image:
+        name: ghcr.io/shyim/danger-php:latest
+        entrypoint: ["/bin/sh", "-c"]
     rules:
-      - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::skip.*/'
-        when: never
-      - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      - if: '$CI_PIPELINE_SOURCE == "pipeline"'
-      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-        changes:
-          - "Migration*.php"
-          - "**/Migration*.php"
-          - "src/Core/Framework/Resources/config/packages/shopware.yaml"
-      - if: '($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH =~ /^(trunk|6\..+)$/) && $EACH_MR == "true"'
-      - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::all.*/'
-      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-        when: manual
-        allow_failure: true
-    parallel:
-        matrix:
-            -   EACH_MR: 'true'
-                MYSQL_IMAGE: mariadb:10.4
-                DEV_IMAGE: shopware/development:8.0-composer-2
-                FEATURE_ALL: ["false", "minor", "major"]
-            -   MYSQL_IMAGE:
-                    - mysql:5.7
-                    - mariadb:10.3
-                DEV_IMAGE: shopware/development:8.0-composer-2
-                FEATURE_ALL: ["false", "minor", "major"]
-            -   MYSQL_IMAGE:
-                    - mysql:8.0.19
-                DEV_IMAGE: ["shopware/development:7.4-composer-2", "shopware/development:8.0-composer-2"]
-                FEATURE_ALL: ["false", "minor", "major"]
-                MYSQL_CMD: 'mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password --sql-require-primary-key=ON'
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::all.*/'
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    before_script: []
+    script:
+        - danger ci
 
 ESLint (Administration):
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-            - schedules
-            - pipelines
-    stage: unit
-    timeout: 1h 00m
+    stage: lint
+    image: node:alpine
     before_script: []
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::all.*/'
+        - changes:
+              - 'src/Administration/Resources/app/administration/**/*'
     script:
         - cd src/Administration/Resources/app/administration
         - npm clean-install
-        - npm run lint -- --format junit --output-file eslint.junit.xml
+        - npm run --silent lint -- --format junit --output-file $CI_PROJECT_DIR/eslint.junit.xml
+    after_script:
+        - grep 'failure message' eslint.junit.xml
     artifacts:
+        when: on_failure
+        paths:
+            - eslint.junit.xml
         reports:
-            junit: src/Administration/Resources/app/administration/eslint.junit.xml
+            junit: eslint.junit.xml
 
 ESLint (Storefront):
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-            - schedules
-            - pipelines
-    stage: unit
-    timeout: 1h 00m
+    stage: lint
+    image: node:alpine
     before_script: []
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::all.*/'
+        - changes:
+              - 'src/Storefront/Resources/app/storefront/**/*'
     script:
         - cd src/Storefront/Resources/app/storefront
         - npm clean-install
-        - npm run lint:js -- --format junit --output-file eslint.junit.xml
+        - npm run --silent lint:js -- --format junit --output-file $CI_PROJECT_DIR/eslint.junit.xml
+    after_script:
+        - grep 'failure message' eslint.junit.xml
     artifacts:
+        when: on_failure
+        paths:
+            - eslint.junit.xml
         reports:
-            junit: src/Storefront/Resources/app/storefront/eslint.junit.xml
+            junit: eslint.junit.xml
 
 Stylelint (Administration):
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-            - schedules
-            - pipelines
-    stage: unit
-    timeout: 1h 00m
+    stage: lint
+    image: node:alpine
     before_script: []
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::all.*/'
+        - changes:
+              - 'src/Administration/Resources/app/administration/.stylelintrc'
+              - 'src/Administration/Resources/app/administration/**/*.scss'
     script:
         - cd src/Administration/Resources/app/administration
         - npm clean-install
@@ -188,16 +120,16 @@ Stylelint (Administration):
             junit: src/Administration/Resources/app/administration/stylelint.junit.xml
 
 Stylelint (Storefront):
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-            - schedules
-            - pipelines
-    stage: unit
-    timeout: 1h 00m
+    stage: lint
+    image: node:alpine
     before_script: []
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::all.*/'
+        - changes:
+              - 'src/Storefront/Resources/app/storefront/stylelint.config.js'
+              - 'src/Storefront/Resources/app/storefront/**/*.scss'
     script:
         - cd src/Storefront/Resources/app/storefront
         - npm clean-install
@@ -207,329 +139,329 @@ Stylelint (Storefront):
             junit: src/Storefront/Resources/app/storefront/stylelint.junit.xml
 
 PHP analysis:
+    stage: lint
     image: shopware/development:7.4-composer-2
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-    stage: unit
-    services:
-        -   name: mysql:5.7
-            alias: mysql
-    retry:
-        max: 2
-        when: runner_system_failure
-    timeout: 1h 00m
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*lint::all.*/'
+        - changes:
+            - phpstan.neon.dist
+            - psalm.xml
+            - 'changelog/**/*.md'
+            - 'src/**/snippet/**/*.json'
+            - '**/*.php'
+    before_script:
+        - composer install --quiet
     script:
-        - ./psh.phar init
-        - if [[ ! -h vendor/shopware/platform ]]; then echo 'vendor/shopware/platform should be a symlink'; exit 1; fi
-        - php dev-ops/analyze/generate-composer.php
-        - php dev-ops/analyze/vendor/bin/ecs check platform/src --config platform/easy-coding-standard.php
-        - php dev-ops/analyze/phpstan-config-generator.php
-        - php dev-ops/analyze/vendor/bin/phpstan analyze --autoload-file=dev-ops/analyze/vendor/autoload.php --configuration platform/phpstan.neon --error-format gitlab | tee phpstan-report.json
-        - php dev-ops/analyze/vendor/bin/psalm --config=platform/psalm.xml --threads=$(nproc) --show-info=false
-        - php bin/console changelog:check
+        - composer run ecs -- src --no-progress-bar
+        - composer run phpstan -- --error-format=gitlab --no-progress | tee phpstan-report.json
+        - composer run psalm -- --threads=$(nproc) --show-info=false --no-progress
+        - composer run lint:changelog
+        - composer run lint:snippets
     artifacts:
         reports:
-            codequality: development/phpstan-report.json
+            codequality: phpstan-report.json
 
-Check generated Docs:
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
+# stage: unit
+
+PHP Full:
+    image: $DEV_IMAGE
     stage: unit
+    needs: []
     services:
-        -   name: mysql:5.7
-            alias: mysql
-    retry:
-        max: 2
-        when: runner_system_failure
-    timeout: 1h 00m
+        -   name: $MYSQL_IMAGE
+            alias: database
+            entrypoint: [ "sh", "-c", "docker-entrypoint.sh $MYSQL_CMD" ]
+        -   name: elasticsearch:7.8.0
+            alias: elasticsearch
+            command: [ "bin/elasticsearch", "-Expack.security.enabled=false", "-Ediscovery.type=single-node" ]
+        -   name: swaggerapi/swagger-validator-v2:v2.0.5
+            alias: swagger
+    variables:
+        TEST_SUITES: "administration storefront checkout content framework profiling migration system elasticsearch"
+        APP_ENV: test
     script:
-        - ./psh.phar init
-        - if [[ ! -h vendor/shopware/platform ]]; then echo 'vendor/shopware/platform should be a symlink'; exit 1; fi
-        - cd ..
-        - cd development
-        - echo "Checking the generated doc files"
-        - bin/console docs:dump-erd
-        - bin/console docs:dump-core-characteristics
-        - cd platform
+        - FAILED=0
         - >
-            if ! git diff --exit-code --ignore-submodules HEAD --; then
-                echo "Docs have changed, please run 'bin/console docs:dump-core-characteristics' and 'bin/console docs:dump-erd'";
-                git diff --exit-code;
-                exit 1;
-            else
-                echo "Everything ok"
-                exit 0;
-            fi
+            for SUITE in $TEST_SUITES; do
+                composer run phpunit -- --testsuite=$SUITE --log-junit phpunit.$SUITE.xml --colors=never || FAILED=1
+            done
+        - '[[ $FAILED -eq 0 ]]'
+    artifacts:
+        when: always
+        paths:
+            - phpunit.*.xml
+            - var/log/*
+        reports:
+            junit: phpunit.*.xml
+    rules:
+      - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::skip.*/'
+        when: never
+      - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::all.*/'
+      - changes:
+          - "Migration*.php"
+          - "**/Migration*.php"
+          - "src/Core/Framework/Resources/config/packages/shopware.yaml"
+      - if: '$SKIP_ON_MR != "true" && ($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH =~ /^(trunk|6\..+)$/)'
+        changes:
+            - phpunit.xml.dist
+            - '**/*.xml'
+            - '**/*.yaml'
+            - '**/*.twig'
+            - '**/*.json'
+            - '**/*.php'
+    parallel:
+        matrix:
+            -   MYSQL_IMAGE: mariadb:10.4
+                DEV_IMAGE: shopware/development:8.0-composer-2
+                FEATURE_ALL: ["false", "minor"]
+            -   MYSQL_IMAGE:
+                    - mysql:5.7
+                    - mariadb:10.3
+                DEV_IMAGE: shopware/development:8.0-composer-2
+                FEATURE_ALL: ["false", "minor", "major"]
+                SKIP_ON_MR: 'true'
+            -   MYSQL_IMAGE:
+                    - mysql:8.0.19
+                DEV_IMAGE: ["shopware/development:7.4-composer-2", "shopware/development:8.0-composer-2"]
+                FEATURE_ALL: ["false", "minor", "major"]
+                MYSQL_CMD: 'mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password --sql-require-primary-key=ON'
+                SKIP_ON_MR: 'true'
 
-# jest
-Jest (Administration):
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-            - pipelines
+PHP coverage:
+    # TODOS: replace with minimal image - development is 2GB big! An alpine based one should be around 100MB
+    image: shopware/development:7.4-composer-2
     stage: unit
-    timeout: 1h 00m
+    needs: []
+    services:
+        -   name: mariadb:10.4
+            alias: database
+            entrypoint: [ "sh", "-c", "docker-entrypoint.sh $MYSQL_CMD" ]
+    variables:
+        APP_ENV: "test"
+        FEATURE_ALL: "major"
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::all.*/'
+        - changes:
+            - phpunit.xml.dist
+            - '**/*.xml'
+            - '**/*.yaml'
+            - '**/*.twig'
+            - '**/*.json'
+            - '**/*.php'
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+          when: manual
+          allow_failure: true
+    before_script: []
+    script:
+        - composer install --optimize-autoloader
+        - mkdir -p config/jwt || true
+        - bin/console system:generate-jwt-secret
+        - PHP_OPTIONS="-d pcov.enabled=1 -d pcov.directory=$PWD/src -d pcov.exclude='~(vendor|Test|node_modules)~'"
+        - php $PHP_OPTIONS vendor/bin/phpunit
+            --configuration phpunit.xml.dist
+            --log-junit phpunit.junit.xml
+            --exclude-group=skip-paratest,needsWebserver
+            --testsuite "$TESTSUITE"
+            --coverage-text
+            --coverage-cobertura cobertura.xml
+    coverage: '/^\s*Lines:\s*(\d+(?:\.\d+)?%)/'
+    artifacts:
+        when: always
+        paths:
+            - cobertura.xml
+        reports:
+            junit: phpunit.junit.xml
+            cobertura: cobertura.xml
+    parallel:
+        matrix:
+            - TESTSUITE: ["framework", "checkout", "content", "storefront,administration,system,elasticsearch,profiling", "migration"]
+
+Jest (Administration):
+    stage: unit
+    needs: []
     services:
         -   name: mariadb:10.3
-            alias: mysql
+            alias: database
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::all.*/'
+        - when: always
+    variables:
+        PROJECT_ROOT: $CI_PROJECT_DIR
     script:
-        - ./psh.phar init
-        - ./psh.phar administration:install-dependencies
-        - ./psh.phar administration:unit
+        - bin/console framework:schema -s 'entity-schema' $ADMIN_PATH/test/_mocks_/entity-schema.json
+        - npm --prefix $ADMIN_PATH run unit -- --silent
     coverage: '/^\s?All files[^|]*\|[^|]*\s+([\d\.]+)/'
     artifacts:
         when: always
         paths:
-            - development/build/artifacts/jest
+            - build/artifacts/jest
         reports:
-            junit: development/build/artifacts/jest/administration.junit.xml
-            cobertura: development/build/artifacts/jest/cobertura-coverage.xml
+            junit: build/artifacts/jest/administration.junit.xml
+            cobertura: build/artifacts/jest/cobertura-coverage.xml
 
 Jest (Storefront):
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-            - pipelines
     stage: unit
-    timeout: 1h 00m
-    variables:
-        PROJECT_ROOT: $CI_PROJECT_DIR/development
+    needs: []
     services:
         -   name: mariadb:10.3
-            alias: mysql
+            alias: database
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*unit::all.*/'
+        - changes:
+            - 'src/Storefront/Resources/app/storefront/**/*'
     script:
-        - ./psh.phar init
-        - ./psh.phar storefront:install-dependencies
-        - npm --prefix vendor/shopware/platform/src/Storefront/Resources/app/storefront/ run unit
+        - npm --prefix "$STOREFRONT_PATH" run unit -- --silent
     coverage: '/^\s?All files[^|]*\|[^|]*\s+([\d\.]+)/'
     artifacts:
+        when: always
+        paths:
+            - build/artifacts/jest
         reports:
-            junit: development/build/artifacts/storefront.junit.xml
-
-# snippets
-
-Validate snippets:
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-        changes:
-            - src/**/snippet/**/*.json
-    stage: unit
-    timeout: 1h 00m
-    services:
-        -   name: mariadb:10.3
-            alias: mysql
-    script:
-        - ./psh.phar init
-        - php bin/console snippets:validate
+            junit: build/artifacts/jest/storefront.junit.xml
+            cobertura: build/artifacts/jest/cobertura-coverage.xml
 
 # Stage: E2E
 
-E2E:
-    timeout: 2h 00m
-    stage: E2E
-    needs: [ESLint (Administration), ESLint (Storefront)]
-    dependencies: []
+.percy_integration:
     services:
-        -   name: docker:18.09.7-dind
-            alias: docker
         -   name: mariadb:10.3
-            alias: mysql
+            alias: database
+    variables:
+        PERCY_ENABLE: $CYPRESS_PERCY_USAGE
+        CYPRESS_localUsage: 'true'
+        CYPRESS_usePercy: $CYPRESS_PERCY_USAGE
+        CYPRESS_baseUrl: "http://localhost:8000"
+        CYPRESS_numTestsKeptInMemory: 0
+        APP_ENV: e2e
+        CYPRESS_screenshotsFolder: $CI_PROJECT_DIR/var/log/screenshots
     script:
-        - mkdir -p $HOME/.docker
-        - echo "$DOCKER_AUTH_CONFIG" > $HOME/.docker/config.json
-        - docker login
-        - rm $HOME/.docker/config.json
-        - echo matrix config
-        - echo cypress_grep $cypress_grep
-        - echo SECTION $SECTION
-        - echo TEST_DIRECTORY $TEST_DIRECTORY
-        - mkdir -p config/packages/
-        - cp platform/src/Core/Framework/Resources/config/packages/e2e/e2e.yaml config/packages/shopware.yaml
-        - echo FEATURE_ALL $FEATURE_ALL
-        - echo BROWSER $BROWSER
-        - echo cypress_usePercy $cypress_usePercy
-        - ./psh.phar init --APP_ENV="prod"
-        - ./psh.phar administration:init --APP_ENV="prod"
-        - ./psh.phar storefront:init --APP_ENV="prod" --DB_NAME="shopware_e2e"
-        - ./psh.phar e2e:dump-db --APP_ENV="prod"
-        - E2E_BASE_PATH=vendor/shopware/platform/src/${SECTION}/Resources/app/$(echo ${SECTION} | tr '[:upper:]' '[:lower:]')/test/e2e
-        - npm install -g npm@6.14.11
-        - npm i @shopware-ag/e2e-testsuite-platform@2.0.0-beta.4 --prefix $E2E_BASE_PATH
-        - forever start ${E2E_BASE_PATH}/node_modules/@shopware-ag/e2e-testsuite-platform/routes/cypress.js
-        - chown -R 1000:1000 .
-        - CYPRESS_CMD="cypress run"
-        - if [[ $cypress_usePercy = "true" ]]; then export CYPRESS_CMD="npx percy exec -- cypress run"; npm install --save-dev @percy/cypress; fi
-        - FULL_CYPRESS_CMD="npm install --production --prefix /e2e && export PERCY_TOKEN=$PERCY_TOKEN && $CYPRESS_CMD --browser chrome --project /e2e --config baseUrl=http://docker.vm:8000 $CYPRESS_PARAMS --spec $TEST_DIRECTORY"
-        - echo $FULL_CYPRESS_CMD
-        - docker run --shm-size=2g --name cypress --add-host="docker.vm:$(hostname -I)" -e cypress_grep -e cypress_usePercy -e CYPRESS_baseUrl=http://docker.vm:8000 -v $(pwd)/${E2E_BASE_PATH}:/e2e -v $(pwd):/app -w /e2e --entrypoint "sh" cypress/included:5.6.0 -c "$FULL_CYPRESS_CMD"
+        - composer run init:e2e:admin
+        - composer run e2e:prepare
+        - composer run e2e:admin:percy -- exec -- cypress run
+            --browser chrome
+            --spec "cypress/**/visual.spec.js,cypress/**/percy-storefront-validation/*"
+            --headless
     after_script:
-        - npx mochawesome-merge development/build/artifacts/e2e/mochawesome/single-reports/mochawesome*.json > development/build/artifacts/e2e/mochawesome/report-final.json
-        - npx mochawesome-report-generator development/build/artifacts/e2e/mochawesome/report-final.json --cdn true --reportDir development/build/artifacts/e2e/mochawesome
-        - docker rm -f cypress
+        - mkdir $CI_PROJECT_DIR/var/log/e2e
+        - mv $ADMIN_PATH/test/e2e/cypress/results/*.xml var/log/e2e/ || true
+        - mv $STOREFRONT_PATH/test/e2e/cypress/results/*.xml var/log/e2e/ || true
     artifacts:
         when: always
         paths:
-            - development/build/artifacts/e2e/
-            - development/var/log/*
-            - $CI_PROJECT_DIR/stdout.log
+            - var/log/*
         reports:
-            junit: development/build/artifacts/e2e/*.xml
+            junit: var/log/e2e/*.xml
+
+E2E:
+    stage: E2E
+    needs: []
+    dependencies: []
+    timeout: 2h 00m
+    services:
+        -   name: mariadb:10.3
+            alias: database
+    variables:
+        APP_ENV: e2e
+        CYPRESS_baseUrl: "http://localhost:8000"
+        CYPRESS_localUsage: 1
+        CYPRESS_screenshotsFolder: $CI_PROJECT_DIR/var/log/screenshots
+        # TODO: fix tests that don't work with cache enabled
+        SHOPWARE_HTTP_CACHE_ENABLED: 0
+    script:
+        - composer run init:e2e:$E2E_PROJECT
+        - composer run e2e:prepare
+        - composer run e2e:$E2E_PROJECT:cypress -- run
+            --browser chrome
+            --spec "$TEST_DIRECTORY"
+            --headless
+    after_script:
+        - mkdir $CI_PROJECT_DIR/var/log/e2e
+        - mv $ADMIN_PATH/test/e2e/cypress/results/*.xml var/log/e2e/ || true
+        - mv $STOREFRONT_PATH/test/e2e/cypress/results/*.xml var/log/e2e/ || true
+    artifacts:
+        when: always
+        paths:
+            - var/log/*
+        reports:
+            junit: var/log/e2e/*.xml
     rules:
-        -   if: '$CI_MERGE_REQUEST_LABELS =~ /.*E2E::skip.*/ || ($cypress_grep == null && $CI_MERGE_REQUEST_LABELS =~ /.*E2E::only_base.*/)'
-            when: never
-            # run full tests if trigger by scheduled or another pipeline (production)
-        -   if: '$cypress_grep == null && ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "pipeline")'
-            # skip @base jobs if trigger by scheduled or another pipeline (production)
-        -   if: '$cypress_grep && ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "pipeline")'
-            when: never
-            # run full tests if there are changes to migrations
-        -   if: '$cypress_grep == null && $CI_PIPELINE_SOURCE == "merge_request_event"'
-            changes:
-                - "Migration*.php"
-                - "**/Migration*.php"
-                - "src/Core/Framework/Resources/config/packages/shopware.yaml"
-            # skip @base jobs if there are changes to migrations, because the full set runs
-        -   if: '$cypress_grep && $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_LABELS !~ /.*E2E::only_base.*/'
-            changes:
-                - "Migration*.php"
-                - "**/Migration*.php"
-                - "src/Core/Framework/Resources/config/packages/shopware.yaml"
-            when: never
-        -   if: '$cypress_grep == null && $CI_MERGE_REQUEST_LABELS =~ /.*E2E::all.*/'
-        -   if: '$cypress_grep && $CI_MERGE_REQUEST_LABELS =~ /.*E2E::all.*/'
-            when: never
-        -   if: '$cypress_grep && ($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH =~ /^(trunk|6\..+)$/)'
-        -   if: '$cypress_grep == null && $CI_PIPELINE_SOURCE == "merge_request_event"'
-            when: manual
-            allow_failure: true
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*E2E::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*E2E::all.*/'
+        - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "pipeline"'
+        - if: '$SKIP_ON_MR != "true" && ($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH =~ /^(trunk|6\..+)$/)'
     parallel:
         matrix:
-            -   cypress_grep: '@base'
-                SECTION: 'Storefront'
-                TEST_DIRECTORY:  "cypress/integration/**/*"
-                FEATURE_ALL: ["false", "minor", "major"]
-                BROWSER: 'chrome'
-                CYPRESS_PARAMS: "--config numTestsKeptInMemory=0"
-                cypress_usePercy: 'false'
-            -   cypress_grep: '@base'
-                SECTION: 'Administration'
-                TEST_DIRECTORY:
-                    - "cypress/integration/content/**/* cypress/integration/catalogue/**/*"
-                    - "cypress/integration/customer/**/* cypress/integration/media-marketing/**/*"
-                    - "cypress/integration/general/**/* cypress/integration/order/**/*"
-                    - "cypress/integration/rule-product-stream/**/* cypress/integration/settings/**/*"
-                FEATURE_ALL: "false" # ["false", "true"]
-                BROWSER: 'chrome'
-                CYPRESS_PARAMS: "--config numTestsKeptInMemory=0"
-                cypress_usePercy: 'false'
-            -   SECTION: 'Storefront'
+            # all test cases in chrome except major are executed on each MR
+            -   E2E_PROJECT: 'storefront'
                 TEST_DIRECTORY: "cypress/integration/**/**/*"
-                BROWSER: ['chrome']
-                FEATURE_ALL: ["false", "minor", "major"]
+                BROWSER: 'chrome'
+                FEATURE_ALL: ["false", "minor"]
                 cypress_usePercy: 'false'
-            -   SECTION: 'Storefront'
+            -   E2E_PROJECT: 'admin'
+                TEST_DIRECTORY:
+                    - "cypress/integration/content/**/*,cypress/integration/catalogue/**/*,cypress/integration/customer/**/*,cypress/integration/media-marketing/**/*"
+                    - "cypress/integration/general/**/*,cypress/integration/order/**/*,cypress/integration/rule-product-stream/**/*,cypress/integration/settings/**/*"
+                BROWSER: 'chrome'
+                FEATURE_ALL: ["false", "minor"]
+                cypress_usePercy: 'false'
+            # major
+            -   E2E_PROJECT: 'storefront'
+                TEST_DIRECTORY: "cypress/integration/**/**/*"
+                BROWSER: 'chrome'
+                FEATURE_ALL: "major"
+                cypress_usePercy: 'false'
+                SKIP_ON_MR: 'true'
+            -   E2E_PROJECT: 'admin'
+                TEST_DIRECTORY:
+                    - "cypress/integration/content/**/*,cypress/integration/catalogue/**/*,cypress/integration/customer/**/*,cypress/integration/media-marketing/**/*"
+                    - "cypress/integration/general/**/*,cypress/integration/order/**/*,cypress/integration/rule-product-stream/**/*,cypress/integration/settings/**/*"
+                BROWSER: 'chrome'
+                FEATURE_ALL: "major"
+                cypress_usePercy: 'false'
+                SKIP_ON_MR: 'true'
+            # firefox
+            -   E2E_PROJECT: 'storefront'
                 TEST_DIRECTORY: "cypress/integration/**/**/*"
                 BROWSER: 'firefox'
                 FEATURE_ALL: 'false'
                 cypress_usePercy: 'false'
-            -   SECTION: 'Administration'
+                SKIP_ON_MR: 'true'
+            -   E2E_PROJECT: 'admin'
                 TEST_DIRECTORY:
-                    - "cypress/integration/content/**/* cypress/integration/catalogue/**/* cypress/integration/customer/**/* cypress/integration/media-marketing/**/*"
-                    - "cypress/integration/general/**/* cypress/integration/order/**/* cypress/integration/rule-product-stream/**/* cypress/integration/settings/**/*"
-                BROWSER: 'chrome'
-                FEATURE_ALL: ["false", "minor", "major"]
-                cypress_usePercy: 'false'
-            -   SECTION: 'Administration'
-                TEST_DIRECTORY:
-                    - "cypress/integration/content/**/* cypress/integration/catalogue/**/* cypress/integration/customer/**/* cypress/integration/media-marketing/**/*"
-                    - "cypress/integration/general/**/* cypress/integration/order/**/* cypress/integration/rule-product-stream/**/* cypress/integration/settings/**/*"
+                    - "cypress/integration/content/**/*,cypress/integration/catalogue/**/*,cypress/integration/customer/**/*,cypress/integration/media-marketing/**/*"
+                    - "cypress/integration/general/**/*,cypress/integration/order/**/*,cypress/integration/rule-product-stream/**/*,cypress/integration/settings/**/*"
                 BROWSER: 'firefox'
                 FEATURE_ALL: 'false'
                 cypress_usePercy: 'false'
-            -   SECTION: 'Administration'
-                TEST_DIRECTORY: "cypress/integration/visual/**/*"
-                BROWSER: 'chrome'
-                FEATURE_ALL: "false"
-                cypress_usePercy: $CYPRESS_PERCY_USAGE
+                SKIP_ON_MR: 'true'
 
-# Stage: build
-
-Component Library:
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-        changes:
-            - src/Administration/**/*
-            - src/Storefront/**/*
-    stage: Build
-    image: node:10.8
-    before_script: []
-    dependencies: []
-    needs: [Jest (Administration), Jest (Storefront)]
-    variables:
-        PROJECT_ROOT: $CI_PROJECT_DIR
-    environment:
-        name: Component Library
-        url: https://component-library.shopware.com
-    script:
-        - npm install --prefix src/Administration/Resources/app/administration
-        - npm install --prefix src/Administration/Resources/app/administration/build/nuxt-component-library/
-        - npm run --prefix src/Administration/Resources/app/administration/build/nuxt-component-library/ generate
-        - "[[ -d build/artifacts/component-library/ ]] && (ls -1qA build/artifacts/component-library/ | grep -q .)"
-    artifacts:
-        paths:
-            - build/artifacts/component-library/
-
-# Stage: Generate docs
-
-Generating docs:
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-        changes:
-            - src/Docs/**/*
-    stage: Generate docs
-    dependencies: []
-    services:
-        -   name: docker:18.09.7-dind
-            alias: docker
-    script:
-        - mkdir -p $HOME/.docker
-        - echo "$DOCKER_AUTH_CONFIG" > $HOME/.docker/config.json
-        - docker login
-        - rm $HOME/.docker/config.json
-        - docker build -t shopware-plattform-plantuml dev-ops/docs/docker/plantuml/.
-        - sh ./dev-ops/docs/scripts/render_puml.sh platform/src/Docs/Resources/current
-        - ./psh.phar init-composer
-        - php dev-ops/docs/scripts/convertMarkdownToDocs.php convert -i platform/src/Docs/Resources/current/ -o build/docs -u /shopware-platform-dev -s
+Visual Testing (Percy):
+    extends: .percy_integration
+    stage: E2E
+    rules:
+        - if: '$PERCY_TOKEN == null || $CYPRESS_PERCY_USAGE == null'
+          when: never
+        - if: '$CI_PIPELINE_SOURCE == "schedule"'
 
 Symfony security check:
-    stage: unit
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-            - schedules
-            - pipelines
+    stage: security
+    needs: []
     image: shopware/development:7.4-composer-2
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*security::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*security::all.*/'
+        - when: always
+    before_script: []
     script:
         - composer install --no-interaction --no-scripts
         - curl --location --output local-php-security-checker https://github.com/fabpot/local-php-security-checker/releases/download/v1.0.0/local-php-security-checker_1.0.0_linux_amd64
@@ -537,22 +469,20 @@ Symfony security check:
         - sha256sum --check local-php-security-checker.sha256
         - chmod +x local-php-security-checker
         - ./local-php-security-checker
-        - composer install --no-interaction --no-scripts -d vendor/shopware/platform/src/Recovery
-        - ./local-php-security-checker --path=vendor/shopware/platform/src/Recovery
+        - composer install --no-interaction --no-scripts -d src/Recovery
+        - ./local-php-security-checker --path=src/Recovery
 
 NPM security check:
-    stage: Security
-    only:
-        refs:
-            - merge_requests
-            - trunk
-            - /^6\..*$/
-            - schedules
-            - pipelines
+    stage: security
     image: shopware/development:7.4-composer-2
-    before_script: []
     dependencies: []
     allow_failure: true
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*security::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*security::all.*/'
+        - when: manual
+    before_script: []
     script:
         - cd src/Administration/Resources/app/administration
         - npm i
@@ -563,36 +493,72 @@ NPM security check:
         - npm install --save-dev audit-ci
         - node node_modules/.bin/audit-ci --moderate --allowlist dot-prop http-proxy acorn jquery elliptic
 
+sonarqube-check:
+    stage: security
+    image:
+        name: sonarsource/sonar-scanner-cli:latest
+        entrypoint: [""]
+    before_script: []
+    dependencies: []
+    variables:
+        SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+        GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+    cache:
+        key: "${CI_JOB_NAME}"
+        paths:
+            - .sonar/cache
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*security::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*security::all.*/'
+        - when: manual
+        - if: '$CI_COMMIT_BRANCH == "trunk"'
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    allow_failure: true
+    script:
+        - sonar-scanner
+    artifacts:
+        when: always
+        paths:
+            - cobertura.xml
+            - development/build/artifacts/phpunit.junit.xml
+
+# Stage: build
+
+Component Library:
+    stage: build
+    image: node:10.8
+    before_script: []
+    dependencies: []
+    variables:
+        PROJECT_ROOT: $CI_PROJECT_DIR
+    environment:
+        name: Component Library
+        url: https://component-library.shopware.com
+    rules:
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*build::skip.*/'
+          when: never
+        - if: '$CI_MERGE_REQUEST_LABELS =~ /.*build::all.*/'
+        - changes:
+            - src/Administration/**/*
+            - src/Storefront/**/*
+    script:
+        - npm install --prefix src/Administration/Resources/app/administration
+        - npm install --prefix src/Administration/Resources/app/administration/build/nuxt-component-library/
+        - npm run --prefix src/Administration/Resources/app/administration/build/nuxt-component-library/ generate
+        - "[[ -d build/artifacts/component-library/ ]] && (ls -1qA build/artifacts/component-library/ | grep -q .)"
+    artifacts:
+        paths:
+            - build/artifacts/component-library/
+
 # Stage: deploy
 
-.Scrutinizer:
-    stage: Deploy
-    image: php:7.4-alpine
-    allow_failure: true
-    before_script: []
-    only:
-        - trunk
-        - /^6\..*$/
-    dependencies:
-        - PHPUnit (MySQL)
-    script:
-        - wget https://scrutinizer-ci.com/ocular.phar
-        - php ocular.phar code-coverage:upload
-            --repository="g/shopware/platform"
-            --revision="$CI_COMMIT_SHA"
-            --format=php-clover
-            development/build/artifacts/phpunit.clover.xml
-    interruptible: false
-
 Upload Component Library:
-    stage: Deploy
+    stage: deploy
     image: python:latest
     before_script: []
-    only:
-        refs:
-            - trunk
-        variables:
-            - $CI_PIPELINE_SOURCE == "schedule"
+    rules:
+        - if: '$CI_COMMIT_BRANCH == "trunk" && $CI_PIPELINE_SOURCE == "schedule"'
     dependencies:
         - Component Library
     script:
@@ -601,3 +567,18 @@ Upload Component Library:
         - aws s3 sync --delete --acl public-read . s3://shopware-ui-component-library-docs/
         - aws cloudfront create-invalidation --distribution-id E18U17118IAC82 --paths "/*"
     interruptible: false
+
+# Stage: visual
+
+Percy:
+    extends: .percy_integration
+    stage: visual
+    rules:
+        -   if: '$PERCY_TOKEN == null || $CYPRESS_PERCY_USAGE == null'
+            when: never
+        -   if: '$CI_MERGE_REQUEST_LABELS =~ /.*E2E::skip.*/'
+            when: never
+        -   if: '$CI_PIPELINE_SOURCE == "pipeline"'
+        -   if: '$CI_MERGE_REQUEST_LABELS =~ /.*E2E::all.*/'
+        -   if: '$CI_MERGE_REQUEST_LABELS =~ /.*E2E::visual.*/'
+        -   if: '$CI_PIPELINE_SOURCE == "pipeline"'

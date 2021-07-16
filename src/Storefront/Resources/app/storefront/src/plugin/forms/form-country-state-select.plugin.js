@@ -12,7 +12,7 @@ export default class CountryStateSelectPlugin extends Plugin {
         initialCountryStateAttribute: 'initial-country-state-id',
         countryStatePlaceholderSelector: '[data-placeholder-option="true"]',
         vatIdFieldInput: '#vatIds',
-        vatIdRequired: 'vat-id-required'
+        vatIdRequired: 'vat-id-required',
     };
 
     init() {
@@ -47,7 +47,9 @@ export default class CountryStateSelectPlugin extends Plugin {
             const vatIdRequired = DomAccess.getDataAttribute(countrySelect, this.options.vatIdRequired);
             const vatIdInput = document.querySelector(this.options.vatIdFieldInput);
 
-            this._updateRequiredVatId(vatIdInput, vatIdRequired);
+            if (vatIdInput) {
+                this._updateRequiredVatId(vatIdInput, vatIdRequired);
+            }
         }
     }
 

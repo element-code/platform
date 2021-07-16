@@ -10,38 +10,38 @@ Component.register('sw-landing-page-tree', {
 
     inject: ['repositoryFactory', 'syncService', 'acl'],
     mixins: [
-        'notification'
+        'notification',
     ],
 
     props: {
         landingPageId: {
             type: String,
             required: false,
-            default: null
+            default: null,
         },
 
         currentLanguageId: {
             type: String,
-            required: true
+            required: true,
         },
 
         allowEdit: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         allowCreate: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         allowDelete: {
             type: Boolean,
             required: false,
-            default: true
-        }
+            default: true,
+        },
     },
 
     data() {
@@ -49,17 +49,13 @@ Component.register('sw-landing-page-tree', {
             loadedLandingPages: {},
             translationContext: 'sw-landing-page',
             linkContext: 'sw.category.landingPage',
-            isLoadingInitialData: true
+            isLoadingInitialData: true,
         };
-    },
-
-    created() {
-        this.createdComponent();
     },
 
     computed: {
         ...mapState('swCategoryDetail', [
-            'landingPagesToDelete'
+            'landingPagesToDelete',
         ]),
 
         cmsLandingPageCriteria() {
@@ -96,7 +92,7 @@ Component.register('sw-landing-page-tree', {
             }
 
             return null;
-        }
+        },
     },
 
     watch: {
@@ -108,7 +104,7 @@ Component.register('sw-landing-page-tree', {
             this.$refs.landingPageTree.onDeleteElements(value);
 
             Shopware.State.commit('swCategoryDetail/setLandingPagesToDelete', {
-                landingPagesToDelete: undefined
+                landingPagesToDelete: undefined,
             });
         },
 
@@ -126,7 +122,7 @@ Component.register('sw-landing-page-tree', {
 
             // reload after save
             if (oldVal && this.landingPageId !== 'create' && newVal.id === oldVal.id) {
-                this.landingPageRepository.get(newVal.id, Shopware.Context.api).then((newLandingPage) => {
+                this.landingPageRepository.get(newVal.id).then((newLandingPage) => {
                     this.$set(this.loadedLandingPages, newLandingPage.id, newLandingPage);
                 });
             }
@@ -139,7 +135,12 @@ Component.register('sw-landing-page-tree', {
             this.loadLandingPages().finally(() => {
                 this.isLoadingInitialData = false;
             });
-        }
+        },
+    },
+
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -147,7 +148,7 @@ Component.register('sw-landing-page-tree', {
             this.loadLandingPages()
                 .catch(() => {
                     this.createNotificationError({
-                        message: this.$tc('global.notification.unspecifiedSaveErrorMessage')
+                        message: this.$tc('global.notification.unspecifiedSaveErrorMessage'),
                     });
                 })
                 .finally(() => {
@@ -156,7 +157,7 @@ Component.register('sw-landing-page-tree', {
         },
 
         loadLandingPages() {
-            return this.landingPageRepository.search(this.cmsLandingPageCriteria, Shopware.Context.api).then((result) => {
+            return this.landingPageRepository.search(this.cmsLandingPageCriteria).then((result) => {
                 this.addLandingPages(result);
             });
         },
@@ -167,7 +168,7 @@ Component.register('sw-landing-page-tree', {
 
         deleteCheckedItems(checkedItems) {
             const ids = Object.keys(checkedItems);
-            this.landingPageRepository.syncDeleted(ids, Shopware.Context.api).then(() => {
+            this.landingPageRepository.syncDeleted(ids).then(() => {
                 ids.forEach(id => this.removeFromStore(id));
             });
         },
@@ -178,7 +179,7 @@ Component.register('sw-landing-page-tree', {
                 return Promise.resolve();
             }
 
-            return this.landingPageRepository.delete(landingPage.id, Shopware.Context.api).then(() => {
+            return this.landingPageRepository.delete(landingPage.id).then(() => {
                 this.removeFromStore(landingPage.id);
 
                 if (landingPage.id === this.landingPageId) {
@@ -203,14 +204,14 @@ Component.register('sw-landing-page-tree', {
                 overwrites: {
                     name: `${contextItem.data.name} ${this.$tc('sw-product.general.copy')}`,
                     url: `${contextItem.data.url}-${this.$tc('sw-product.general.copy')}`,
-                    active: false
-                }
+                    active: false,
+                },
             };
 
             this.landingPageRepository.clone(contextItem.id, Shopware.Context.api, behavior).then((clone) => {
                 const criteria = new Criteria();
                 criteria.setIds([clone.id]);
-                this.landingPageRepository.search(criteria, Shopware.Context.api).then((landingPages) => {
+                this.landingPageRepository.search(criteria).then((landingPages) => {
                     landingPages.forEach(element => {
                         element.childCount = 0;
                         element.parentId = null;
@@ -220,7 +221,7 @@ Component.register('sw-landing-page-tree', {
                 });
             }).catch(() => {
                 this.createNotificationError({
-                    message: this.$tc('global.notification.unspecifiedSaveErrorMessage')
+                    message: this.$tc('global.notification.unspecifiedSaveErrorMessage'),
                 });
             });
         },
@@ -232,20 +233,20 @@ Component.register('sw-landing-page-tree', {
         },
 
         syncLandingPages() {
-            return this.landingPageRepository.sync(this.landingPages, Shopware.Context.api);
+            return this.landingPageRepository.sync(this.landingPages);
         },
 
         createNewLandingPage(name) {
-            const newLandingPage = this.landingPageRepository.create(Shopware.Context.api);
+            const newLandingPage = this.landingPageRepository.create();
 
             newLandingPage.name = name;
             newLandingPage.active = false;
 
             newLandingPage.save = () => {
-                return this.landingPageRepository.save(newLandingPage, Shopware.Context.api).then(() => {
+                return this.landingPageRepository.save(newLandingPage).then(() => {
                     const criteria = new Criteria();
                     criteria.setIds([newLandingPage.id].filter((id) => id !== null));
-                    this.landingPageRepository.search(criteria, Shopware.Context.api).then((landingPages) => {
+                    this.landingPageRepository.search(criteria).then((landingPages) => {
                         this.addLandingPages(landingPages);
                     });
                 });
@@ -275,15 +276,15 @@ Component.register('sw-landing-page-tree', {
         getLandingPageUrl(landingPage) {
             return this.$router.resolve({
                 name: this.linkContext,
-                params: { id: landingPage.id }
+                params: { id: landingPage.id },
             }).href;
         },
 
         newLandingPageUrl() {
             return {
                 name: 'sw.category.landingPageDetail',
-                params: { id: 'create' }
+                params: { id: 'create' },
             };
-        }
-    }
+        },
+    },
 });

@@ -10,7 +10,7 @@ Component.register('sw-first-run-wizard-data-import', {
     inject: [
         'storeService',
         'extensionStoreActionService',
-        'repositoryFactory'
+        'repositoryFactory',
     ],
 
     data() {
@@ -18,12 +18,12 @@ Component.register('sw-first-run-wizard-data-import', {
             plugins: {
                 demodata: {
                     name: 'SwagPlatformDemoData',
-                    isInstalled: false
+                    isInstalled: false,
                 },
                 migration: {
                     name: 'SwagMigrationAssistant',
-                    isInstalled: false
-                }
+                    isInstalled: false,
+                },
             },
             demoDataPluginName: 'SwagPlatformDemoData',
             migrationPluginName: 'SwagMigrationAssistant',
@@ -33,8 +33,8 @@ Component.register('sw-first-run-wizard-data-import', {
             pluginError: null,
             pluginInstalledSuccessfully: {
                 demodata: false,
-                migration: false
-            }
+                migration: false,
+            },
         };
     },
 
@@ -51,16 +51,16 @@ Component.register('sw-first-run-wizard-data-import', {
                     position: 'right',
                     variant: 'primary',
                     action: 'sw.first.run.wizard.index.mailer.selection',
-                    disabled: this.isInstallingPlugin
-                }
+                    disabled: this.isInstallingPlugin,
+                },
             ];
-        }
+        },
     },
 
     watch: {
         isInstallingPlugin() {
             this.updateButtons();
-        }
+        },
     },
 
 
@@ -109,7 +109,7 @@ Component.register('sw-first-run-wizard-data-import', {
                     this.isInstallingPlugin = false;
                     this.installationError = true;
 
-                    if (error.response && error.response.data && error.response.data.errors) {
+                    if (error.response?.data?.errors) {
                         this.pluginError = error.response.data.errors.pop();
                     }
 
@@ -123,12 +123,11 @@ Component.register('sw-first-run-wizard-data-import', {
 
             pluginCriteria
                 .addFilter(
-                    Criteria.equalsAny('plugin.name', pluginNames)
+                    Criteria.equalsAny('plugin.name', pluginNames),
                 )
                 .setLimit(5);
 
-            this.pluginRepository
-                .search(pluginCriteria, Shopware.Context.api)
+            this.pluginRepository.search(pluginCriteria)
                 .then((result) => {
                     if (result.total < 1) {
                         return;
@@ -156,6 +155,6 @@ Component.register('sw-first-run-wizard-data-import', {
             });
 
             return pluginKey;
-        }
-    }
+        },
+    },
 });

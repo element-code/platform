@@ -16,7 +16,7 @@ use Shopware\Core\System\StateMachine\Aggregation\StateMachineTransition\StateMa
 use Shopware\Core\System\StateMachine\Transition;
 
 /**
- * @internal (flag:FEATURE_NEXT_14357) only for use by the app-system
+ * @internal only for use by the app-system
  */
 class AppSyncPaymentHandler extends AbstractAppPaymentHandler implements SynchronousPaymentHandlerInterface
 {
@@ -36,7 +36,7 @@ class AppSyncPaymentHandler extends AbstractAppPaymentHandler implements Synchro
         try {
             $response = $this->payloadService->request($payUrl, $payload, $app, SyncPayResponse::class);
         } catch (ClientExceptionInterface $exception) {
-            throw new AsyncPaymentProcessException($transaction->getOrderTransaction()->getId(), \sprintf('App error: %s', $exception->getMessage()));
+            throw new AsyncPaymentProcessException($transaction->getOrderTransaction()->getId(), sprintf('App error: %s', $exception->getMessage()));
         }
 
         if (!$response instanceof SyncPayResponse) {

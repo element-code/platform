@@ -6,14 +6,14 @@ const { Component, Mixin, Data: { Criteria } } = Shopware;
 Component.register('sw-settings-snippet-set-list', {
     template,
 
-    mixins: [
-        Mixin.getByName('sw-settings-list')
-    ],
-
     inject: [
         'snippetSetService',
         'repositoryFactory',
-        'acl'
+        'acl',
+    ],
+
+    mixins: [
+        Mixin.getByName('sw-settings-list'),
     ],
 
     data() {
@@ -28,13 +28,13 @@ Component.register('sw-settings-snippet-set-list', {
             showDeleteModal: false,
             showCloneModal: false,
             snippetsEditable: false,
-            selection: {}
+            selection: {},
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle()
+            title: this.$createTitle(),
         };
     },
 
@@ -47,7 +47,7 @@ Component.register('sw-settings-snippet-set-list', {
             const criteria = new Criteria(this.page, this.limit);
 
             criteria.addSorting(
-                Criteria.sort('name', 'ASC')
+                Criteria.sort('name', 'ASC'),
             );
 
             if (this.term) {
@@ -61,7 +61,7 @@ Component.register('sw-settings-snippet-set-list', {
             return this.acl.can('snippet.editor') ?
                 this.$tc('global.default.edit') :
                 this.$tc('global.default.view');
-        }
+        },
     },
 
     methods: {
@@ -69,10 +69,7 @@ Component.register('sw-settings-snippet-set-list', {
             this.isLoading = true;
 
             return this.loadBaseFiles().then(() => {
-                return this.snippetSetRepository.search(
-                    this.snippetSetCriteria,
-                    Shopware.Context.api
-                ).then((response) => {
+                return this.snippetSetRepository.search(this.snippetSetCriteria).then((response) => {
                     this.total = response.total;
                     this.snippetSets = response;
                     this.isLoading = false;
@@ -87,7 +84,7 @@ Component.register('sw-settings-snippet-set-list', {
         },
 
         onAddSnippetSet() {
-            const newSnippetSet = this.snippetSetRepository.create(Shopware.Context.api);
+            const newSnippetSet = this.snippetSetRepository.create();
             newSnippetSet.baseFile = Object.values(this.baseFiles)[0].name;
 
             const result = this.snippetSets.splice(0, 0, newSnippetSet);
@@ -121,7 +118,7 @@ Component.register('sw-settings-snippet-set-list', {
             if (match && match.iso !== null) {
                 item.iso = match.iso;
 
-                this.snippetSetRepository.save(item, Shopware.Context.api)
+                this.snippetSetRepository.save(item)
                     .then(() => {
                         this.createInlineSuccessNote(item.name);
                     })
@@ -149,7 +146,7 @@ Component.register('sw-settings-snippet-set-list', {
 
             this.$router.push({
                 name: 'sw.settings.snippet.list',
-                query: { ids: selection }
+                query: { ids: selection },
             });
         },
 
@@ -170,7 +167,7 @@ Component.register('sw-settings-snippet-set-list', {
         onConfirmDelete(id) {
             this.showDeleteModal = false;
 
-            return this.snippetSetRepository.delete(id, Shopware.Context.api)
+            return this.snippetSetRepository.delete(id)
                 .then(() => {
                     this.getList();
                     this.createDeleteSuccessNote();
@@ -192,8 +189,8 @@ Component.register('sw-settings-snippet-set-list', {
             this.isLoading = true;
 
             try {
-                const clone = await this.snippetSetService.clone(id);
-                const set = await this.snippetSetRepository.get(clone.id, Shopware.Context.api);
+                const clone = await this.snippetSetRepository.clone(id);
+                const set = await this.snippetSetRepository.get(clone.id);
 
                 if (!set) {
                     return;
@@ -211,11 +208,11 @@ Component.register('sw-settings-snippet-set-list', {
                 }
 
                 try {
-                    await this.snippetSetRepository.save(set, Shopware.Context.api);
+                    await this.snippetSetRepository.save(set);
 
                     this.createCloneSuccessNote();
                 } catch {
-                    await this.snippetSetRepository.delete(set.id, Shopware.Context.api);
+                    await this.snippetSetRepository.delete(set.id);
 
                     this.createCloneErrorNote();
                 } finally {
@@ -231,43 +228,43 @@ Component.register('sw-settings-snippet-set-list', {
 
         createDeleteSuccessNote() {
             this.createNotificationSuccess({
-                message: this.$tc('sw-settings-snippet.setList.deleteNoteSuccessMessage')
+                message: this.$tc('sw-settings-snippet.setList.deleteNoteSuccessMessage'),
             });
         },
 
         createDeleteErrorNote() {
             this.createNotificationError({
-                message: this.$tc('sw-settings-snippet.setList.deleteNoteErrorMessage')
+                message: this.$tc('sw-settings-snippet.setList.deleteNoteErrorMessage'),
             });
         },
 
         createInlineSuccessNote(name) {
             this.createNotificationSuccess({
-                message: this.$tc('sw-settings-snippet.setList.inlineEditSuccessMessage', 0, { name })
+                message: this.$tc('sw-settings-snippet.setList.inlineEditSuccessMessage', 0, { name }),
             });
         },
 
         createInlineErrorNote(name) {
             this.createNotificationError({
-                message: this.$tc('sw-settings-snippet.setList.inlineEditErrorMessage', name !== null, { name })
+                message: this.$tc('sw-settings-snippet.setList.inlineEditErrorMessage', name !== null, { name }),
             });
         },
 
         createCloneSuccessNote() {
             this.createNotificationSuccess({
-                message: this.$tc('sw-settings-snippet.setList.cloneSuccessMessage')
+                message: this.$tc('sw-settings-snippet.setList.cloneSuccessMessage'),
             });
         },
 
         createCloneErrorNote() {
             this.createNotificationError({
-                message: this.$tc('sw-settings-snippet.setList.cloneErrorMessage')
+                message: this.$tc('sw-settings-snippet.setList.cloneErrorMessage'),
             });
         },
 
         createNotEditableErrorNote() {
             this.createNotificationError({
-                message: this.$tc('sw-settings-snippet.setList.notEditableNoteErrorMessage')
+                message: this.$tc('sw-settings-snippet.setList.notEditableNoteErrorMessage'),
             });
         },
 
@@ -277,8 +274,8 @@ Component.register('sw-settings-snippet-set-list', {
                 appearance: 'dark',
                 showOnDisabledElements,
                 disabled: this.acl.can(role),
-                message: this.$tc('sw-privileges.tooltip.warning')
+                message: this.$tc('sw-privileges.tooltip.warning'),
             };
-        }
-    }
+        },
+    },
 });

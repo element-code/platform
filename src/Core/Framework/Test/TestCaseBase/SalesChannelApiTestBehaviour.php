@@ -61,7 +61,7 @@ trait SalesChannelApiTestBehaviour
     public function getSalesChannelApiSalesChannelId(): string
     {
         if (!$this->salesChannelIds) {
-            throw new \LogicException('The sales channel id con only be requested after calling `createSalesChannelApiClient`.');
+            throw new \LogicException('The sales channel id can only be requested after calling `createSalesChannelApiClient`.');
         }
 
         return end($this->salesChannelIds);
@@ -101,7 +101,8 @@ trait SalesChannelApiTestBehaviour
 
     protected function createSalesChannelBrowser(
         ?KernelInterface $kernel = null,
-        bool $enableReboot = false
+        bool $enableReboot = false,
+        array $salesChannelOverrides = []
     ): KernelBrowser {
         if (!$kernel) {
             $kernel = $this->getKernel();
@@ -113,7 +114,7 @@ trait SalesChannelApiTestBehaviour
             'HTTP_' . PlatformRequest::HEADER_CONTEXT_TOKEN => Random::getAlphanumericString(32),
         ]);
 
-        $this->authorizeSalesChannelBrowser($salesChannelApiBrowser);
+        $this->authorizeSalesChannelBrowser($salesChannelApiBrowser, $salesChannelOverrides);
 
         return $salesChannelApiBrowser;
     }

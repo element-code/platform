@@ -29,41 +29,39 @@ Component.register('sw-meteor-card', {
     template,
 
     props: {
+        // eslint-disable-next-line vue/require-default-prop
         title: {
             type: String,
-            required: false
+            required: false,
+            default: null,
         },
         hero: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
         isLoading: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
         large: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         defaultTab: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     data() {
         return {
-            activeTab: null
+            activeTab: null,
         };
-    },
-
-    created() {
-        this.createdComponent();
     },
 
     computed: {
@@ -89,9 +87,13 @@ Component.register('sw-meteor-card', {
                 'sw-meteor-card--toolbar': this.hasToolbar,
                 'sw-meteor-card--hero': !!this.hero,
                 'sw-meteor-card--large': this.large,
-                'has--header': this.hasHeader && !this.isToolbarLastHeaderElement
+                'has--header': this.hasHeader && !this.isToolbarLastHeaderElement,
             };
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -101,7 +103,7 @@ Component.register('sw-meteor-card', {
 
         setActiveTab(name) {
             this.activeTab = name;
-        }
-    }
+        },
+    },
 });
 }

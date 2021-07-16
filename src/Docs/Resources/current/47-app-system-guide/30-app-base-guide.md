@@ -48,7 +48,8 @@ For example:
     "url":"http:\/\/localhost:8000",
     "appVersion":"0.0.1",
     "shopId":"dgrH7nLU6tlE"
-  }
+  },
+  "timestamp": 123123123
 }
 
 ```
@@ -63,7 +64,9 @@ The next property `data` contains the name of the event so that a single endpoin
 complete entities as these might become outdated. Instead the entity in the payload is characterized by its id, stored under `primaryKey`, so that the 
 app can fetch additional data through the shops API. This also has the advantage of giving the app explicit control over the associations that
 get fetched instead of relying on the associations determined by the event. Other events in contrast contain the entity data that defines the event,
-but keep in mind that event might not contain all associations.    
+but keep in mind that event might not contain all associations.
+
+The next property `timestamp` is the time which the webhook was handled. The attacker cannot change the timestamp without validating the signature. If the timestamp is too old, the user's application can decide to reject the request.
 
 The current shopware version will be sent as a `sw-version` header.
 
@@ -183,6 +186,63 @@ The current shopware version will be sent as a `sw-version` header.
 
 Again you can verify the authenticity of the incoming request, like with webhooks, by checking the `shopware-shop-signature` it too should contain a sha256 hmac of the
 request body, that is signed with the secret your app assigned the shop during the registration.
+
+If you want to trigger an action inside the administration upon completing the action, the app should return a response with a valid body and the header `shopware-app-signature` contains the sha256 hmac of the whole response body signed with and the app secret.
+If you do not need to trigger any actions, a response with an empty body is also always valid.
+
+Examples response body:
+To open a new tab in the user browser you can use the `openNewTab` action type. You need to pass the url that should be opened as the `redirectUrl` property inside the payload.
+```json
+{
+  "actionType": "openNewTab",
+  "payload": {
+    "redirectUrl": "http://google.com"
+  }
+}
+
+```
+
+To send a notification, you can use the `notification` action type. You need to pass the `status` property and the content of the notification as `message` property inside the payload.
+```json
+{
+  "actionType": "notification",
+  "payload": {
+    "status": "success",
+    "message": "This is the successful message"
+  }
+}
+
+```
+
+To reload the data in the user's current page you can use the `reload` action type with an empty payload.
+```json
+{
+  "actionType": "reload",
+  "payload": {}
+}
+
+```
+
+To open a modal with the embedded link in the iframe, you can use the `openModal` action type. You need to pass the url that should be opened as the `iframeUrl` property and the `size` property inside the payload.
+```json
+{
+  "actionType": "openModal",
+  "payload": {
+    "iframeUrl": "http://google.com",
+    "size": "medium",
+    "expand": true
+  }
+}
+
+```
+* `actionType`: The type of action the app want to be triggered, including `notification`, `reload`, `openNewTab`, `openModal`
+* `payload`: The needed data to perform the action
+* `redirectUrl`: The url to open new tab
+* `iframeUrl`: The embedded link in modal iframe
+* `status`: Notification status, including `success`, `error`, `info`, `warning`
+* `message`: The content of the notification
+* `size`: The size of the modal in `openModal` type, including `small`, `medium`, `large`, `fullscreen`, default `medium`
+* `expand`: The expansion of the modal in `openModal` type, including `true`, `false`, default `false`
 
 ### Create own module
 

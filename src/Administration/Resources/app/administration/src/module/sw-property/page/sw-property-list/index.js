@@ -9,11 +9,11 @@ Component.register('sw-property-list', {
 
     inject: [
         'repositoryFactory',
-        'acl'
+        'acl',
     ],
 
     mixins: [
-        Mixin.getByName('listing')
+        Mixin.getByName('listing'),
     ],
 
     data() {
@@ -22,13 +22,13 @@ Component.register('sw-property-list', {
             sortBy: 'name',
             isLoading: false,
             sortDirection: 'ASC',
-            showDeleteModal: false
+            showDeleteModal: false,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle()
+            title: this.$createTitle(),
         };
     },
 
@@ -49,7 +49,7 @@ Component.register('sw-property-list', {
 
         useNaturalSorting() {
             return this.sortBy === 'property.name';
-        }
+        },
     },
 
     methods: {
@@ -64,7 +64,7 @@ Component.register('sw-property-list', {
         onConfirmDelete(id) {
             this.showDeleteModal = false;
 
-            return this.propertyRepository.delete(id, Shopware.Context.api).then(() => {
+            return this.propertyRepository.delete(id).then(() => {
                 this.getList();
             });
         },
@@ -76,7 +76,7 @@ Component.register('sw-property-list', {
         getList() {
             this.isLoading = true;
 
-            return this.propertyRepository.search(this.defaultCriteria, Shopware.Context.api).then((items) => {
+            return this.propertyRepository.search(this.defaultCriteria).then((items) => {
                 this.total = items.total;
                 this.propertyGroup = items;
                 this.isLoading = false;
@@ -94,22 +94,22 @@ Component.register('sw-property-list', {
                 routerLink: 'sw.property.detail',
                 inlineEdit: 'string',
                 allowResize: true,
-                primary: true
+                primary: true,
             }, {
                 property: 'options',
                 label: 'sw-property.list.columnOptions',
-                allowResize: true
+                allowResize: true,
             }, {
                 property: 'description',
                 label: 'sw-property.list.columnDescription',
-                allowResize: true
+                allowResize: true,
             }, {
                 property: 'filterable',
                 label: 'sw-property.list.columnFilterable',
                 inlineEdit: 'boolean',
                 allowResize: true,
-                align: 'center'
+                align: 'center',
             }];
-        }
-    }
+        },
+    },
 });

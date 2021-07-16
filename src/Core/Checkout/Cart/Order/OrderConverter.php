@@ -65,6 +65,7 @@ class OrderConverter
         DeliveryProcessor::SKIP_DELIVERY_TAX_RECALCULATION => true,
         PromotionCollector::SKIP_PROMOTION => true,
         ProductCartProcessor::SKIP_PRODUCT_STOCK_VALIDATION => true,
+        ProductCartProcessor::KEEP_INACTIVE_PRODUCT => true,
     ];
 
     /**
@@ -82,25 +83,13 @@ class OrderConverter
      */
     protected $eventDispatcher;
 
-    /**
-     * @var StateMachineRegistry
-     */
-    private $stateMachineRegistry;
+    private StateMachineRegistry $stateMachineRegistry;
 
-    /**
-     * @var NumberRangeValueGeneratorInterface
-     */
-    private $numberRangeValueGenerator;
+    private NumberRangeValueGeneratorInterface $numberRangeValueGenerator;
 
-    /**
-     * @var OrderDefinition
-     */
-    private $orderDefinition;
+    private OrderDefinition $orderDefinition;
 
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $orderAddressRepository;
+    private EntityRepositoryInterface $orderAddressRepository;
 
     public function __construct(
         EntityRepositoryInterface $customerRepository,
@@ -268,7 +257,7 @@ class OrderConverter
     /**
      * @throws InconsistentCriteriaIdsException
      */
-    public function assembleSalesChannelContext(OrderEntity $order, Context $context): SalesChannelContext
+    public function assembleSalesChannelContext(OrderEntity $order, Context $context, array $overrideOptions = []): SalesChannelContext
     {
         if ($order->getTransactions() === null) {
             throw new MissingOrderRelationException('transactions');
@@ -323,17 +312,21 @@ class OrderConverter
             }
         }
 
+        $options = array_merge($options, $overrideOptions);
+
         $salesChannelContext = $this->salesChannelContextFactory->create(Uuid::randomHex(), $order->getSalesChannelId(), $options);
         $salesChannelContext->getContext()->addExtensions($context->getExtensions());
 
-        $itemRounding = $order->getItemRounding();
-        if ($itemRounding !== null) {
-            $salesChannelContext->setItemRounding($itemRounding);
+        if ($order->getItemRounding() !== null) {
+            $salesChannelContext->setItemRounding($order->getItemRounding());
         }
 
-        $totalRounding = $order->getTotalRounding();
-        if ($totalRounding !== null) {
-            $salesChannelContext->setTotalRounding($totalRounding);
+        if ($order->getTotalRounding() !== null) {
+            $salesChannelContext->setTotalRounding($order->getTotalRounding());
+        }
+
+        if ($order->getRuleIds() !== null) {
+            $salesChannelContext->setRuleIds($order->getRuleIds());
         }
 
         return $salesChannelContext;
@@ -351,11 +344,23 @@ class OrderConverter
 
             $deliveryPositions = new DeliveryPositionCollection();
 
+            if ($orderDelivery->getPositions() === null) {
+                continue;
+            }
+
             foreach ($orderDelivery->getPositions() as $position) {
+                if ($position->getOrderLineItem() === null) {
+                    continue;
+                }
+
                 $identifier = $position->getOrderLineItem()->getIdentifier();
 
                 // line item has been removed and will not be added to delivery
                 if ($lineItems->get($identifier) === null) {
+                    continue;
+                }
+
+                if ($position->getPrice() === null) {
                     continue;
                 }
 
@@ -369,6 +374,13 @@ class OrderConverter
                 $deliveryPosition->addExtension(self::ORIGINAL_ID, new IdStruct($position->getId()));
 
                 $deliveryPositions->add($deliveryPosition);
+            }
+
+            if ($orderDelivery->getShippingMethod() === null
+                || $orderDelivery->getShippingOrderAddress() === null
+                || $orderDelivery->getShippingOrderAddress()->getCountry() === null
+            ) {
+                continue;
             }
 
             $cartDelivery = new Delivery(

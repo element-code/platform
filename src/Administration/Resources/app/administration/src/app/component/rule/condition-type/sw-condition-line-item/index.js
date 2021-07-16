@@ -18,6 +18,12 @@ Component.extend('sw-condition-line-item', 'sw-condition-base', {
 
     inject: ['repositoryFactory'],
 
+    data() {
+        return {
+            products: null,
+        };
+    },
+
     computed: {
         operators() {
             return this.conditionDataProviderService.getOperatorSet('multiStore');
@@ -35,7 +41,7 @@ Component.extend('sw-condition-line-item', 'sw-condition-base', {
             set(identifiers) {
                 this.ensureValueExist();
                 this.condition.value = { ...this.condition.value, identifiers };
-            }
+            },
         },
 
         ...mapPropertyErrors('condition', ['value.operator', 'value.identifiers']),
@@ -60,13 +66,7 @@ Component.extend('sw-condition-line-item', 'sw-condition-base', {
 
         productContext() {
             return { ...Shopware.Context.api, inheritance: true };
-        }
-    },
-
-    data() {
-        return {
-            products: null
-        };
+        },
     },
 
     created() {
@@ -78,7 +78,7 @@ Component.extend('sw-condition-line-item', 'sw-condition-base', {
             this.products = new EntityCollection(
                 this.productRepository.route,
                 this.productRepository.entityName,
-                this.productContext
+                this.productContext,
             );
 
 
@@ -98,6 +98,6 @@ Component.extend('sw-condition-line-item', 'sw-condition-base', {
         setIds(productCollection) {
             this.productIds = productCollection.getIds();
             this.products = productCollection;
-        }
-    }
+        },
+    },
 });

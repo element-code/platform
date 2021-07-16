@@ -1,0 +1,35 @@
+.sw-sales-channel-products-assignment-single-products {
+    .sw-card {
+        margin: 0;
+    }
+
+    &-primary.sw-card-section {
+        padding: 0;
+    }
+
+    .sw-data-grid.sw-data-grid--full-page {
+        position: relative;
+    }
+
+    .sw-data-grid .sw-data-grid__bulk {
+        padding-left: 100px !important;
+    }
+
+    .sw-data-grid .sw-data-grid__bulk-selected {
+        margin: 12px 8px;
+    }
+
+    .sw-card .sw-card__content {
+        padding: 0;
+        min-height: 100px;
+    }
+
+    .sw-data-grid tr th:last-child,
+    td:last-child {
+        display: none;
+    }
+
+    .sw-data-grid .sw-data-grid__wrapper {
+        overflow-x: hidden;
+    }
+}

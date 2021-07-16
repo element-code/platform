@@ -12,25 +12,25 @@ Component.register('sw-customer-base-info', {
     props: {
         customer: {
             type: Object,
-            required: true
+            required: true,
         },
         customerEditMode: {
             type: Boolean,
             required: true,
-            default: false
+            default: false,
         },
         isLoading: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
     },
 
     data() {
         return {
             orderAmount: 0,
             orderCount: 0,
-            customerLanguage: null
+            customerLanguage: null,
         };
     },
 
@@ -59,18 +59,18 @@ Component.register('sw-customer-base-info', {
             criteria.addFilter(Criteria.equals('salesChannels.id', this.customer.salesChannelId));
 
             return criteria;
-        }
+        },
     },
 
     watch: {
         languageId: {
             immediate: true,
             handler() {
-                this.languageRepository.get(this.languageId, Shopware.Context.api).then((language) => {
+                this.languageRepository.get(this.languageId).then((language) => {
                     this.customerLanguage = language;
                 });
-            }
-        }
+            },
+        },
     },
 
     created() {
@@ -82,10 +82,10 @@ Component.register('sw-customer-base-info', {
             const criteria = new Criteria(1, 1);
             criteria.addAggregation(Criteria.sum('orderAmount', 'amountTotal'));
             criteria.addFilter(Criteria.equals('order.orderCustomer.customerId', this.$route.params.id));
-            this.orderRepository.search(criteria, Shopware.Context.api).then((response) => {
+            this.orderRepository.search(criteria).then((response) => {
                 this.orderCount = response.total;
                 this.orderAmount = response.aggregations.orderAmount.sum;
             });
-        }
-    }
+        },
+    },
 });

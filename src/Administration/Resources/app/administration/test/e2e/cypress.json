@@ -23,7 +23,7 @@
     "admin": "/admin",
     "apiPath": "**/api",
     "locale": "en-GB",
-    "projectRoot": "/app",
+    "shopwareRoot": "/app",
     "localUsage": false,
     "usePercy": false
   },

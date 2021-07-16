@@ -9,7 +9,7 @@ const availableTooltipPlacements = [
     'top',
     'right',
     'bottom',
-    'left'
+    'left',
 ];
 
 const tooltipRegistry = new Map();
@@ -38,15 +38,15 @@ class Tooltip {
         hideDelay = showDelay,
         disabled = false,
         appearance = 'dark',
-        showOnDisabledElements = false
+        showOnDisabledElements = false,
     }) {
         this._id = id;
         this._placement = Tooltip.validatePlacement(placement);
         this._message = Tooltip.validateMessage(message);
         this._width = Tooltip.validateWidth(width);
         this._parentDOMElement = element;
-        this._showDelay = showDelay;
-        this._hideDelay = hideDelay;
+        this._showDelay = showDelay ?? 100;
+        this._hideDelay = hideDelay ?? 100;
         this._disabled = disabled;
         this._appearance = appearance;
         this._showOnDisabledElements = showOnDisabledElements;
@@ -108,9 +108,9 @@ class Tooltip {
 
             this._vue.$destroy();
             this._vue = new Vue({
-                template: this._DOMElement.outerHTML,
+                el: this._DOMElement,
                 parent: this._vue.$parent,
-                el: this._DOMElement
+                template: this._DOMElement.outerHTML,
             });
 
             this._DOMElement = this._vue.$el;
@@ -178,9 +178,9 @@ class Tooltip {
         element.classList.add(`sw-tooltip--${this._appearance}`);
 
         this._vue = new Vue({
-            template: element.outerHTML,
+            el: element,
             parent: node.context,
-            el: element
+            template: element.outerHTML,
         });
 
         return this._vue.$el;
@@ -335,7 +335,7 @@ class Tooltip {
             top: boundingClientRect.top > 0,
             right: boundingClientRect.right < windowWidth,
             bottom: boundingClientRect.bottom < windowHeight,
-            left: boundingClientRect.left > 0
+            left: boundingClientRect.left > 0,
         };
 
         return visibleBorders.top && visibleBorders.right && visibleBorders.bottom && visibleBorders.left;
@@ -349,7 +349,7 @@ class Tooltip {
         if (!availableTooltipPlacements.includes(placement)) {
             debug.warn(
                 'Tooltip Directive',
-                `The modifier has to be one of these "${availableTooltipPlacements.join(',')}"`
+                `The modifier has to be one of these "${availableTooltipPlacements.join(',')}"`,
             );
             return 'top';
         }
@@ -428,7 +428,7 @@ function createOrUpdateTooltip(el, { value, modifiers }) {
         hideDelay: hideDelay,
         disabled: disabled,
         appearance: appearance,
-        showOnDisabledElements: showOnDisabledElements
+        showOnDisabledElements: showOnDisabledElements,
     };
 
     if (el.hasAttribute('tooltip-id')) {
@@ -501,5 +501,5 @@ Directive.register('tooltip', {
             const tooltip = tooltipRegistry.get(el.getAttribute('tooltip-id'));
             tooltip.init(node);
         }
-    }
+    },
 });

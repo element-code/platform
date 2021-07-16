@@ -2,6 +2,9 @@ import { shallowMount } from '@vue/test-utils';
 import 'src/module/sw-settings-document/page/sw-settings-document-detail';
 
 const documentBaseConfigRepositoryMock = {
+    create: () => {
+        return Promise.resolve({});
+    },
     get: (id) => {
         const salesChannels = new Shopware.Data.EntityCollection(
             'source',
@@ -115,8 +118,10 @@ const createWrapper = (customOptions, privileges = []) => {
             },
             acl: {
                 can: key => (key ? privileges.includes(key) : true)
+            },
+            customFieldDataProviderService: {
+                getCustomFieldSets: () => Promise.resolve([])
             }
-
         }
     };
 
@@ -282,7 +287,7 @@ describe('src/module/sw-settings-document/page/sw-settings-document-detail', () 
         expect(displayAdditionalNoteDeliveryCheckbox.attributes('value')).toBe('true');
         expect(displayAdditionalNoteDeliveryCheckbox.attributes('label'))
             .toBe('sw-settings-document.detail.labelDisplayAdditionalNoteDelivery');
-        expect(deliveryCountriesSelect.attributes('helptext'))
+        expect(deliveryCountriesSelect.attributes('help-text'))
             .toBe('sw-settings-document.detail.helpTextDisplayDeliveryCountries');
         expect(deliveryCountriesSelect.attributes('label'))
             .toBe('sw-settings-document.detail.labelDeliveryCountries');

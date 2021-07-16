@@ -9,32 +9,32 @@ Component.register('sw-settings-rule-list', {
 
     inject: [
         'repositoryFactory',
-        'acl'
+        'acl',
     ],
 
     mixins: [
         Mixin.getByName('listing'),
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     data() {
         return {
             rules: null,
             isLoading: false,
-            sortBy: 'name'
+            sortBy: 'name',
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle()
+            title: this.$createTitle(),
         };
     },
 
     computed: {
         ruleRepository() {
             return this.repositoryFactory.create('rule');
-        }
+        },
     },
 
     methods: {
@@ -45,7 +45,7 @@ Component.register('sw-settings-rule-list', {
             const naturalSort = this.sortBy === 'createdAt';
             criteria.addSorting(Criteria.sort(this.sortBy, this.sortDirection, naturalSort));
 
-            this.ruleRepository.search(criteria, Shopware.Context.api).then((items) => {
+            this.ruleRepository.search(criteria).then((items) => {
                 this.total = items.total;
                 this.rules = items;
                 this.isLoading = false;
@@ -57,12 +57,12 @@ Component.register('sw-settings-rule-list', {
         },
 
         onDuplicate(referenceRule) {
-            this.ruleRepository.clone(referenceRule.id, Shopware.Context.api).then((duplicatedData) => {
+            this.ruleRepository.clone(referenceRule.id).then((duplicatedData) => {
                 this.$router.push(
                     {
                         name: 'sw.settings.rule.detail',
-                        params: { id: duplicatedData.id }
-                    }
+                        params: { id: duplicatedData.id },
+                    },
                 );
             });
         },
@@ -74,12 +74,12 @@ Component.register('sw-settings-rule-list', {
                 this.isLoading = false;
 
                 this.createNotificationSuccess({
-                    message: this.$tc('sw-settings-rule.detail.messageSaveSuccess', 0, { name: rule.name })
+                    message: this.$tc('sw-settings-rule.detail.messageSaveSuccess', 0, { name: rule.name }),
                 });
             }).catch(() => {
                 this.getList();
                 this.createNotificationError({
-                    message: this.$tc('sw-settings-rule.detail.messageSaveError')
+                    message: this.$tc('sw-settings-rule.detail.messageSaveError'),
                 });
             });
         },
@@ -93,27 +93,27 @@ Component.register('sw-settings-rule-list', {
                 routerLink: 'sw.settings.rule.detail',
                 width: '250px',
                 allowResize: true,
-                primary: true
+                primary: true,
             }, {
                 property: 'priority',
                 label: 'sw-settings-rule.list.columnPriority',
                 inlineEdit: 'number',
-                allowResize: true
+                allowResize: true,
             }, {
                 property: 'description',
                 label: 'sw-settings-rule.list.columnDescription',
                 width: '250px',
-                allowResize: true
+                allowResize: true,
             }, {
                 property: 'updatedAt',
                 label: 'sw-settings-rule.list.columnDateCreated',
                 align: 'right',
-                allowResize: true
+                allowResize: true,
             }, {
                 property: 'invalid',
                 label: 'sw-product-stream.list.columnStatus',
-                allowResize: true
+                allowResize: true,
             }];
-        }
-    }
+        },
+    },
 });

@@ -1,7 +1,7 @@
 import template from './sw-extension-adding-failed.html.twig';
 import './sw-extension-adding-failed.scss';
 
-const { Component, Utils } = Shopware;
+const { Component } = Shopware;
 const { mapState } = Component.getComponentHelper();
 
 /**
@@ -11,32 +11,32 @@ Component.register('sw-extension-adding-failed', {
     template,
 
     inject: [
-        'shopwareExtensionService'
+        'shopwareExtensionService',
     ],
 
     props: {
         extensionName: {
             type: String,
-            required: true
+            required: true,
         },
 
         title: {
             type: String,
             required: false,
-            default: null
+            default: null,
         },
 
         detail: {
             type: String,
             required: false,
-            default: null
+            default: null,
         },
 
         documentationLink: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     computed: {
@@ -49,10 +49,7 @@ Component.register('sw-extension-adding-failed', {
         },
 
         isRent() {
-            return Utils.get(
-                this.extension,
-                'storeLicense.variant'
-            ) === this.shopwareExtensionService.EXTENSION_VARIANT_TYPES.RENT;
+            return this.extension?.storeLicense?.variant === this.shopwareExtensionService.EXTENSION_VARIANT_TYPES.RENT;
         },
 
         headline() {
@@ -69,6 +66,6 @@ Component.register('sw-extension-adding-failed', {
             }
 
             return this.$tc('sw-extension-store.component.sw-extension-adding-failed.installationFailed.textProblem');
-        }
-    }
+        },
+    },
 });

@@ -4,6 +4,40 @@ $sw-order-line-item-grid-trash: $color-crimson-500;
 $sw-order-line-item-border: $color-gray-300;
 
 .sw-order-line-items-grid {
+    .sw-order-line-items-grid__actions-container {
+        padding: 24px;
+        border-bottom: 1px solid $sw-order-line-item-border;
+        background: $color-gray-100;
+
+        .sw-order-line-items-grid__delete-button {
+            &.sw-button--square:not([disabled]) .sw-icon,
+            &.sw-button--square:not(.sw-button--disabled) .sw-icon {
+                color: $sw-order-line-item-grid-trash;
+            }
+        }
+    }
+
+    .sw-order-line-items-grid__item {
+        &-nested-indicator {
+            display: inline-block;
+            margin-right: 12px;
+            height: 24px;
+        }
+
+        &-product {
+            display: flex;
+            flex-direction: row;
+        }
+
+        &-payload-options span {
+            margin-right: 3px;
+        }
+    }
+
+    .sw-order-line-items-grid__item-payload-options--group {
+        font-weight: $font-weight-bold;
+    }
+
     .sw-icon {
         width: 16px;
         height: 16px;
@@ -19,29 +53,7 @@ $sw-order-line-item-border: $color-gray-300;
         max-width: 65px;
     }
 
-    .sw-order-line-items-grid__actions-container {
-        padding: 24px;
-        border-bottom: 1px solid $sw-order-line-item-border;
-        background: $color-gray-100;
-
-        .sw-order-line-items-grid__delete-button {
-            &.sw-button--square:not([disabled]) .sw-icon,
-            &.sw-button--square:not(.sw-button--disabled) .sw-icon {
-                color: $sw-order-line-item-grid-trash;
-            }
-        }
-    }
-
-    .sw-order-line-items-grid__item-payload-options {
-        display: flex;
-        flex-direction: row;
-
-        span {
-            margin-right: 3px;
-        }
-    }
-
-    .sw-order-line-items-grid__item-payload-options--group {
-        font-weight: $font-weight-bold;
+    .sw-data-grid .sw-data-grid__body .sw-data-grid__cell--multi-line .sw-data-grid__cell-content {
+        height: 64px;
     }
 }

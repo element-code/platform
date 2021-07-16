@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Framework\Test\Store\Service;
 
+use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Shopware\Core\Framework\Api\Context\AdminApiSource;
@@ -42,9 +43,19 @@ class ExtensionStoreLicensesServiceTest extends TestCase
 
         $this->extensionLicensesService->cancelSubscription(1, $context);
 
+        $lastRequest = $this->getRequestHandler()->getLastRequest();
         static::assertEquals(
-            '/swplatform/pluginlicenses/1/cancel?shopwareVersion=___VERSION___&language=en-GB&domain=localhost',
-            $this->getRequestHandler()->getLastRequest()->getRequestTarget()
+            '/swplatform/pluginlicenses/1/cancel',
+            $lastRequest->getUri()->getPath()
+        );
+
+        static::assertEquals(
+            [
+                'shopwareVersion' => '___VERSION___',
+                'language' => 'en-GB',
+                'domain' => 'localhost',
+            ],
+            Query::parse($lastRequest->getUri()->getQuery())
         );
     }
 
@@ -90,10 +101,10 @@ class ExtensionStoreLicensesServiceTest extends TestCase
 
     private function setCancelationResponses(): void
     {
-        $licenses = \json_decode(\file_get_contents(__DIR__ . '/../_fixtures/responses/licenses.json'), true);
+        $licenses = json_decode(file_get_contents(__DIR__ . '/../_fixtures/responses/licenses.json'), true);
         $licenses[0]['extension']['name'] = 'TestApp';
 
-        $this->setLicensesRequest(\json_encode($licenses));
+        $this->setLicensesRequest(json_encode($licenses));
         $this->getRequestHandler()->append(new Response(204));
 
         unset($licenses[0]);
@@ -101,7 +112,7 @@ class ExtensionStoreLicensesServiceTest extends TestCase
             new Response(
                 200,
                 [ExtensionDataProvider::HEADER_NAME_TOTAL_COUNT => '0'],
-                \json_encode($licenses)
+                json_encode($licenses)
             )
         );
     }

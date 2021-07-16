@@ -11,6 +11,7 @@
       "columnDescription": "Beschreibung",
       "columnActive": "Aktiv",
       "columnPosition": "Position",
+      "columnExtension": "Erweiterung",
       "buttonAddPaymentMethod": "Zahlungsart anlegen",
       "contextMenuEdit": "Bearbeiten",
       "contextMenuDelete": "Löschen",
@@ -42,7 +43,7 @@
     }
   },
   "sw-plugin-box": {
-    "buttonPluginSettings": "Plugin Einstellungen"
+    "buttonPluginSettings": "Erweiterung Einstellungen"
   },
   "sw-privileges": {
     "permissions": {

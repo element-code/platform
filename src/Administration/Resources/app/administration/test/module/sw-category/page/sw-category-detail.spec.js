@@ -18,7 +18,9 @@ function createWrapper(privileges = []) {
             },
             'sw-category-tree': true,
             'sw-button': true,
-            'sw-button-process': true
+            'sw-button-process': true,
+            'sw-sidebar-collapse': true,
+            'sw-landing-page-tree': true
         },
         provide: {
             acl: {
@@ -97,7 +99,7 @@ describe('src/module/sw-category/page/sw-category-detail', () => {
 
         const categoryTree = wrapper.find('sw-category-tree-stub');
 
-        expect(categoryTree.attributes().allowedit).toBeUndefined();
+        expect(categoryTree.attributes()['allow-edit']).toBeUndefined();
         wrapper.destroy();
     });
 
@@ -117,7 +119,7 @@ describe('src/module/sw-category/page/sw-category-detail', () => {
 
         const categoryTree = wrapper.find('sw-category-tree-stub');
 
-        expect(categoryTree.attributes().allowedit).toBe('true');
+        expect(categoryTree.attributes()['allow-edit']).toBe('true');
         wrapper.destroy();
     });
 
@@ -135,7 +137,7 @@ describe('src/module/sw-category/page/sw-category-detail', () => {
 
         const categoryTree = wrapper.find('sw-category-tree-stub');
 
-        expect(categoryTree.attributes().allowcreate).toBeUndefined();
+        expect(categoryTree.attributes()['allow-create']).toBeUndefined();
         wrapper.destroy();
     });
 
@@ -155,7 +157,7 @@ describe('src/module/sw-category/page/sw-category-detail', () => {
 
         const categoryTree = wrapper.find('sw-category-tree-stub');
 
-        expect(categoryTree.attributes().allowcreate).toBe('true');
+        expect(categoryTree.attributes()['allow-create']).toBe('true');
         wrapper.destroy();
     });
 
@@ -173,7 +175,7 @@ describe('src/module/sw-category/page/sw-category-detail', () => {
 
         const categoryTree = wrapper.find('sw-category-tree-stub');
 
-        expect(categoryTree.attributes().allowdelete).toBeUndefined();
+        expect(categoryTree.attributes()['allow-delete']).toBeUndefined();
         wrapper.destroy();
     });
 
@@ -193,7 +195,7 @@ describe('src/module/sw-category/page/sw-category-detail', () => {
 
         const categoryTree = wrapper.find('sw-category-tree-stub');
 
-        expect(categoryTree.attributes().allowdelete).toBe('true');
+        expect(categoryTree.attributes()['allow-delete']).toBe('true');
         wrapper.destroy();
     });
 });

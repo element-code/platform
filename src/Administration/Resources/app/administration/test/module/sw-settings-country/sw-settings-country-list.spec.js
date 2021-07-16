@@ -58,6 +58,9 @@ function createWrapper(privileges = []) {
 
                     return privileges.includes(identifier);
                 }
+            },
+            feature: {
+                isActive: () => true
             }
         },
 
@@ -184,7 +187,7 @@ describe('module/sw-settings-country/page/sw-settings-country-list', () => {
 
         const entityListing = wrapper.find('.sw-settings-country-list-grid');
         expect(entityListing.exists()).toBeTruthy();
-        expect(entityListing.attributes().allowinlineedit).toBeTruthy();
+        expect(entityListing.attributes()['allow-inline-edit']).toBeTruthy();
     });
 
     it('should not be able to inline edit a country', async () => {
@@ -193,7 +196,7 @@ describe('module/sw-settings-country/page/sw-settings-country-list', () => {
 
         const entityListing = wrapper.find('.sw-settings-country-list-grid');
         expect(entityListing.exists()).toBeTruthy();
-        expect(entityListing.attributes().allowinlineedit).toBeFalsy();
+        expect(entityListing.attributes()['allow-inline-edit']).toBeFalsy();
     });
 
     it('should be able to delete a country', async () => {
@@ -212,5 +215,15 @@ describe('module/sw-settings-country/page/sw-settings-country-list', () => {
 
         const deleteMenuItem = wrapper.find('.sw-country-list__delete-action');
         expect(deleteMenuItem.attributes().disabled).toBeTruthy();
+    });
+
+    it('should be able to delete mutilple country', async () => {
+        const wrapper = createWrapper([
+            'country.deleter'
+        ]);
+        await wrapper.vm.$nextTick();
+
+        const deleteSelection = wrapper.find('.sw-settings-country-list-grid');
+        expect(deleteSelection.attributes()['show-selection']).toBeTruthy();
     });
 });

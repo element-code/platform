@@ -16,10 +16,6 @@ const { Component } = Shopware;
  * </sw-boolean-radio-group>
  */
 Component.register('sw-boolean-radio-group', {
-    model: {
-        prop: 'value',
-        event: 'change'
-    },
 
     template:
 `
@@ -31,36 +27,40 @@ Component.register('sw-boolean-radio-group', {
     :bordered="bordered">
 </sw-radio-field>
 `,
+    model: {
+        prop: 'value',
+        event: 'change',
+    },
 
     props: {
         value: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         labelOptionTrue: {
             type: String,
-            required: true
+            required: true,
         },
 
         labelOptionFalse: {
             type: String,
-            required: true
+            required: true,
         },
 
         bordered: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
     },
 
     computed: {
         options() {
             return [
                 { value: 'true', name: this.labelOptionTrue },
-                { value: 'false', name: this.labelOptionFalse }
+                { value: 'false', name: this.labelOptionFalse },
             ];
         },
 
@@ -71,7 +71,7 @@ Component.register('sw-boolean-radio-group', {
 
             set(val) {
                 this.$emit('change', val === 'true');
-            }
-        }
-    }
+            },
+        },
+    },
 });

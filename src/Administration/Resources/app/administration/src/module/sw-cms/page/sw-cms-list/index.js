@@ -11,14 +11,8 @@ Component.register('sw-cms-list', {
 
     mixins: [
         Mixin.getByName('listing'),
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
-
-    metaInfo() {
-        return {
-            title: this.$createTitle()
-        };
-    },
 
     data() {
         return {
@@ -35,7 +29,13 @@ Component.register('sw-cms-list', {
             showDeleteModal: false,
             defaultMediaFolderId: null,
             listMode: 'grid',
-            assignablePageTypes: ['categories', 'products']
+            assignablePageTypes: ['categories', 'products'],
+        };
+    },
+
+    metaInfo() {
+        return {
+            title: this.$createTitle(),
         };
     },
 
@@ -57,7 +57,7 @@ Component.register('sw-cms-list', {
                 { value: 'createdAt:DESC', name: this.$tc('sw-cms.sorting.labelSortByCreatedDsc') },
                 { value: 'createdAt:ASC', name: this.$tc('sw-cms.sorting.labelSortByCreatedAsc') },
                 { value: 'updatedAt:DESC', name: this.$tc('sw-cms.sorting.labelSortByUpdatedDsc') },
-                { value: 'updatedAt:ASC', name: this.$tc('sw-cms.sorting.labelSortByUpdatedAsc') }
+                { value: 'updatedAt:ASC', name: this.$tc('sw-cms.sorting.labelSortByUpdatedAsc') },
             ];
         },
 
@@ -67,7 +67,7 @@ Component.register('sw-cms-list', {
                 { value: 'page', name: this.$tc('sw-cms.sorting.labelSortByShopPages') },
                 { value: 'landingpage', name: this.$tc('sw-cms.sorting.labelSortByLandingPages') },
                 { value: 'product_list', name: this.$tc('sw-cms.sorting.labelSortByCategoryPages') },
-                { value: 'product_detail', name: this.$tc('sw-cms.sorting.labelSortByProductPages') }
+                { value: 'product_detail', name: this.$tc('sw-cms.sorting.labelSortByProductPages') },
             ];
 
             return sortPageTypes;
@@ -78,7 +78,7 @@ Component.register('sw-cms-list', {
                 page: this.$tc('sw-cms.sorting.labelSortByShopPages'),
                 landingpage: this.$tc('sw-cms.sorting.labelSortByLandingPages'),
                 product_list: this.$tc('sw-cms.sorting.labelSortByCategoryPages'),
-                product_detail: this.$tc('sw-cms.sorting.labelSortByProductPages')
+                product_detail: this.$tc('sw-cms.sorting.labelSortByProductPages'),
             };
 
             return pageTypes;
@@ -86,6 +86,25 @@ Component.register('sw-cms-list', {
 
         sortingConCat() {
             return `${this.sortBy}:${this.sortDirection}`;
+        },
+
+        listCriteria() {
+            const criteria = new Criteria(this.page, this.limit);
+            criteria.addAssociation('previewMedia')
+                .addAssociation('products')
+                .addSorting(Criteria.sort(this.sortBy, this.sortDirection));
+
+            if (this.term !== null) {
+                criteria.setTerm(this.term);
+            }
+
+            if (this.currentPageType !== null) {
+                criteria.addFilter(Criteria.equals('cms_page.type', this.currentPageType));
+            }
+
+            this.addLinkedLayoutsAggregation(criteria);
+
+            return criteria;
         },
 
         /**
@@ -99,11 +118,11 @@ Component.register('sw-cms-list', {
                     type: 'multi',
                     operator: 'OR',
                     queries: this.assignablePageTypes.map(
-                        name => Criteria.not('OR', [Criteria.equals(`${name}.id`, null)])
-                    )
-                }
+                        name => Criteria.not('OR', [Criteria.equals(`${name}.id`, null)]),
+                    ),
+                },
             ];
-        }
+        },
     },
 
     created() {
@@ -125,26 +144,12 @@ Component.register('sw-cms-list', {
 
         getList() {
             this.isLoading = true;
-            const criteria = new Criteria(this.page, this.limit);
-            criteria.addAssociation('previewMedia')
-                .addAssociation('products')
-                .addSorting(Criteria.sort(this.sortBy, this.sortDirection));
 
-            if (this.term !== null) {
-                criteria.setTerm(this.term);
-            }
-
-            if (this.currentPageType !== null) {
-                criteria.addFilter(Criteria.equals('cms_page.type', this.currentPageType));
-            }
-
-            this.addLinkedLayoutsAggregation(criteria);
-
-            return this.pageRepository.search(criteria, Shopware.Context.api).then((searchResult) => {
+            return this.pageRepository.search(this.listCriteria).then((searchResult) => {
                 this.total = searchResult.total;
                 this.pages = searchResult;
 
-                if (searchResult.aggregations && searchResult.aggregations.linkedLayouts) {
+                if (searchResult.aggregations?.linkedLayouts) {
                     this.linkedLayouts = searchResult.aggregations.linkedLayouts.entities;
                 }
 
@@ -164,7 +169,7 @@ Component.register('sw-cms-list', {
                 name: 'linkedLayouts',
                 type: 'entity',
                 definition: 'cms_page',
-                field: 'id'
+                field: 'id',
             });
 
             criteria.addAggregation(linkedLayoutsFilter);
@@ -185,7 +190,7 @@ Component.register('sw-cms-list', {
                 limit: this.limit,
                 term: this.term,
                 sortBy: this.sortBy,
-                sortDirection: this.sortDirection
+                sortDirection: this.sortDirection,
             });
             this.getList();
         },
@@ -195,9 +200,9 @@ Component.register('sw-cms-list', {
             criteria.addAssociation('folder');
             criteria.addFilter(Criteria.equals('entity', 'cms_page'));
 
-            return this.defaultFolderRepository.search(criteria, Shopware.Context.api).then((searchResult) => {
+            return this.defaultFolderRepository.search(criteria).then((searchResult) => {
                 const defaultFolder = searchResult.first();
-                if (defaultFolder.folder && defaultFolder.folder.id) {
+                if (defaultFolder.folder?.id) {
                     return defaultFolder.folder.id;
                 }
 
@@ -246,7 +251,7 @@ Component.register('sw-cms-list', {
             this.getList();
             this.updateRoute({
                 page: this.page,
-                limit: this.limit
+                limit: this.limit,
             });
         },
 
@@ -290,7 +295,7 @@ Component.register('sw-cms-list', {
 
         onDuplicateCmsPage(page) {
             this.isLoading = true;
-            this.pageRepository.clone(page.id, Shopware.Context.api).then(() => {
+            this.pageRepository.clone(page.id).then(() => {
                 this.resetList();
                 this.isLoading = false;
             }).catch(() => {
@@ -312,7 +317,7 @@ Component.register('sw-cms-list', {
 
         saveCmsPage(page) {
             this.isLoading = true;
-            return this.pageRepository.save(page, Shopware.Context.api).then(() => {
+            return this.pageRepository.save(page).then(() => {
                 this.isLoading = false;
             }).catch(() => {
                 this.isLoading = false;
@@ -324,13 +329,13 @@ Component.register('sw-cms-list', {
             const messageDeleteError = this.$tc('sw-cms.components.cmsListItem.notificationDeleteErrorMessage');
 
             this.isLoading = true;
-            return this.pageRepository.delete(page.id, Shopware.Context.api).then(() => {
+            return this.pageRepository.delete(page.id).then(() => {
                 this.resetList();
             }).catch(() => {
                 this.isLoading = false;
                 this.createNotificationError({
                     title: titleDeleteError,
-                    message: messageDeleteError
+                    message: messageDeleteError,
                 });
             });
         },
@@ -340,17 +345,17 @@ Component.register('sw-cms-list', {
                 property: 'name',
                 label: this.$tc('sw-cms.list.gridHeaderName'),
                 inlineEdit: 'string',
-                primary: true
+                primary: true,
             }, {
                 property: 'type',
-                label: this.$tc('sw-cms.list.gridHeaderType')
+                label: this.$tc('sw-cms.list.gridHeaderType'),
             }, {
                 property: 'assignments',
                 label: this.$tc('sw-cms.list.gridHeaderAssignments'),
-                sortable: false
+                sortable: false,
             }, {
                 property: 'createdAt',
-                label: this.$tc('sw-cms.list.gridHeaderCreated')
+                label: this.$tc('sw-cms.list.gridHeaderCreated'),
             }];
         },
 
@@ -359,15 +364,15 @@ Component.register('sw-cms-list', {
                 return {
                     showDelay: 300,
                     message: this.$tc('sw-cms.general.deleteDisabledProductToolTip'),
-                    disabled: !this.layoutIsLinked(page.id)
+                    disabled: !this.layoutIsLinked(page.id),
                 };
             }
 
             return {
                 showDelay: 300,
                 message: this.$tc('sw-cms.general.deleteDisabledToolTip'),
-                disabled: !this.layoutIsLinked(page.id)
+                disabled: !this.layoutIsLinked(page.id),
             };
-        }
-    }
+        },
+    },
 });

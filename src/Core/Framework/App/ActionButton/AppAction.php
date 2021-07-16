@@ -15,42 +15,23 @@ class AppAction
     /**
      * @var string[]
      */
-    private $ids;
+    private array $ids;
 
-    /**
-     * @var string
-     */
-    private $targetUrl;
+    private string $targetUrl;
 
-    /**
-     * @var string
-     */
-    private $appVersion;
+    private string $appVersion;
 
-    /**
-     * @var string
-     */
-    private $entity;
+    private string $entity;
 
-    /**
-     * @var string
-     */
-    private $action;
+    private string $action;
 
-    /**
-     * @var string
-     */
-    private $shopUrl;
+    private string $shopUrl;
 
-    /**
-     * @var string
-     */
-    private $appSecret;
+    private string $appSecret;
 
-    /**
-     * @var string
-     */
-    private $shopId;
+    private string $shopId;
+
+    private string $actionId;
 
     /**
      * @param array<string> $ids
@@ -63,7 +44,8 @@ class AppAction
         string $action,
         array $ids,
         string $appSecret,
-        string $shopId
+        string $shopId,
+        string $actionId
     ) {
         $this->setAction($action);
         $this->setAppVersion($appVersion);
@@ -73,6 +55,7 @@ class AppAction
         $this->setTargetUrl($targetUrl);
         $this->setAppSecret($appSecret);
         $this->setShopId($shopId);
+        $this->setActionId($actionId);
     }
 
     public function getTargetUrl(): string
@@ -110,6 +93,20 @@ class AppAction
         $this->shopId = $shopId;
     }
 
+    public function setActionId(string $actionId): void
+    {
+        if ($actionId === '') {
+            throw new InvalidArgumentException('action id must not be empty');
+        }
+
+        $this->actionId = $actionId;
+    }
+
+    public function getActionId(): string
+    {
+        return $this->actionId;
+    }
+
     /**
      * @param array<string> $ids
      */
@@ -125,7 +122,7 @@ class AppAction
 
     private function setTargetUrl(string $targetUrl): void
     {
-        if (!filter_var($targetUrl, FILTER_VALIDATE_URL)) {
+        if (!filter_var($targetUrl, \FILTER_VALIDATE_URL)) {
             throw new InvalidArgumentException(sprintf('%s is not a valid url', $targetUrl));
         }
         $this->targetUrl = $targetUrl;
@@ -157,7 +154,7 @@ class AppAction
 
     private function setShopUrl(string $shopUrl): void
     {
-        if (!filter_var($shopUrl, FILTER_VALIDATE_URL)) {
+        if (!filter_var($shopUrl, \FILTER_VALIDATE_URL)) {
             throw new InvalidArgumentException(sprintf('%s is not a valid url', $shopUrl));
         }
         $this->shopUrl = $shopUrl;

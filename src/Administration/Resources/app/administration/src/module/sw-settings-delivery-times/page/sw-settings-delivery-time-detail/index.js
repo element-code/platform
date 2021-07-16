@@ -7,92 +7,36 @@ const { mapPropertyErrors } = Component.getComponentHelper();
 Component.register('sw-settings-delivery-time-detail', {
     template,
 
-    mixins: [
-        Mixin.getByName('notification')
-    ],
+    inject: ['repositoryFactory', 'acl', 'customFieldDataProviderService'],
 
-    inject: ['repositoryFactory', 'acl'],
+    mixins: [
+        Mixin.getByName('notification'),
+    ],
 
     shortcuts: {
         'SYSTEMKEY+S': {
             active() {
                 return this.allowSave;
             },
-            method: 'onSave'
+            method: 'onSave',
         },
 
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     data() {
         return {
             deliveryTime: null,
             isLoading: false,
-            isSaveSuccessful: false
+            isSaveSuccessful: false,
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle()
+            title: this.$createTitle(),
         };
-    },
-
-    created() {
-        this.createdComponent();
-    },
-
-    methods: {
-        createdComponent() {
-            this.isLoading = true;
-
-            this.deliveryTimeRepository
-                .get(this.$route.params.id, Shopware.Context.api)
-                .then((deliveryTime) => {
-                    this.deliveryTime = deliveryTime;
-                    this.isLoading = false;
-                })
-                .catch((exception) => {
-                    this.createNotificationError({
-                        message: this.$tc('sw-settings-delivery-time.detail.errorLoad')
-                    });
-
-                    this.isLoading = false;
-                    throw exception;
-                });
-        },
-
-        onSave() {
-            this.isLoading = true;
-            this.isSaveSuccessful = false;
-
-            return this.deliveryTimeRepository
-                .save(this.deliveryTime, Shopware.Context.api)
-                .then(() => {
-                    this.isLoading = false;
-                    this.isSaveSuccessful = true;
-                })
-                .catch((exception) => {
-                    this.createNotificationError({
-                        message: this.$tc('sw-settings-delivery-time.detail.errorSave')
-                    });
-
-                    this.isLoading = false;
-                    throw exception;
-                });
-        },
-
-        onChangeLanguage() {
-            this.createdComponent();
-        },
-
-        saveFinish() {
-            this.isSaveSuccessful = false;
-        },
-
-        onCancel() {
-            this.$router.push({ name: 'sw.settings.delivery.time.index' });
-        }
     },
 
     computed: {
@@ -100,7 +44,7 @@ Component.register('sw-settings-delivery-time-detail', {
             'name',
             'min',
             'max',
-            'unit'
+            'unit',
         ]),
 
         deliveryTimeRepository() {
@@ -110,16 +54,16 @@ Component.register('sw-settings-delivery-time-detail', {
         deliveryTimeUnits() {
             return [{
                 value: 'day',
-                label: this.$tc('sw-settings-delivery-time.detail.selectionUnitDay')
+                label: this.$tc('sw-settings-delivery-time.detail.selectionUnitDay'),
             }, {
                 value: 'week',
-                label: this.$tc('sw-settings-delivery-time.detail.selectionUnitWeek')
+                label: this.$tc('sw-settings-delivery-time.detail.selectionUnitWeek'),
             }, {
                 value: 'month',
-                label: this.$tc('sw-settings-delivery-time.detail.selectionUnitMonth')
+                label: this.$tc('sw-settings-delivery-time.detail.selectionUnitMonth'),
             }, {
                 value: 'year',
-                label: this.$tc('sw-settings-delivery-time.detail.selectionUnitYear')
+                label: this.$tc('sw-settings-delivery-time.detail.selectionUnitYear'),
             }];
         },
 
@@ -158,7 +102,7 @@ Component.register('sw-settings-delivery-time-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.allowSave,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -166,15 +110,83 @@ Component.register('sw-settings-delivery-time-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
-        }
-    }
+        },
+
+        showCustomFields() {
+            return this.deliveryTime && this.customFieldSets && this.customFieldSets.length > 0;
+        },
+    },
+
+    created() {
+        this.createdComponent();
+    },
+
+    methods: {
+        createdComponent() {
+            this.isLoading = true;
+            this.loadCustomFieldSets();
+
+            this.deliveryTimeRepository
+                .get(this.$route.params.id)
+                .then((deliveryTime) => {
+                    this.deliveryTime = deliveryTime;
+                    this.isLoading = false;
+                })
+                .catch((exception) => {
+                    this.createNotificationError({
+                        message: this.$tc('sw-settings-delivery-time.detail.errorLoad'),
+                    });
+
+                    this.isLoading = false;
+                    throw exception;
+                });
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('delivery_time').then((sets) => {
+                this.customFieldSets = sets;
+            });
+        },
+
+        onSave() {
+            this.isLoading = true;
+            this.isSaveSuccessful = false;
+
+            return this.deliveryTimeRepository
+                .save(this.deliveryTime, Shopware.Context.api)
+                .then(() => {
+                    this.isLoading = false;
+                    this.isSaveSuccessful = true;
+                })
+                .catch((exception) => {
+                    this.createNotificationError({
+                        message: this.$tc('sw-settings-delivery-time.detail.errorSave'),
+                    });
+
+                    this.isLoading = false;
+                    throw exception;
+                });
+        },
+
+        onChangeLanguage() {
+            this.createdComponent();
+        },
+
+        saveFinish() {
+            this.isSaveSuccessful = false;
+        },
+
+        onCancel() {
+            this.$router.push({ name: 'sw.settings.delivery.time.index' });
+        },
+    },
 });

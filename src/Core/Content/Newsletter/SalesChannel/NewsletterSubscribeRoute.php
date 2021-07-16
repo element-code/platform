@@ -6,6 +6,7 @@ use OpenApi\Annotations as OA;
 use Shopware\Core\Content\Newsletter\Aggregate\NewsletterRecipient\NewsletterRecipientEntity;
 use Shopware\Core\Content\Newsletter\Event\NewsletterConfirmEvent;
 use Shopware\Core\Content\Newsletter\Event\NewsletterRegisterEvent;
+use Shopware\Core\Content\Newsletter\Event\NewsletterSubscribeUrlEvent;
 use Shopware\Core\Content\Newsletter\Exception\NewsletterRecipientNotFoundException;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
@@ -22,6 +23,7 @@ use Shopware\Core\Framework\Validation\DataValidator;
 use Shopware\Core\System\SalesChannel\Aggregate\SalesChannelDomain\SalesChannelDomainEntity;
 use Shopware\Core\System\SalesChannel\NoContentResponse;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
+use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Constraints\Choice;
 use Symfony\Component\Validator\Constraints\Email;
@@ -53,14 +55,18 @@ class NewsletterSubscribeRoute extends AbstractNewsletterSubscribeRoute
      */
     private $eventDispatcher;
 
+    private SystemConfigService $systemConfigService;
+
     public function __construct(
         EntityRepositoryInterface $newsletterRecipientRepository,
         DataValidator $validator,
-        EventDispatcherInterface $eventDispatcher
+        EventDispatcherInterface $eventDispatcher,
+        SystemConfigService $systemConfigService
     ) {
         $this->newsletterRecipientRepository = $newsletterRecipientRepository;
         $this->validator = $validator;
         $this->eventDispatcher = $eventDispatcher;
+        $this->systemConfigService = $systemConfigService;
     }
 
     public function getDecorated(): AbstractNewsletterSubscribeRoute
@@ -72,16 +78,87 @@ class NewsletterSubscribeRoute extends AbstractNewsletterSubscribeRoute
      * @Since("6.2.0.0")
      * @OA\Post(
      *      path="/newsletter/subscribe",
-     *      summary="Subscribe to newsletter",
+     *      summary="Create or remove a newsletter subscription",
+     *      description="This route is used to create/remove/confirm a newsletter subscription.
+
+The `option` property controls what should happen:
+* `direct`: The subscription is directly active and does not need a confirmation.
+* `subscribe`: An email will be send to the provided email addrees containing a link to the /newsletter/confirm route.
+The subscription is only successful, if the /newsletter/confirm route is called with the generated hashes.
+* `unsubscribe`: The email address will be removed from the newsletter subscriptions.
+* `confirmSubscribe`: Confirmes the newsletter subscription for the provided email address.",
      *      operationId="subscribeToNewsletter",
      *      tags={"Store API", "Newsletter"},
-     *      @OA\Parameter(name="email", description="Email", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="salutationId", description="Salutation", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="firstName", description="Firstname", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="lastName", description="Lastname", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="street", description="Street", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="city", description="City", in="query", @OA\Schema(type="string")),
-     *      @OA\Parameter(name="zipCode", description="Zipcode", in="query", @OA\Schema(type="string")),
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\JsonContent(
+     *              required={
+     *                  "email",
+     *                  "option",
+     *                  "storefrontUrl"
+     *              },
+     *              @OA\Property(
+     *                  property="email",
+     *                  description="Email address that will receive the confirmation and the newsletter.",
+     *                  type="string"
+     *              ),
+     *              @OA\Property(
+     *                  property="option",
+     *                  description="Defines what should be done.",
+     *                  @OA\Schema(type="string", enum={"direct", "subscribe", "confirmSubscribe", "unsubscribe"})
+     *              ),
+     *              @OA\Property(
+     *                  property="storefrontUrl",
+     *                  description="Url of the storefront of the shop. This will be used for generating the link to the /newsletter/confirm inside the confirm email.",
+     *                  type="string"
+     *              ),
+     *              @OA\Property(
+     *                  property="salutationId",
+     *                  description="Identifier of the salutation.",
+     *                  @OA\Schema(type="string", pattern="^[0-9a-f]{32}$")
+     *              ),
+     *              @OA\Property(
+     *                  property="firstName",
+     *                  description="First name",
+     *                  type="string"
+     *              ),
+     *              @OA\Property(
+     *                  property="lastName",
+     *                  description="Last name",
+     *                  type="string"
+     *              ),
+     *              @OA\Property(
+     *                  property="street",
+     *                  description="Street",
+     *                  type="string"
+     *              ),
+     *              @OA\Property(
+     *                  property="city",
+     *                  description="City",
+     *                  type="string"
+     *              ),
+     *              @OA\Property(
+     *                  property="zipCode",
+     *                  description="Zip code",
+     *                  type="string"
+     *              ),
+     *              @OA\Property(
+     *                  property="tags",
+     *                  description="Zip code",
+     *                  type="string"
+     *              ),
+     *              @OA\Property(
+     *                  property="languageId",
+     *                  description="Identifier of the language.",
+     *                  @OA\Schema(type="string", pattern="^[0-9a-f]{32}$")
+     *              ),
+     *              @OA\Property(
+     *                  property="customFields",
+     *                  description="Custom field data that should be added to the subscription.",
+     *                  type="string"
+     *              )
+     *          )
+     *      ),
      *      @OA\Response(
      *          response="200",
      *          description="Success",
@@ -115,7 +192,10 @@ class NewsletterSubscribeRoute extends AbstractNewsletterSubscribeRoute
         if (isset($recipientId)) {
             /** @var NewsletterRecipientEntity $recipient */
             $recipient = $this->newsletterRecipientRepository->search(new Criteria([$recipientId]), $context->getContext())->first();
-            if ($recipient->getConfirmedAt()) {
+
+            // If the user was previously subscribed but has unsubscribed now, the `getConfirmedAt()`
+            // will still be set. So we need to check for the status as well.
+            if ($recipient->getStatus() !== self::STATUS_OPT_OUT && $recipient->getConfirmedAt()) {
                 return new NoContentResponse();
             }
         }
@@ -133,17 +213,8 @@ class NewsletterSubscribeRoute extends AbstractNewsletterSubscribeRoute
             return new NoContentResponse();
         }
 
-        $url = $data['storefrontUrl'] . str_replace(
-            [
-                '%%HASHEDEMAIL%%',
-                '%%SUBSCRIBEHASH%%',
-            ],
-            [
-                hash('sha1', $data['email']),
-                $data['hash'],
-            ],
-            '/newsletter-subscribe?em=%%HASHEDEMAIL%%&hash=%%SUBSCRIBEHASH%%'
-        );
+        $hashedEmail = hash('sha1', $data['email']);
+        $url = $this->getSubscribeUrl($context, $hashedEmail, $data['hash'], $data, $recipient);
 
         $event = new NewsletterRegisterEvent($context->getContext(), $recipient, $url, $context->getSalesChannel()->getId());
         $this->eventDispatcher->dispatch($event);
@@ -223,5 +294,36 @@ class NewsletterSubscribeRoute extends AbstractNewsletterSubscribeRoute
         return array_map(static function (SalesChannelDomainEntity $domainEntity) {
             return rtrim($domainEntity->getUrl(), '/');
         }, $context->getSalesChannel()->getDomains()->getElements());
+    }
+
+    private function getSubscribeUrl(
+        SalesChannelContext $context,
+        string $hashedEmail,
+        string $hash,
+        array $data,
+        NewsletterRecipientEntity $recipient
+    ): string {
+        $urlTemplate = $this->systemConfigService->get(
+            'core.newsletter.subscribeUrl',
+            $context->getSalesChannelId()
+        );
+        if (!\is_string($urlTemplate)) {
+            $urlTemplate = '/newsletter-subscribe?em=%%HASHEDEMAIL%%&hash=%%SUBSCRIBEHASH%%';
+        }
+
+        $urlEvent = new NewsletterSubscribeUrlEvent($context, $urlTemplate, $hashedEmail, $hash, $data, $recipient);
+        $this->eventDispatcher->dispatch($urlEvent);
+
+        return $data['storefrontUrl'] . str_replace(
+            [
+                '%%HASHEDEMAIL%%',
+                '%%SUBSCRIBEHASH%%',
+            ],
+            [
+                $hashedEmail,
+                $hash,
+            ],
+            $urlEvent->getSubscribeUrl()
+        );
     }
 }

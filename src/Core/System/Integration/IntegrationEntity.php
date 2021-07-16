@@ -5,11 +5,13 @@ namespace Shopware\Core\System\Integration;
 use Shopware\Core\Framework\Api\Acl\Role\AclRoleCollection;
 use Shopware\Core\Framework\App\AppEntity;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityCustomFieldsTrait;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityIdTrait;
 
 class IntegrationEntity extends Entity
 {
     use EntityIdTrait;
+    use EntityCustomFieldsTrait;
 
     /**
      * @var string
@@ -37,11 +39,6 @@ class IntegrationEntity extends Entity
     protected $lastUsageAt;
 
     /**
-     * @var array|null
-     */
-    protected $customFields;
-
-    /**
      * @var AppEntity|null
      */
     protected $app;
@@ -50,6 +47,8 @@ class IntegrationEntity extends Entity
      * @var AclRoleCollection|null
      */
     protected $aclRoles;
+
+    protected ?\DateTimeInterface $deletedAt;
 
     public function getLabel(): string
     {
@@ -91,16 +90,6 @@ class IntegrationEntity extends Entity
         $this->lastUsageAt = $lastUsageAt;
     }
 
-    public function getCustomFields(): ?array
-    {
-        return $this->customFields;
-    }
-
-    public function setCustomFields(?array $customFields): void
-    {
-        $this->customFields = $customFields;
-    }
-
     public function getApp(): ?AppEntity
     {
         return $this->app;
@@ -129,5 +118,15 @@ class IntegrationEntity extends Entity
     public function setAdmin(bool $admin): void
     {
         $this->admin = $admin;
+    }
+
+    public function getDeletedAt(): ?\DateTimeInterface
+    {
+        return $this->deletedAt;
+    }
+
+    public function setDeletedAt(\DateTimeInterface $deletedAt): void
+    {
+        $this->deletedAt = $deletedAt;
     }
 }

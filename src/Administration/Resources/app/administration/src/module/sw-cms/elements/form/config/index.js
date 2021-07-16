@@ -9,13 +9,8 @@ Component.register('sw-cms-el-config-form', {
     inject: ['systemConfigApiService'],
 
     mixins: [
-        Mixin.getByName('cms-element')
+        Mixin.getByName('cms-element'),
     ],
-
-    created() {
-        this.createdComponent();
-        this.setShopMail();
-    },
 
     computed: {
         getLastMailClass() {
@@ -23,7 +18,12 @@ Component.register('sw-cms-el-config-form', {
                 return 'is--last';
             }
             return '';
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
+        this.setShopMail();
     },
 
     methods: {
@@ -73,6 +73,6 @@ Component.register('sw-cms-el-config-form', {
                 }
             }
             return true;
-        }
-    }
+        },
+    },
 });

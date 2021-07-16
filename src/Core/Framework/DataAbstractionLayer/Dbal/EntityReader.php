@@ -89,8 +89,7 @@ class EntityReader implements EntityReaderInterface
             $criteria,
             $definition,
             $context,
-            $definition->getEntityClass(),
-            new $collectionClass(),
+            EntityHydrator::createClass($collectionClass),
             $definition->getFields()->getBasicFields()
         );
     }
@@ -104,7 +103,6 @@ class EntityReader implements EntityReaderInterface
         Criteria $criteria,
         EntityDefinition $definition,
         Context $context,
-        string $entity,
         EntityCollection $collection,
         FieldCollection $fields
     ): EntityCollection {
@@ -123,7 +121,7 @@ class EntityReader implements EntityReaderInterface
 
         $rows = $this->fetch($criteria, $definition, $context, $fields);
 
-        $collection = $this->hydrator->hydrate($collection, $entity, $definition, $rows, $definition->getEntityName(), $context);
+        $collection = $this->hydrator->hydrate($collection, $definition->getEntityClass(), $definition, $rows, $definition->getEntityName(), $context);
 
         $collection = $this->fetchAssociations($criteria, $definition, $context, $collection, $fields);
 
@@ -241,7 +239,6 @@ class EntityReader implements EntityReaderInterface
 
             //all other StorageAware fields are stored inside the main entity
             if ($field instanceof StorageAware) {
-                /* @var StorageAware|Field $field */
                 $query->addSelect(
                     EntityDefinitionQueryHelper::escape($root) . '.'
                     . EntityDefinitionQueryHelper::escape($field->getStorageName()) . ' as '
@@ -433,20 +430,22 @@ class EntityReader implements EntityReaderInterface
             $fieldCriteria,
             $referenceClass,
             $context,
-            $referenceClass->getEntityClass(),
-            new $collectionClass(),
+            EntityHydrator::createClass($collectionClass),
             $referenceClass->getFields()->getBasicFields()
         );
 
+        $grouped = [];
+        foreach ($data as $entity) {
+            $fk = $entity->get($propertyName);
+
+            $grouped[$fk][] = $entity;
+        }
+
         //assign loaded data to root entities
         foreach ($collection as $entity) {
-            /* @var Entity $entity */
-
-            //if association is inherited, the data is shared by different entities - we can not reduce the data array
-            if ($association->is(Inherited::class) && $context->considerInheritance()) {
-                $structData = $data->filterByProperty($propertyName, $entity->getUniqueIdentifier());
-            } else {
-                $structData = $data->filterAndReduceByProperty($propertyName, $entity->getUniqueIdentifier());
+            $structData = EntityHydrator::createClass($collectionClass);
+            if (isset($grouped[$entity->getUniqueIdentifier()])) {
+                $structData->fill($grouped[$entity->getUniqueIdentifier()]);
             }
 
             //assign data of child immediately
@@ -462,7 +461,10 @@ class EntityReader implements EntityReaderInterface
             }
 
             //if association can be inherited by the parent and the struct data is empty, filter again for the parent id
-            $structData = $data->filterByProperty($propertyName, $entity->get('parentId'));
+            $structData = EntityHydrator::createClass($collectionClass);
+            if (isset($grouped[$entity->get('parentId')])) {
+                $structData->fill($grouped[$entity->get('parentId')]);
+            }
 
             if ($association->is(Extension::class)) {
                 $entity->addExtension($association->getPropertyName(), $structData);
@@ -514,8 +516,7 @@ class EntityReader implements EntityReaderInterface
             $fieldCriteria,
             $referenceClass,
             $context,
-            $referenceClass->getEntityClass(),
-            new $collectionClass(),
+            EntityHydrator::createClass($collectionClass),
             $referenceClass->getFields()->getBasicFields()
         );
 
@@ -571,8 +572,7 @@ class EntityReader implements EntityReaderInterface
             $criteria,
             $referenceClass,
             $context,
-            $referenceClass->getEntityClass(),
-            new $collectionClass(),
+            EntityHydrator::createClass($collectionClass),
             $referenceClass->getFields()->getBasicFields()
         );
 
@@ -711,14 +711,13 @@ class EntityReader implements EntityReaderInterface
             $fieldCriteria,
             $referenceClass,
             $context,
-            $referenceClass->getEntityClass(),
-            new $collectionClass(),
+            EntityHydrator::createClass($collectionClass),
             $referenceClass->getFields()->getBasicFields()
         );
 
         /** @var Entity $struct */
         foreach ($collection as $struct) {
-            $structData = new $collectionClass([]);
+            $structData = EntityHydrator::createClass($collectionClass);
 
             $id = $struct->getUniqueIdentifier();
 
@@ -987,11 +986,12 @@ class EntityReader implements EntityReaderInterface
         $fields = $referenceDefinition->getFields()->getBasicFields();
         $fields = $this->addAssociationFieldsToCriteria($associationCriteria, $referenceDefinition, $fields);
 
-        /** @var EntityCollection $related */
         // This line removes duplicate entries, so after fetchAssociations the association must be reassigned
-        $related = new $collectionClass($related);
+        /** @var EntityCollection $relatedCollection */
+        $relatedCollection = EntityHydrator::createClass($collectionClass);
+        $relatedCollection->fill($related);
 
-        $this->fetchAssociations($associationCriteria, $referenceDefinition, $context, $related, $fields);
+        $this->fetchAssociations($associationCriteria, $referenceDefinition, $context, $relatedCollection, $fields);
 
         /** @var Entity $entity */
         foreach ($collection as $entity) {
@@ -1007,13 +1007,13 @@ class EntityReader implements EntityReaderInterface
             }
 
             if ($association->is(Extension::class)) {
-                $entity->addExtension($association->getPropertyName(), $related->get($item->getUniqueIdentifier()));
+                $entity->addExtension($association->getPropertyName(), $relatedCollection->get($item->getUniqueIdentifier()));
 
                 continue;
             }
 
             $entity->assign([
-                $association->getPropertyName() => $related->get($item->getUniqueIdentifier()),
+                $association->getPropertyName() => $relatedCollection->get($item->getUniqueIdentifier()),
             ]);
         }
     }

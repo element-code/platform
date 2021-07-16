@@ -6,32 +6,37 @@ const { Criteria } = Shopware.Data;
 Component.extend('sw-entity-listing', 'sw-data-grid', {
     template,
 
+    inject: ['feature'],
+
     props: {
         detailRoute: {
             type: String,
-            required: false
+            required: false,
+            default: null,
         },
 
         repository: {
             type: Object,
-            required: true
+            required: true,
         },
 
         items: {
             type: Array,
             required: false,
-            default: null
+            default: null,
         },
 
+        // FIXME: add default value to this property
+        // eslint-disable-next-line vue/require-default-prop
         dataSource: {
             type: [Array, Object],
-            required: false
+            required: false,
         },
 
         showSettings: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         steps: {
@@ -39,62 +44,82 @@ Component.extend('sw-entity-listing', 'sw-data-grid', {
             required: false,
             default() {
                 return [10, 25, 50, 75, 100];
-            }
+            },
         },
 
         fullPage: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         allowInlineEdit: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         allowColumnEdit: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         criteriaLimit: {
             type: Number,
             required: false,
-            default: 25
+            default: 25,
         },
 
         allowEdit: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         allowView: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         allowDelete: {
             type: Boolean,
             required: false,
-            default: true
+            default: true,
         },
 
         disableDataFetching: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         naturalSorting: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
+
+        allowBulkEdit: {
+            type: Boolean,
+            required: false,
+            default: false,
+        },
+
+        showBulkEditModal: {
+            type: Boolean,
+            required: false,
+            default: false,
+        },
+
+        bulkGridEditColumns: {
+            type: Array,
+            required: false,
+            default() {
+                return [];
+            },
+        },
     },
 
     data() {
@@ -105,7 +130,7 @@ Component.extend('sw-entity-listing', 'sw-data-grid', {
             page: 1,
             limit: this.criteriaLimit,
             total: 10,
-            lastSortedColumn: null
+            lastSortedColumn: null,
         };
     },
     computed: {
@@ -115,13 +140,13 @@ Component.extend('sw-entity-listing', 'sw-data-grid', {
             }
 
             return this.$tc('global.default.edit');
-        }
+        },
     },
 
     watch: {
         items() {
             this.applyResult(this.items);
-        }
+        },
     },
 
     methods: {
@@ -212,7 +237,7 @@ Component.extend('sw-entity-listing', 'sw-data-grid', {
 
             this.lastSortedColumn.dataIndex.split(',').forEach((field) => {
                 this.items.criteria.addSorting(
-                    Criteria.sort(field, direction, this.lastSortedColumn.naturalSorting)
+                    Criteria.sort(field, direction, this.lastSortedColumn.naturalSorting),
                 );
             });
 
@@ -256,6 +281,14 @@ Component.extend('sw-entity-listing', 'sw-data-grid', {
 
         closeModal() {
             this.deleteId = null;
-        }
-    }
+        },
+
+        onClickBulkEdit() {
+            this.$emit('bulk-edit-modal-open');
+        },
+
+        onCloseBulkEditModal() {
+            this.$emit('bulk-edit-modal-close');
+        },
+    },
 });

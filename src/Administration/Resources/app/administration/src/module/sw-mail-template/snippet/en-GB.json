@@ -64,8 +64,12 @@
         "placeholderTestMail": "shop@example.com",
         "buttonTestMail": "Send",
         "labelTestMail": "Recipient address",
-        "titleTestMail": "Send test email"
+        "titleTestMail": "Send test email",
+        "titleShowPreview": "Show preview",
+        "titleShowAvailableVariables": "Variables",
+        "copyTooltip": "Copy to clipboard."
       },
+      "previewModalTitle": "Preview",
       "buttonCancel": "Cancel",
       "buttonSave": "Save",
       "textHeadline": "New email template",
@@ -104,7 +108,7 @@
         "titleCard": "Information",
         "labelName": "Name",
         "labelDescription": "Description",
-        "labelSalesChannels": "Sales channels",
+        "labelSalesChannels": "Sales Channels",
         "placeholderName": "Enter a name...",
         "placeholderDescription": "Enter a description...",
         "placeholderSalesChannels": "Choose related Sales Channels..."

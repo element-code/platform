@@ -7,21 +7,21 @@ const { mapPropertyErrors, mapState, mapGetters } = Shopware.Component.getCompon
 Component.register('sw-product-seo-form', {
     template,
 
+    inject: [
+        'repositoryFactory',
+    ],
+
+    mixins: [
+        Mixin.getByName('placeholder'),
+    ],
+
     props: {
         allowEdit: {
             type: Boolean,
             required: false,
-            default: true
-        }
+            default: true,
+        },
     },
-
-    mixins: [
-        Mixin.getByName('placeholder')
-    ],
-
-    inject: [
-        'repositoryFactory'
-    ],
 
     data() {
         return {
@@ -30,67 +30,8 @@ Component.register('sw-product-seo-form', {
             canonicalProductSwitchEnabled: false,
             switchStateHasBeenSet: false,
             shouldKeepSelectValue: false,
-            selectValue: null
+            selectValue: null,
         };
-    },
-
-    watch: {
-        'product.canonicalProductId': {
-            handler(value) {
-                /* Return if value is undefined or the switch state has been set the very first time.
-                 * The reason to return is that using `immediate` on this watcher the very first value is always `undefined`.
-                 * So when the product actually has a `canonicalProductId` the switch will be initially off instead off on.
-                 */
-                if (value === undefined || this.switchStateHasBeenSet) {
-                    return;
-                }
-
-                this.canonicalProductSwitchEnabled = !!value;
-                this.switchStateHasBeenSet = true;
-            },
-            immediate: true
-        },
-
-        'product.id': {
-            // eslint-disable-next-line func-names
-            handler: function (value) {
-                if (!value) {
-                    return;
-                }
-
-                this.fetchVariants();
-            },
-            immediate: true
-        },
-
-        canonicalProductSwitchEnabled(isEnabled) {
-            if (!this.shouldKeepSelectValue) {
-                this.shouldKeepSelectValue = true;
-
-                return;
-            }
-
-            /* When the switch state is false it saves the variant id internally.
-             * And when the switch is enabled and the value is not null it sets back the variant id.
-             */
-            if (isEnabled) {
-                this.product.canonicalProductId = this.selectValue;
-                this.selectValue = null;
-
-                return;
-            }
-
-            this.selectValue = this.product.canonicalProductId;
-            this.product.canonicalProductId = null;
-        },
-
-        isLoading(isLoading) {
-            if (isLoading) {
-                return;
-            }
-
-            this.selectValue = this.product.canonicalProductId;
-        }
     },
 
     computed: {
@@ -112,7 +53,7 @@ Component.register('sw-product-seo-form', {
             criteria.addAssociation('options.group');
 
             criteria.addFilter(
-                Criteria.equals('parentId', this.product.id)
+                Criteria.equals('parentId', this.product.id),
             );
 
             if (this.searchTerm) {
@@ -143,31 +84,91 @@ Component.register('sw-product-seo-form', {
 
             variants.unshift({
                 id: null,
-                name: this.$tc('sw-product.seoForm.placeholderCanonicalProduct')
+                name: this.$tc('sw-product.seoForm.placeholderCanonicalProduct'),
             });
 
             return variants;
         },
 
         ...mapGetters('swProductDetail', [
-            'isLoading'
+            'isLoading',
         ]),
 
         ...mapState('swProductDetail', [
             'product',
-            'parentProduct'
+            'parentProduct',
         ]),
 
         ...mapPropertyErrors('product', [
             'keywords',
             'metaDescription',
-            'metaTitle'
-        ])
+            'metaTitle',
+        ]),
+    },
+
+
+    watch: {
+        'product.canonicalProductId': {
+            handler(value) {
+                /* Return if value is undefined or the switch state has been set the very first time.
+                 * The reason to return is that using `immediate` on this watcher the very first value is always `undefined`.
+                 * So when the product actually has a `canonicalProductId` the switch will be initially off instead off on.
+                 */
+                if (value === undefined || this.switchStateHasBeenSet) {
+                    return;
+                }
+
+                this.canonicalProductSwitchEnabled = !!value;
+                this.switchStateHasBeenSet = true;
+            },
+            immediate: true,
+        },
+
+        'product.id': {
+            // eslint-disable-next-line func-names
+            handler: function (value) {
+                if (!value) {
+                    return;
+                }
+
+                this.fetchVariants();
+            },
+            immediate: true,
+        },
+
+        canonicalProductSwitchEnabled(isEnabled) {
+            if (!this.shouldKeepSelectValue) {
+                this.shouldKeepSelectValue = true;
+
+                return;
+            }
+
+            /* When the switch state is false it saves the variant id internally.
+             * And when the switch is enabled and the value is not null it sets back the variant id.
+             */
+            if (isEnabled) {
+                this.product.canonicalProductId = this.selectValue;
+                this.selectValue = null;
+
+                return;
+            }
+
+            this.selectValue = this.product.canonicalProductId;
+            this.product.canonicalProductId = null;
+        },
+
+        isLoading(isLoading) {
+            if (isLoading) {
+                return;
+            }
+
+            this.selectValue = this.product.canonicalProductId;
+        },
     },
 
     methods: {
         fetchVariants() {
-            return this.productRepository.search(this.variantCriteria, Shopware.Context.api).then(variants => {
+            return this.productRepository.search(this.variantCriteria).then(variants => {
                 this.variants = variants;
 
                 return variants;
@@ -192,6 +193,6 @@ Component.register('sw-product-seo-form', {
                     this.$refs.canonicalProductSelect.resetActiveItem();
                 });
             });
-        }
-    }
+        },
+    },
 });

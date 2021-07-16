@@ -2,6 +2,7 @@
 
 namespace Shopware\Core\Framework\App\Api;
 
+use Shopware\Core\DevOps\Environment\EnvironmentHelper;
 use Shopware\Core\Framework\App\AppUrlChangeResolver\Resolver;
 use Shopware\Core\Framework\App\Exception\AppUrlChangeStrategyNotFoundException;
 use Shopware\Core\Framework\App\Exception\AppUrlChangeStrategyNotFoundHttpException;
@@ -85,11 +86,18 @@ class AppUrlChangeController extends AbstractController
         }
         $shopIdConfig = (array) $this->systemConfigService->get(ShopIdProvider::SHOP_ID_SYSTEM_CONFIG_KEY);
         $oldUrl = $shopIdConfig['app_url'];
+        $newUrl = EnvironmentHelper::getVariable('APP_URL');
+
+        if ($oldUrl === $newUrl) {
+            $this->systemConfigService->delete(ShopIdProvider::SHOP_DOMAIN_CHANGE_CONFIG_KEY);
+
+            return new Response(null, Response::HTTP_NO_CONTENT);
+        }
 
         return new JsonResponse(
             [
                 'oldUrl' => $oldUrl,
-                'newUrl' => $_SERVER['APP_URL'],
+                'newUrl' => $newUrl,
             ]
         );
     }

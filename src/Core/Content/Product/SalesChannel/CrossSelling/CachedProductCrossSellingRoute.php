@@ -31,6 +31,9 @@ class CachedProductCrossSellingRoute extends AbstractProductCrossSellingRoute
 
     private EntityCacheKeyGenerator $generator;
 
+    /**
+     * @var AbstractCacheTracer<ProductCrossSellingRouteResponse>
+     */
     private AbstractCacheTracer $tracer;
 
     private array $states;
@@ -39,6 +42,9 @@ class CachedProductCrossSellingRoute extends AbstractProductCrossSellingRoute
 
     private LoggerInterface $logger;
 
+    /**
+     * @param AbstractCacheTracer<ProductCrossSellingRouteResponse> $tracer
+     */
     public function __construct(
         AbstractProductCrossSellingRoute $decorated,
         TagAwareAdapterInterface $cache,
@@ -72,10 +78,17 @@ class CachedProductCrossSellingRoute extends AbstractProductCrossSellingRoute
      * @Entity("product")
      * @OA\Post(
      *      path="/product/{productId}/cross-selling",
-     *      summary="This route is used to load the cross sellings for a product. A product has several cross selling definitions in which several products are linked. The route returns the cross sellings together with the linked products",
+     *      summary="Fetch cross-selling groups of a product",
+     *      description="This route is used to load the cross sellings for a product. A product has several cross selling definitions in which several products are linked. The route returns the cross sellings together with the linked products",
      *      operationId="readProductCrossSellings",
      *      tags={"Store API","Product"},
-     *      @OA\Parameter(name="productId", description="Product ID", @OA\Schema(type="string"), in="path", required=true),
+     *      @OA\Parameter(
+     *          name="productId",
+     *          description="Product ID",
+     *          @OA\Schema(type="string"),
+     *          in="path",
+     *          required=true
+     *      ),
      *      @OA\Response(
      *          response="200",
      *          description="Found cross sellings",

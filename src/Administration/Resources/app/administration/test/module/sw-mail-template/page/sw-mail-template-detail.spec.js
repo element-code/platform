@@ -1,5 +1,6 @@
 import { shallowMount } from '@vue/test-utils';
 import 'src/module/sw-mail-template/page/sw-mail-template-detail';
+import 'src/app/component/base/sw-button';
 import EntityCollection from 'src/core/data/entity-collection.data';
 
 const mailTemplateMock = {
@@ -35,6 +36,10 @@ const mailTemplateMediaMock = {
     fileSize: 792866
 };
 
+const mailTemplateTypeMock = {
+    contentHtml: ''
+};
+
 const repositoryMockFactory = () => {
     return {
         search: () => Promise.resolve({}),
@@ -62,7 +67,9 @@ const createWrapper = (privileges = []) => {
             repositoryFactory: {
                 create: () => repositoryMockFactory()
             },
-            mailService: {},
+            mailService: {
+                testMailTemplate: jest.fn(() => Promise.resolve())
+            },
             entityMappingService: {
                 getEntityMapping: () => []
             },
@@ -96,7 +103,7 @@ const createWrapper = (privileges = []) => {
             'sw-container': {
                 template: '<div><slot></slot></div>'
             },
-            'sw-button': true,
+            'sw-button': Shopware.Component.build('sw-button'),
             'sw-button-process': true,
             'sw-language-info': true,
             'sw-entity-single-select': true,
@@ -107,6 +114,7 @@ const createWrapper = (privileges = []) => {
             'sw-code-editor': true,
             'sw-upload-listener': true,
             'sw-media-upload-v2': true,
+            'sw-tree': true,
             'sw-data-grid': {
                 props: ['dataSource'],
                 template: `
@@ -137,6 +145,7 @@ describe('modules/sw-mail-template/page/sw-mail-template-detail', () => {
 
     afterEach(() => {
         wrapper.destroy();
+        jest.clearAllMocks();
     });
 
     it('should be a Vue.js component', async () => {
@@ -269,7 +278,7 @@ describe('modules/sw-mail-template/page/sw-mail-template-detail', () => {
             { selector: wrapper.find('sw-text-field-stub'), attribute: 'disabled', expect: undefined },
             {
                 selector: wrapper.find('.sw-mail-template-detail__attachments-info-grid'),
-                attribute: 'showselection',
+                attribute: 'show-selection',
                 expect: 'true'
             }
         ].forEach(element => {
@@ -286,5 +295,100 @@ describe('modules/sw-mail-template/page/sw-mail-template-detail', () => {
             message: 'CTRL + S',
             appearance: 'light'
         });
+    });
+
+    it('should not be able to show preview if html content is empty', async () => {
+        wrapper = createWrapper();
+
+        wrapper.setData({ mailTemplate: mailTemplateTypeMock });
+
+        const sidebarItem = wrapper.find('[icon=default-eye-open]');
+
+        expect(sidebarItem.attributes().disabled).toBeTruthy();
+    });
+
+    it('should not be able to send test mails when values are missing', async () => {
+        wrapper = await createWrapper();
+
+        await wrapper.setData({
+            mailTemplate: {
+                ...mailTemplateTypeMock
+            },
+            testerMail: 'foo@bar.com',
+            isLoading: false
+        });
+
+        const sendTestMail = wrapper.find('.sw-mail-template-detail__send-test-mail');
+
+        expect(sendTestMail.props().disabled).toEqual(true);
+    });
+
+    it('should be able to send test mails when values are filled', async () => {
+        wrapper = await createWrapper();
+
+        await wrapper.setData({
+            mailTemplate: {
+                ...mailTemplateTypeMock,
+                subject: 'Your order with {{ salesChannel.name }} is partially paid',
+                contentPlain: 'the status of your order at {{ salesChannel.translated.name }}',
+                // eslint-disable-next-line max-len
+                contentHtml: '{{ order.orderCustomer.salutation.translated.letterName }} {{ order.orderCustomer.firstName }} {{ order.orderCustomer.lastName }},<br/><br/>',
+                senderName: '{{ salesChannel.name }}'
+            },
+            testerMail: 'foo@bar.com',
+            isLoading: false,
+            testMailSalesChannelId: '1a2b3c'
+        });
+
+        const sendTestMail = wrapper.find('.sw-mail-template-detail__send-test-mail');
+
+        expect(sendTestMail.props().disabled).toEqual(false);
+
+        await sendTestMail.trigger('click');
+
+        expect(wrapper.vm.mailService.testMailTemplate).toHaveBeenCalledWith(
+            'foo@bar.com',
+            wrapper.vm.mailTemplate,
+            null,
+            '1a2b3c'
+        );
+    });
+
+    it('should be able to send test mails when only inherited values are filled', async () => {
+        wrapper = await createWrapper();
+
+        await wrapper.setData({
+            mailTemplate: {
+                ...mailTemplateTypeMock,
+                subject: undefined,
+                contentPlain: undefined,
+                // eslint-disable-next-line max-len
+                contentHtml: undefined,
+                senderName: undefined,
+                translated: {
+                    subject: 'Your order with {{ salesChannel.name }} is partially paid',
+                    contentPlain: 'the status of your order at {{ salesChannel.translated.name }}',
+                    // eslint-disable-next-line max-len
+                    contentHtml: '{{ order.orderCustomer.salutation.translated.letterName }} {{ order.orderCustomer.firstName }} {{ order.orderCustomer.lastName }},<br/><br/>',
+                    senderName: '{{ salesChannel.name }}'
+                }
+            },
+            testerMail: 'foo@bar.com',
+            isLoading: false,
+            testMailSalesChannelId: '1a2b3c'
+        });
+
+        const sendTestMail = wrapper.find('.sw-mail-template-detail__send-test-mail');
+
+        expect(sendTestMail.props().disabled).toEqual(false);
+
+        await sendTestMail.trigger('click');
+
+        expect(wrapper.vm.mailService.testMailTemplate).toHaveBeenCalledWith(
+            'foo@bar.com',
+            wrapper.vm.mailTemplate,
+            null,
+            '1a2b3c'
+        );
     });
 });

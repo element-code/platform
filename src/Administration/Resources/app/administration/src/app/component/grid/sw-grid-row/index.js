@@ -13,19 +13,20 @@ Component.register('sw-grid-row', {
     props: {
         item: {
             type: Object,
-            required: true
+            required: true,
         },
 
         index: {
             type: Number,
-            required: false
+            required: false,
+            default: null,
         },
 
         allowInlineEdit: {
             type: Boolean,
             required: false,
-            default: true
-        }
+            default: true,
+        },
     },
 
     data() {
@@ -33,7 +34,7 @@ Component.register('sw-grid-row', {
             columns: [],
             isEditingActive: false,
             inlineEditingCls: 'is--inline-editing',
-            id: utils.createId()
+            id: utils.createId(),
         };
     },
 
@@ -45,7 +46,7 @@ Component.register('sw-grid-row', {
             }
 
             this.$refs.swGridRow.classList.remove(this.inlineEditingCls);
-        }
+        },
     },
 
     created() {
@@ -99,6 +100,6 @@ Component.register('sw-grid-row', {
         onInlineEditFinish() {
             this.isEditingActive = false;
             this.$emit('inline-edit-finish', this.item);
-        }
-    }
+        },
+    },
 });

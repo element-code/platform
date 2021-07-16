@@ -13,7 +13,7 @@ Component.register('sw-sales-channel-menu', {
     data() {
         return {
             salesChannels: [],
-            showModal: false
+            showModal: false,
         };
     },
 
@@ -49,12 +49,12 @@ Component.register('sw-sales-channel-menu', {
                     icon: salesChannel.type.iconName,
                     children: [],
                     domainLink: this.getDomainLink(salesChannel),
-                    active: salesChannel.active
+                    active: salesChannel.active,
                 });
             });
 
             return flatTree.convertToTree();
-        }
+        },
     },
 
     created() {
@@ -82,7 +82,7 @@ Component.register('sw-sales-channel-menu', {
         },
 
         loadEntityData() {
-            this.salesChannelRepository.search(this.salesChannelCriteria, Shopware.Context.api).then((response) => {
+            this.salesChannelRepository.search(this.salesChannelCriteria).then((response) => {
                 this.salesChannels = response;
             });
         },
@@ -115,6 +115,6 @@ Component.register('sw-sales-channel-menu', {
 
         openStorefrontLink(storeFrontLink) {
             window.open(storeFrontLink, '_blank');
-        }
-    }
+        },
+    },
 });

@@ -28,7 +28,6 @@ class Migration1603179023AddDefaultSettingConfigValueForProductListingPerPageTes
      */
     public function initialise(): void
     {
-        /* @var Connection $connection */
         $connection = $this->getContainer()->get(Connection::class);
 
         $this->removeConfig($connection);
@@ -59,7 +58,7 @@ class Migration1603179023AddDefaultSettingConfigValueForProductListingPerPageTes
         );
 
         $jsonValue = json_decode($value, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
+        if (json_last_error() === \JSON_ERROR_NONE) {
             return $jsonValue['_value'];
         }
 

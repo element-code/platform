@@ -8,7 +8,6 @@ use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ReferenceVersionField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\StorageAware;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\VersionField;
-use Shopware\Core\Framework\DataAbstractionLayer\FieldCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\EntitySearcherInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\IdSearchResult;
@@ -60,7 +59,7 @@ class EntitySearcher implements EntitySearcherInterface
             if (!$field instanceof StorageAware) {
                 continue;
             }
-            /* @var StorageAware $field */
+
             $query->addSelect(
                 EntityDefinitionQueryHelper::escape($table) . '.' . EntityDefinitionQueryHelper::escape($field->getStorageName())
             );
@@ -91,7 +90,7 @@ class EntitySearcher implements EntitySearcherInterface
         //execute and fetch ids
         $rows = $query->execute()->fetchAll();
 
-        $total = $this->getTotalCount($criteria, $rows);
+        $total = $this->getTotalCount($criteria, $query, $rows);
 
         if ($criteria->getTotalCountMode() === Criteria::TOTAL_COUNT_MODE_NEXT_PAGES) {
             $rows = \array_slice($rows, 0, $criteria->getLimit());
@@ -99,7 +98,6 @@ class EntitySearcher implements EntitySearcherInterface
 
         $converted = [];
 
-        /* @var FieldCollection $fields */
         foreach ($rows as $row) {
             $pk = [];
             $data = [];
@@ -137,28 +135,28 @@ class EntitySearcher implements EntitySearcherInterface
 
     private function addTotalCountMode(Criteria $criteria, QueryBuilder $query): void
     {
-        //requires total count for query? add save SQL_CALC_FOUND_ROWS
-        if ($criteria->getTotalCountMode() === Criteria::TOTAL_COUNT_MODE_NONE) {
-            return;
-        }
-        if ($criteria->getTotalCountMode() === Criteria::TOTAL_COUNT_MODE_NEXT_PAGES) {
-            $query->setMaxResults($criteria->getLimit() * 6 + 1);
-
+        if ($criteria->getTotalCountMode() !== Criteria::TOTAL_COUNT_MODE_NEXT_PAGES) {
             return;
         }
 
-        $selects = $query->getQueryPart('select');
-        $selects[0] = 'SQL_CALC_FOUND_ROWS ' . $selects[0];
-        $query->select($selects);
+        $query->setMaxResults($criteria->getLimit() * 6 + 1);
     }
 
-    private function getTotalCount(Criteria $criteria, array $data): int
+    private function getTotalCount(Criteria $criteria, QueryBuilder $query, array $data): int
     {
         if ($criteria->getTotalCountMode() !== Criteria::TOTAL_COUNT_MODE_EXACT) {
             return \count($data);
         }
 
-        return (int) $this->connection->fetchColumn('SELECT FOUND_ROWS()');
+        $query->setMaxResults(null);
+        $query->setFirstResult(null);
+
+        $total = new QueryBuilder($query->getConnection());
+        $total->select(['COUNT(*)'])
+            ->from(sprintf('(%s) total', $query->getSQL()))
+            ->setParameters($query->getParameters(), $query->getParameterTypes());
+
+        return (int) $total->execute()->fetchOne();
     }
 
     private function addGroupBy(EntityDefinition $definition, Criteria $criteria, Context $context, QueryBuilder $query, string $table): void

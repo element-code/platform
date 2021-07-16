@@ -2,17 +2,19 @@ import template from './sw-settings-listing.html.twig';
 import './sw-settings-listing.scss';
 
 const { Component } = Shopware;
-const { Criteria } = Shopware.Data;
+const { EntityCollection, Criteria } = Shopware.Data;
+const { isEmpty } = Shopware.Utils.types;
+const { cloneDeep } = Shopware.Utils.object;
 
 Component.register('sw-settings-listing', {
     template,
 
+    inject: ['repositoryFactory', 'systemConfigApiService', 'feature'],
+
     mixins: [
         'notification',
-        'sw-inline-snippet'
+        'sw-inline-snippet',
     ],
-
-    inject: ['repositoryFactory', 'systemConfigApiService', 'feature'],
 
     data() {
         return {
@@ -25,7 +27,17 @@ Component.register('sw-settings-listing', {
             toBeDeletedProductSortingOption: null,
             productSortingOptionsSearchTerm: null,
             isProductSortingOptionsCardLoading: false,
-            customFields: []
+            isDefaultSalesChannelLoading: false,
+            customFields: [],
+            displayVisibilityDetail: false,
+            configData: {
+                null: {
+                    'core.defaultSalesChannel.salesChannel': [],
+                    'core.defaultSalesChannel.active': true,
+                    'core.defaultSalesChannel.visibility': {},
+                },
+            },
+            visibilityConfig: [],
         };
     },
 
@@ -38,6 +50,19 @@ Component.register('sw-settings-listing', {
             return this.repositoryFactory.create('custom_field');
         },
 
+        salesChannelRepository() {
+            return this.repositoryFactory.create('sales_channel');
+        },
+
+        salesChannel: {
+            get() {
+                return this.configData?.null?.['core.defaultSalesChannel.salesChannel'];
+            },
+            set(salesChannel) {
+                this.configData.null['core.defaultSalesChannel.salesChannel'] = salesChannel;
+            },
+        },
+
         productSortingsOptionsCriteria() {
             const criteria = new Criteria();
 
@@ -46,11 +71,11 @@ Component.register('sw-settings-listing', {
                 .setPage(this.sortingOptionsGridPage);
 
             criteria.addSorting(
-                Criteria.sort('priority', 'DESC')
+                Criteria.sort('priority', 'DESC'),
             );
 
             criteria.addFilter(
-                Criteria.equals('locked', false)
+                Criteria.equals('locked', false),
             );
 
             return criteria;
@@ -60,7 +85,7 @@ Component.register('sw-settings-listing', {
             const criteria = new Criteria();
 
             criteria.addFilter(
-                Criteria.contains('label', this.productSortingOptionsSearchTerm)
+                Criteria.contains('label', this.productSortingOptionsSearchTerm),
             );
 
             return criteria;
@@ -79,20 +104,47 @@ Component.register('sw-settings-listing', {
                 {
                     property: 'label',
                     routerLink: 'sw.settings.listing.edit',
-                    label: this.$tc('sw-settings-listing.index.productSorting.grid.header.name')
+                    label: this.$tc('sw-settings-listing.index.productSorting.grid.header.name'),
                 },
                 {
                     property: 'criteria',
                     label: this.$tc('sw-settings-listing.index.productSorting.grid.header.criteria'),
-                    multiLine: true
+                    multiLine: true,
                 },
                 {
                     property: 'priority',
                     inlineEdit: 'number',
-                    label: this.$tc('sw-settings-listing.index.productSorting.grid.header.priority')
-                }
+                    label: this.$tc('sw-settings-listing.index.productSorting.grid.header.priority'),
+                },
             ];
-        }
+        },
+    },
+
+    watch: {
+        salesChannel: {
+            handler() {
+                if (!this.salesChannel.length) {
+                    this.visibilityConfig = [];
+                    return;
+                }
+
+                const salesChannelIds = this.salesChannel.map(el => el.id);
+                this.visibilityConfig = this.visibilityConfig.filter(el => salesChannelIds.includes(el.id));
+
+                const configData = new Map();
+                this.visibilityConfig.forEach(el => configData.set(el.id, { ...el }));
+
+                this.salesChannel.forEach(el => {
+                    configData.set(el, {
+                        id: el,
+                        visibility: this.configData.null?.['core.defaultSalesChannel.visibility'][el] || 30,
+                    });
+                });
+
+                this.visibilityConfig = [...configData.values()];
+            },
+            deep: true,
+        },
     },
 
     created() {
@@ -107,15 +159,16 @@ Component.register('sw-settings-listing', {
         createdComponent() {
             this.fetchProductSortingOptions();
             this.fetchCustomFields();
+
+            if (this.feature.isActive('FEATURE_NEXT_12437')) {
+                this.fetchSalesChannelsSystemConfig();
+            }
         },
 
         fetchProductSortingOptions() {
             this.isProductSortingOptionsCardLoading = true;
 
-            this.productSortingOptionRepository.search(
-                this.productSortingsOptionsCriteria,
-                Shopware.Context.api
-            ).then(response => {
+            this.productSortingOptionRepository.search(this.productSortingsOptionsCriteria).then(response => {
                 this.productSortingOptions = response;
 
                 this.isProductSortingOptionsCardLoading = false;
@@ -123,7 +176,7 @@ Component.register('sw-settings-listing', {
         },
 
         fetchCustomFields() {
-            this.customFieldRepository.search(this.customFieldCriteria, Shopware.Context.api).then(response => {
+            this.customFieldRepository.search(this.customFieldCriteria).then(response => {
                 this.customFields = response;
             });
         },
@@ -138,17 +191,19 @@ Component.register('sw-settings-listing', {
 
             const saveProductSortingOptions = await this.saveProductSortingOptions();
 
-            Promise.all([saveSalesChannelConfig, saveProductSortingOptions])
+            const saveSalesChannelVisibilityConfig = await this.saveSalesChannelVisibilityConfig();
+
+            Promise.all([saveSalesChannelConfig, saveProductSortingOptions, saveSalesChannelVisibilityConfig])
                 .then(() => {
                     this.isSaveSuccessful = true;
 
                     this.createNotificationSuccess({
-                        message: this.$tc('sw-settings-listing.general.messageSaveSuccess')
+                        message: this.$tc('sw-settings-listing.general.messageSaveSuccess'),
                     });
                 })
                 .catch(() => {
                     this.createNotificationError({
-                        message: this.$tc('sw-settings-listing.general.messageSaveError')
+                        message: this.$tc('sw-settings-listing.general.messageSaveError'),
                     });
                 })
                 .finally(() => {
@@ -157,17 +212,17 @@ Component.register('sw-settings-listing', {
         },
 
         saveProductSortingOptions() {
-            return this.productSortingOptionRepository.saveAll(this.productSortingOptions, Shopware.Context.api);
+            return this.productSortingOptionRepository.saveAll(this.productSortingOptions);
         },
 
         onDeleteProductSorting(item) {
             // closes modal
             this.toBeDeletedProductSortingOption = null;
 
-            this.productSortingOptionRepository.delete(item.id, Shopware.Context.api)
+            this.productSortingOptionRepository.delete(item.id)
                 .catch(() => {
                     this.createNotificationError({
-                        message: this.$tc('sw-settings-listing.index.productSorting.messageDeleteError')
+                        message: this.$tc('sw-settings-listing.index.productSorting.messageDeleteError'),
                     });
                 })
                 .finally(() => {
@@ -186,7 +241,7 @@ Component.register('sw-settings-listing', {
                 if ((this.sortingOptionsGridPage * this.sortingOptionsGridLimit) >= newTotal) {
                     this.onPageChange({
                         page: this.sortingOptionsGridPage - 1,
-                        limit: this.sortingOptionsGridLimit
+                        limit: this.sortingOptionsGridLimit,
                     });
                 }
             }
@@ -214,7 +269,7 @@ Component.register('sw-settings-listing', {
                 }
 
                 return this.$tc(
-                    `sw-settings-listing.general.productSortingCriteriaGrid.options.label.${currentField.field}`
+                    `sw-settings-listing.general.productSortingCriteriaGrid.options.label.${currentField.field}`,
                 );
             });
 
@@ -253,10 +308,7 @@ Component.register('sw-settings-listing', {
                 return;
             }
 
-            this.productSortingOptionRepository.search(
-                this.productSortingOptionsSearchCriteria,
-                Shopware.Context.api
-            ).then(response => {
+            this.productSortingOptionRepository.search(this.productSortingOptionsSearchCriteria).then(response => {
                 this.productSortingOptions = response;
             });
         },
@@ -321,6 +373,53 @@ Component.register('sw-settings-listing', {
             }
 
             return sortingKey === this.$refs.systemConfig.actualConfigData.null['core.listing.defaultSorting'];
-        }
-    }
+        },
+
+        fetchSalesChannelsSystemConfig() {
+            this.isDefaultSalesChannelLoading = true;
+
+            const salesChannelEntity = new EntityCollection(
+                this.salesChannelRepository.route,
+                this.salesChannelRepository.entityName,
+                Shopware.Context.api,
+            );
+
+            this.systemConfigApiService.getValues('core.defaultSalesChannel').then(configData => {
+                this.isDefaultSalesChannelLoading = false;
+
+                if (!isEmpty(configData)) {
+                    this.configData.null = configData;
+                    this.salesChannel.forEach(el => salesChannelEntity.add(el));
+                    this.salesChannel = salesChannelEntity;
+
+                    return;
+                }
+
+                this.salesChannel = salesChannelEntity;
+            });
+        },
+
+        displayAdvancedVisibility() {
+            this.displayVisibilityDetail = true;
+        },
+
+        closeAdvancedVisibility() {
+            this.displayVisibilityDetail = false;
+
+            this.visibilityConfig = cloneDeep(this.$refs.visibilityConfig.items);
+
+            this.configData.null['core.defaultSalesChannel.visibility'] = {};
+            this.visibilityConfig.forEach(el => {
+                this.configData.null['core.defaultSalesChannel.visibility'][el.id] = el.visibility;
+            });
+        },
+
+        updateSalesChannel(salesChannel) {
+            this.salesChannel = salesChannel;
+        },
+
+        saveSalesChannelVisibilityConfig() {
+            return this.systemConfigApiService.batchSave(this.configData);
+        },
+    },
 });

@@ -9,12 +9,6 @@ const { Component } = Shopware;
 Component.register('sw-field', {
     functional: true,
 
-    watch: {
-        type() {
-            this.$forceUpdate();
-        }
-    },
-
     render(createElement, context) {
         function getComponentName() {
             const components = {
@@ -29,7 +23,7 @@ Component.register('sw-field', {
                 select: 'sw-select-field',
                 switch: 'sw-switch-field',
                 textarea: 'sw-textarea-field',
-                url: 'sw-url-field'
+                url: 'sw-url-field',
             };
             return components[context.props.type] || 'sw-text-field';
         }
@@ -37,7 +31,7 @@ Component.register('sw-field', {
         return createElement(
             getComponentName(),
             context.data,
-            context.children
+            context.children,
         );
     },
 
@@ -60,7 +54,7 @@ Component.register('sw-field', {
                 'confirm',
                 'password',
                 'url',
-                'email'
+                'email',
             ],
             validator(value) {
                 return [
@@ -77,9 +71,15 @@ Component.register('sw-field', {
                     'confirm',
                     'password',
                     'url',
-                    'email'
+                    'email',
                 ].includes(value);
-            }
-        }
-    }
+            },
+        },
+    },
+
+    watch: {
+        type() {
+            this.$forceUpdate();
+        },
+    },
 });

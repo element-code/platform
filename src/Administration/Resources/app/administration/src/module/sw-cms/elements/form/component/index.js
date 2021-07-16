@@ -8,19 +8,19 @@ const { Component, Mixin } = Shopware;
 Component.register('sw-cms-el-form', {
     template,
 
+    mixins: [
+        Mixin.getByName('cms-element'),
+    ],
+
     components: {
         contact,
-        newsletter
+        newsletter,
     },
-
-    mixins: [
-        Mixin.getByName('cms-element')
-    ],
 
     computed: {
         selectedForm() {
             return this.element.config.type.value;
-        }
+        },
     },
 
     created() {
@@ -30,6 +30,6 @@ Component.register('sw-cms-el-form', {
     methods: {
         createdComponent() {
             this.initElementConfig('form');
-        }
-    }
+        },
+    },
 });

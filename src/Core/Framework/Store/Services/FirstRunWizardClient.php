@@ -3,10 +3,14 @@
 namespace Shopware\Core\Framework\Store\Services;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use League\Flysystem\FilesystemInterface;
+use Shopware\Core\Framework\Api\Context\AdminApiSource;
+use Shopware\Core\Framework\Api\Context\Exception\InvalidContextSourceException;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Plugin\PluginCollection;
 use Shopware\Core\Framework\Plugin\PluginEntity;
+use Shopware\Core\Framework\Store\Authentication\AbstractStoreRequestOptionsProvider;
 use Shopware\Core\Framework\Store\Event\FirstRunWizardFinishedEvent;
 use Shopware\Core\Framework\Store\Event\FirstRunWizardStartedEvent;
 use Shopware\Core\Framework\Store\Exception\LicenseDomainVerificationException;
@@ -30,42 +34,28 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  */
 final class FirstRunWizardClient
 {
-    private const SHOPWARE_TOKEN_HEADER = 'X-Shopware-Token';
-
     private const TRACKING_EVENT_FRW_STARTED = 'First Run Wizard started';
     private const TRACKING_EVENT_FRW_FINISHED = 'First Run Wizard finished';
 
+    private const SYSTEM_CONFIG_KEY_SHOPWARE_ID = 'core.store.shopwareId';
+
     private const FRW_MAX_FAILURES = 3;
 
-    /**
-     * @var Client
-     */
-    private $client;
+    private Client $client;
 
-    /**
-     * @var StoreService
-     */
-    private $storeService;
+    private StoreService $storeService;
 
-    /**
-     * @var SystemConfigService
-     */
-    private $configService;
+    private SystemConfigService $configService;
 
-    /**
-     * @var FilesystemInterface
-     */
-    private $filesystem;
+    private FilesystemInterface $filesystem;
 
-    /**
-     * @var bool
-     */
-    private $frwAutoRun;
+    private bool $frwAutoRun;
 
-    /**
-     * @var EventDispatcherInterface
-     */
-    private $eventDispatcher;
+    private EventDispatcherInterface $eventDispatcher;
+
+    private AbstractStoreRequestOptionsProvider $optionsProvider;
+
+    private InstanceService $instanceService;
 
     public function __construct(
         StoreService $storeService,
@@ -73,10 +63,14 @@ final class FirstRunWizardClient
         FilesystemInterface $filesystem,
         bool $frwAutoRun,
         EventDispatcherInterface $eventDispatcher,
-        Client $client
+        Client $client,
+        AbstractStoreRequestOptionsProvider $optionsProvider,
+        InstanceService $instanceService
     ) {
         $this->storeService = $storeService;
         $this->client = $client;
+        $this->optionsProvider = $optionsProvider;
+        $this->instanceService = $instanceService;
 
         $this->configService = $configService;
         $this->filesystem = $filesystem;
@@ -88,64 +82,67 @@ final class FirstRunWizardClient
 
     public function startFrw(Context $context): void
     {
-        $this->client->get('/ping');
-        $this->storeService->fireTrackingEvent(self::TRACKING_EVENT_FRW_STARTED);
+        $this->fireTrackingEvent(self::TRACKING_EVENT_FRW_STARTED);
 
         $this->eventDispatcher->dispatch(new FirstRunWizardStartedEvent($this->getFrwState(), $context));
     }
 
     /**
      * @throws StoreLicenseDomainMissingException
+     * @throws ClientException
      */
-    public function frwLogin(string $shopwareId, string $password, string $language, string $userId): AccessTokenStruct
+    public function frwLogin(string $shopwareId, string $password, string $language, Context $context): void
     {
+        if (!$context->getSource() instanceof AdminApiSource) {
+            throw new InvalidContextSourceException(AdminApiSource::class, \get_class($context->getSource()));
+        }
+
         $response = $this->client->post(
             '/swplatform/firstrunwizard/login',
             [
                 'json' => [
                     'shopwareId' => $shopwareId,
                     'password' => $password,
-                    'shopwareUserId' => $userId,
                 ],
-                'query' => $this->storeService->getDefaultQueryParameters($language, false),
+                'query' => $this->optionsProvider->getDefaultQueryParameters(null, $language),
             ]
         );
-        $data = json_decode($response->getBody()->getContents(), true);
 
-        $userToken = new ShopUserTokenStruct();
-        $userToken->assign($data['firstRunWizardUserToken']);
+        $this->configService->set(self::SYSTEM_CONFIG_KEY_SHOPWARE_ID, $shopwareId);
 
-        $accessTokenStruct = new AccessTokenStruct();
-        $accessTokenStruct->assign($data);
-        $accessTokenStruct->setShopUserToken($userToken);
+        $data = \json_decode($response->getBody()->getContents(), true);
 
-        return $accessTokenStruct;
+        $this->storeService->updateStoreToken(
+            $context,
+            $this->createAccessTokenStruct($data, $data['firstRunWizardUserToken'])
+        );
     }
 
-    public function upgradeAccessToken(string $storeToken, string $language): ?AccessTokenStruct
+    public function upgradeAccessToken(string $language, Context $context): void
     {
-        $headers = $this->client->getConfig('headers');
-        $headers[self::SHOPWARE_TOKEN_HEADER] = $storeToken;
+        if (!$context->getSource() instanceof AdminApiSource
+            || $context->getSource()->getUserId() === null) {
+            throw new \RuntimeException('First run wizard requires a logged in user');
+        }
 
-        $response = $this->client->get(
+        $response = $this->client->post(
             '/swplatform/login/upgrade',
             [
-                'query' => $this->storeService->getDefaultQueryParameters($language),
-                'headers' => $headers,
+                'query' => $this->optionsProvider->getDefaultQueryParameters(null, $language),
+                'headers' => $this->optionsProvider->getAuthenticationHeader($context),
+                'json' => [
+                    'shopwareUserId' => $context->getSource()->getUserId(),
+                ],
             ]
         );
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        $userToken = new ShopUserTokenStruct();
-        $userToken->assign($data['shopUserToken']);
+        $data = \json_decode($response->getBody()->getContents(), true);
 
         $this->configService->set('core.store.shopSecret', $data['shopSecret']);
 
-        $accessTokenStruct = new AccessTokenStruct();
-        $accessTokenStruct->assign($data);
-        $accessTokenStruct->setShopUserToken($userToken);
-
-        return $accessTokenStruct;
+        $this->storeService->updateStoreToken(
+            $context,
+            $this->createAccessTokenStruct($data, $data['shopUserToken'])
+        );
     }
 
     public function finishFrw(bool $failed, Context $context): void
@@ -153,31 +150,15 @@ final class FirstRunWizardClient
         $currentState = $this->getFrwState();
 
         if ($failed) {
-            $newState = FrwState::failedState();
+            $newState = FrwState::failedState(null, $currentState->getFailureCount() + 1);
         } else {
-            $this->storeService->fireTrackingEvent(self::TRACKING_EVENT_FRW_FINISHED);
+            $this->fireTrackingEvent(self::TRACKING_EVENT_FRW_FINISHED);
             $newState = FrwState::completedState();
         }
 
         $this->setFrwStatus($newState);
 
         $this->eventDispatcher->dispatch(new FirstRunWizardFinishedEvent($newState, $currentState, $context));
-    }
-
-    public function getFrwState(): FrwState
-    {
-        $completedAt = $this->configService->getString('core.frw.completedAt');
-        if ($completedAt !== '') {
-            return FrwState::completedState(new \DateTimeImmutable($completedAt));
-        }
-        $failedAt = $this->configService->getString('core.frw.failedAt');
-        if ($failedAt !== '') {
-            $failureCount = $this->configService->getInt('core.frw.failureCount');
-
-            return FrwState::failedState(new \DateTimeImmutable($failedAt), $failureCount);
-        }
-
-        return FrwState::openState();
     }
 
     public function frwShouldRun(): bool
@@ -200,43 +181,39 @@ final class FirstRunWizardClient
 
     /**
      * @throws StoreLicenseDomainMissingException
+     * @throws ClientException
      */
     public function getLanguagePlugins(string $language, PluginCollection $pluginCollection): array
     {
-        $response = $this->client->get(
-            '/swplatform/firstrunwizard/localizations',
-            ['query' => $this->storeService->getDefaultQueryParameters($language, false)]
+        return $this->mapPluginData(
+            $this->getPluginsFromStore('/swplatform/firstrunwizard/localizations', $language),
+            $pluginCollection
         );
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        return $this->mapPluginData($data, $pluginCollection);
     }
 
     /**
      * @throws StoreLicenseDomainMissingException
+     * @throws ClientException
      */
     public function getDemoDataPlugins(string $language, PluginCollection $pluginCollection): array
     {
-        $query = $this->storeService->getDefaultQueryParameters($language, false);
-        $response = $this->client->get(
-            '/swplatform/firstrunwizard/demodataplugins',
-            ['query' => $query]
+        return $this->mapPluginData(
+            $this->getPluginsFromStore('/swplatform/firstrunwizard/demodataplugins', $language),
+            $pluginCollection
         );
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        return $this->mapPluginData($data, $pluginCollection);
     }
 
     /**
      * @throws StoreLicenseDomainMissingException
+     * @throws ClientException
      */
     public function getRecommendationRegions(string $language): PluginRegionCollection
     {
         $response = $this->client->get(
             '/swplatform/firstrunwizard/categories',
-            ['query' => $this->storeService->getDefaultQueryParameters($language, false)]
+            ['query' => $this->optionsProvider->getDefaultQueryParameters(null, $language)]
         );
-        $data = json_decode($response->getBody()->getContents(), true);
+        $data = \json_decode($response->getBody()->getContents(), true);
 
         $regions = new PluginRegionCollection();
         foreach ($data as $region) {
@@ -258,7 +235,7 @@ final class FirstRunWizardClient
 
     public function getRecommendations(string $language, PluginCollection $pluginCollection, ?string $region, ?string $category): PluginRecommendationCollection
     {
-        $query = $this->storeService->getDefaultQueryParameters($language, false);
+        $query = $this->optionsProvider->getDefaultQueryParameters(null, $language);
         $query['region'] = $query['market'] = $region;
         $query['category'] = $category;
 
@@ -267,25 +244,22 @@ final class FirstRunWizardClient
             ['query' => $query]
         );
 
-        $data = json_decode($response->getBody()->getContents(), true);
+        $data = \json_decode($response->getBody()->getContents(), true);
 
         return new PluginRecommendationCollection($this->mapPluginData($data, $pluginCollection));
     }
 
-    public function getLicenseDomains(string $language, string $storeToken): LicenseDomainCollection
+    public function getLicenseDomains(string $language, Context $context): LicenseDomainCollection
     {
-        $headers = $this->client->getConfig('headers');
-        $headers[self::SHOPWARE_TOKEN_HEADER] = $storeToken;
-
         $response = $this->client->get(
             '/swplatform/firstrunwizard/shops',
             [
-                'query' => $this->storeService->getDefaultQueryParameters($language, false),
-                'headers' => $headers,
+                'query' => $this->optionsProvider->getDefaultQueryParameters(null, $language),
+                'headers' => $this->optionsProvider->getAuthenticationHeader($context),
             ]
         );
 
-        $data = json_decode($response->getBody()->getContents(), true);
+        $data = \json_decode($response->getBody()->getContents(), true);
 
         $currentLicenseDomain = $this->configService->getString(StoreService::CONFIG_KEY_STORE_LICENSE_DOMAIN);
         $currentLicenseDomain = $currentLicenseDomain ? idn_to_utf8($currentLicenseDomain) : null;
@@ -304,17 +278,17 @@ final class FirstRunWizardClient
         return new LicenseDomainCollection($domains);
     }
 
-    public function verifyLicenseDomain(string $domain, string $language, string $storeToken, bool $testEnvironment = false): LicenseDomainStruct
+    public function verifyLicenseDomain(string $domain, string $language, Context $context, bool $testEnvironment = false): LicenseDomainStruct
     {
-        $domains = $this->getLicenseDomains($language, $storeToken);
+        $domains = $this->getLicenseDomains($language, $context);
 
         $existing = $domains->get($domain);
         if (!$existing || !$existing->isVerified()) {
-            $secret = $this->fetchVerificationInfo($domain, $language, $storeToken);
+            $secret = $this->fetchVerificationInfo($domain, $language, $context);
             $this->storeVerificationSecret($domain, $secret);
-            $this->checkVerificationSecret($domain, $storeToken, $testEnvironment);
+            $this->checkVerificationSecret($domain, $context, $testEnvironment);
 
-            $domains = $this->getLicenseDomains($language, $storeToken);
+            $domains = $this->getLicenseDomains($language, $context);
             $existing = $domains->get($domain);
         }
 
@@ -327,6 +301,28 @@ final class FirstRunWizardClient
         $this->configService->set(StoreService::CONFIG_KEY_STORE_LICENSE_EDITION, $existing->getEdition());
 
         return $existing;
+    }
+
+    private function createAccessTokenStruct(array $accessTokenData, array $userTokenData): AccessTokenStruct
+    {
+        $userToken = new ShopUserTokenStruct();
+        $userToken->assign($userTokenData);
+
+        $accessTokenStruct = new AccessTokenStruct();
+        $accessTokenStruct->assign($accessTokenData);
+        $accessTokenStruct->setShopUserToken($userToken);
+
+        return $accessTokenStruct;
+    }
+
+    private function getPluginsFromStore(string $endpoint, string $language): array
+    {
+        $response = $this->client->get(
+            $endpoint,
+            ['query' => $this->optionsProvider->getDefaultQueryParameters(null, $language)]
+        );
+
+        return \json_decode($response->getBody()->getContents(), true);
     }
 
     private function setFrwStatus(FrwState $newState): void
@@ -348,38 +344,32 @@ final class FirstRunWizardClient
         $this->configService->set('core.frw.failureCount', $failureCount);
     }
 
-    private function checkVerificationSecret(string $domain, string $storeToken, bool $testEnvironment): void
+    private function checkVerificationSecret(string $domain, Context $context, bool $testEnvironment): void
     {
-        $headers = $this->client->getConfig('headers');
-        $headers[self::SHOPWARE_TOKEN_HEADER] = $storeToken;
-
         $this->client->post(
             '/swplatform/firstrunwizard/shops',
             [
                 'json' => [
                     'domain' => $domain,
-                    'shopwareVersion' => $this->storeService->getShopwareVersion(),
+                    'shopwareVersion' => $this->instanceService->getShopwareVersion(),
                     'testEnvironment' => $testEnvironment,
                 ],
-                'headers' => $headers,
+                'headers' => $this->optionsProvider->getAuthenticationHeader($context),
             ]
         );
     }
 
-    private function fetchVerificationInfo(string $domain, string $language, string $storeToken): DomainVerificationRequestStruct
+    private function fetchVerificationInfo(string $domain, string $language, Context $context): DomainVerificationRequestStruct
     {
-        $headers = $this->client->getConfig('headers');
-        $headers[self::SHOPWARE_TOKEN_HEADER] = $storeToken;
-
         $response = $this->client->post(
             '/swplatform/firstrunwizard/shopdomainverificationhash',
             [
                 'json' => ['domain' => $domain],
-                'query' => $this->storeService->getDefaultQueryParameters($language, false),
-                'headers' => $headers,
+                'query' => $this->optionsProvider->getDefaultQueryParameters(null, $language),
+                'headers' => $this->optionsProvider->getAuthenticationHeader($context),
             ]
         );
-        $data = json_decode($response->getBody()->getContents(), true);
+        $data = \json_decode($response->getBody()->getContents(), true);
 
         return new DomainVerificationRequestStruct($data['content'], $data['fileName']);
     }
@@ -424,6 +414,46 @@ final class FirstRunWizardClient
             $this->filesystem->put($validationRequest->getFileName(), $validationRequest->getContent());
         } catch (\Exception $e) {
             throw new LicenseDomainVerificationException($domain);
+        }
+    }
+
+    private function getFrwState(): FrwState
+    {
+        $completedAt = $this->configService->getString('core.frw.completedAt');
+        if ($completedAt !== '') {
+            return FrwState::completedState(new \DateTimeImmutable($completedAt));
+        }
+        $failedAt = $this->configService->getString('core.frw.failedAt');
+        if ($failedAt !== '') {
+            $failureCount = $this->configService->getInt('core.frw.failureCount');
+
+            return FrwState::failedState(new \DateTimeImmutable($failedAt), $failureCount);
+        }
+
+        return FrwState::openState();
+    }
+
+    private function fireTrackingEvent(string $eventName): void
+    {
+        if (!$this->instanceService->getInstanceId()) {
+            return;
+        }
+
+        try {
+            $this->client->post(
+                '/swplatform/tracking/events',
+                [
+                    'json' => [
+                        'additionalData' => [
+                            'shopwareVersion' => $this->instanceService->getShopwareVersion(),
+                        ],
+                        'instanceId' => $this->instanceService->getInstanceId(),
+                        'event' => $eventName,
+                    ],
+                ]
+            );
+        } catch (\Throwable $e) {
+            // ignore exceptions
         }
     }
 }

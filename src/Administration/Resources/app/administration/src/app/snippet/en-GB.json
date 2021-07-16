@@ -15,6 +15,7 @@
       "apply": "Apply",
       "cancel": "Cancel",
       "delete": "Delete",
+      "remove": "Remove",
       "edit": "Edit",
       "duplicate": "Duplicate",
       "error": "Error",
@@ -29,6 +30,7 @@
       "ascending": "Ascending",
       "descending": "Descending",
       "xTimesIn": "{n} times in",
+      "open": "Open",
       "close": "Close",
       "from": "From",
       "to": "To"
@@ -179,6 +181,10 @@
     },
     "sw-text-editor": {
       "labelTextLength": "{count} character | {count} characters"
+    },
+    "sw-code-editor": {
+      "sanitizeInfo": "Potentially harmful code will be sanitised and removed from the editor automatically.",
+      "sanitizedHint": "Some of your inputs have been sanitised. Please double check your content."
     },
     "sw-tag-field": {
       "title": "Tags",
@@ -389,6 +395,7 @@
     },
     "sw-media-upload-v2": {
       "buttonFileUpload": "Upload file",
+      "buttonFilesUpload": "Upload files",
       "buttonUrlUpload": "Upload file from URL",
       "buttonSwitchToFileUpload": "Upload file from your computer",
       "buttonSwitchToUrlUpload": "Upload file from url",
@@ -475,23 +482,16 @@
     },
     "sw-multi-tag-ip-select": {
       "enterValidIp": "Please enter a valid IPv4 or IPv6 address",
-      "addIpAdress": "Add IP address",
+      "addIpAddress": "Add IP address",
       "knownIps": {
         "you": "You"
       }
-    },
-    "sw-multi-ip-select": {
-      "enterValidIp": "Please enter a valid IPv4 or IPv6 address",
-      "addIpAdress": "Add IP address"
     },
     "sw-entity-multi-select": {
       "messageNoResults": "No results found for \"{term}\"."
     },
     "sw-entity-many-to-many-select": {
       "messageNoResults": "No results found for \"{term}\"."
-    },
-    "sw-label": {
-      "buttonDismiss": "Dismiss"
     },
     "sw-search-bar": {
       "messageNoResults": "No results found for \"{term}\".",
@@ -525,7 +525,8 @@
         "isOneOf": "Is one of",
         "isNoneOf": "Is none of",
         "gross": "Gross",
-        "net": "Net"
+        "net": "Net",
+        "empty": "Is empty"
       },
       "placeholderErrorMessage": "Placeholder cannot be saved.",
       "dataErrorMessage": "Required fields not filled.",
@@ -552,9 +553,10 @@
         "shippingCountryRule": "Shipping country",
         "shippingStreetRule": "Shipping street",
         "shippingZipCodeRule": "Shipping postal code",
+        "customerLoggedInRule": "Customer logged in",
         "cartAmountRule": "Cart amount",
-        "goodsCountRule": "Goods count",
-        "goodsPriceRule": "Goods price",
+        "goodsCountRule": "Distinct products in cart",
+        "goodsPriceRule": "Total product price in cart",
         "lineItemOfTypeRule": {
           "label": "Line item of type",
           "product": "Product",
@@ -593,7 +595,7 @@
         "alwaysValidRule": "Always valid",
         "lineItemPropertyRule": "Line item property",
         "lineItemNoveltyRule": "Novelties",
-        "lineItemCustomFieldRule": "Line item with attribute",
+        "lineItemCustomFieldRule": "Line item with custom field",
         "lineItemIsNewRule": "Line item is new",
         "lineItemOfManufacturerRule": "Manufacturer",
         "lineItemPurchasePriceRule": "Line item purchase price",
@@ -610,6 +612,8 @@
         "lineItemListPriceRule": "Line item list price",
         "paymentMethodRule": "Payment method",
         "shippingMethodRule": "Shipping method",
+        "lineItemGoodsTotalRule": "Total number of products in cart",
+        "orderTotalAmountRule": "Total value of completed orders",
         "lineItemCustomField": {
           "field": {
             "fieldSetSelect": {
@@ -696,7 +700,9 @@
       "delivery_time": "Delivery time | Delivery times",
       "import_export_profile": "Import/Export Profile | Import/Export Profiles",
       "feature_set": "Template | Templates",
-      "event_action": "Business events"
+      "event_action": "Business events",
+      "property_group": "Property group | Property groups",
+      "document_base_config": "Document base config | Document base configs"
     },
     "day-of-week": {
       "monday": "Monday",
@@ -778,6 +784,11 @@
       "Standard rate": "Standard rate",
       "Reduced rate": "Reduced rate",
       "Reduced rate 2": "Super-reduced rate"
+    },
+    "sw-bulk-edit-modal": {
+      "bulkEdit": "Bulk edit",
+      "startBulkEdit": "Start bulk edit",
+      "bulkEditModalTitle": "Bulk edit - {count} item selected | Bulk edit - {count} items selected"
     }
   },
   "sw-text-editor-toolbar": {
@@ -885,9 +896,9 @@
     "infoTextInheritedField": "{moduleName} has inherited fields. Meaning that as long as the inherited state is active the content will be inherited. Inherited fields can be unlinked by clicking the link symbol. Clicking the symbol again will set the inherited state back."
   },
   "sw-license-violation": {
-    "title": "Extension warning(s)",
+    "title": "Extension warning",
     "reload": "Reload",
-    "alertText": "We have detected a license violation for at least one of your extensions in this installation. To fix the license violation and avoid legal consequences, book a extension subscription or buy/rent the extension (according to inflicted violation type). You do not use the extension anymore? Then delete it via the My Extensions. If none of these measures are taken, shopware AG reserves itself the right to charge penalty fees for any license violation.",
+    "alertText": "We have detected a license violation for at least one of your extensions in this installation. To fix the license violation and avoid legal consequences, book a subscription or buy/rent the extension (according to inflicted violation type). You do not use the extension anymore? Then delete it via the \"Delete extension permanently\" button or via My Extensions. If none of these measures are taken, shopware AG reserves the right to charge penalty fees for any license violation.",
     "deletePlugin": "Delete extension permanently",
     "messageDeleteConfirm": "Do you want to delete the extension \"{pluginName}\" completely?",
     "checkboxMessage": "I have taken notice of this message and eventually accruing consequences.",
@@ -1050,7 +1061,11 @@
   "sw-app": {
     "component": {
       "sw-app-actions": {
-        "messageErrorFetchButtons": "An error occurred while fetching your app actions."
+        "messageErrorFetchButtons": "An error occurred while fetching your app actions.",
+        "closeWindow": "Close window",
+        "iframeModalConfirmMessage": "Are you sure you want to close \"{title}\"?",
+        "iframeModalConfirmMessageDescription": "Please make sure that all processes are completed.",
+        "dontAskMeAgain": "Don't ask me again"
       },
       "sw-app-app-url-changed-modal": {
         "move-shop-permanently": {
@@ -1059,7 +1074,7 @@
         },
         "reinstall-apps": {
           "name": "Copy apps to current domain",
-          "description": "If you want to keep your apps working on both domains, this reinstalls all apps on your new domain. Note: App data on your old domain will still be available, non-free apps may require additional charges for each domain."
+          "description": "If you want to keep your apps working on both domains, this re-installs all apps on your new domain. Note: App data on your old domain will still be available, non-free apps may require additional charges for each domain."
         },
         "uninstall-apps": {
           "name": "Uninstall apps",

@@ -10,6 +10,7 @@ use Shopware\Core\Content\ProductStream\ProductStreamEntity;
 use Shopware\Core\Content\Seo\MainCategory\MainCategoryCollection;
 use Shopware\Core\Content\Seo\SeoUrl\SeoUrlCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityCustomFieldsTrait;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityIdTrait;
 use Shopware\Core\System\SalesChannel\SalesChannelCollection;
 use Shopware\Core\System\Tag\TagCollection;
@@ -17,6 +18,7 @@ use Shopware\Core\System\Tag\TagCollection;
 class CategoryEntity extends Entity
 {
     use EntityIdTrait;
+    use EntityCustomFieldsTrait;
 
     /**
      * @var string|null
@@ -64,6 +66,11 @@ class CategoryEntity extends Entity
     protected $childCount;
 
     /**
+     * @var int
+     */
+    protected $visibleChildCount = 0;
+
+    /**
      * @var bool
      */
     protected $displayNestedProducts;
@@ -102,11 +109,6 @@ class CategoryEntity extends Entity
      * @var string|null
      */
     protected $afterCategoryId;
-
-    /**
-     * @var array|null
-     */
-    protected $customFields;
 
     /**
      * @var TagCollection|null
@@ -288,6 +290,16 @@ class CategoryEntity extends Entity
         $this->childCount = $childCount;
     }
 
+    public function getVisibleChildCount(): int
+    {
+        return $this->visibleChildCount;
+    }
+
+    public function setVisibleChildCount(int $visibleChildCount): void
+    {
+        $this->visibleChildCount = $visibleChildCount;
+    }
+
     public function getParent(): ?CategoryEntity
     {
         return $this->parent;
@@ -376,16 +388,6 @@ class CategoryEntity extends Entity
     public function setAfterCategoryId(string $afterCategoryId): void
     {
         $this->afterCategoryId = $afterCategoryId;
-    }
-
-    public function getCustomFields(): ?array
-    {
-        return $this->customFields;
-    }
-
-    public function setCustomFields(?array $customFields): void
-    {
-        $this->customFields = $customFields;
     }
 
     public function getTags(): ?TagCollection

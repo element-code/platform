@@ -13,6 +13,7 @@ describe('Number Range: Test acl privileges', () => {
             });
     });
 
+    // TODO: Unskip with NEXT-15489
     it.skip('@settings: read number range with ACL, but without rights', () => {
         cy.loginAsUserWithPermissions([]).then(() => {
             cy.visit(`${Cypress.env('admin')}#/sw/settings/number/range/index`);
@@ -24,6 +25,7 @@ describe('Number Range: Test acl privileges', () => {
         cy.location('hash').should('eq', '#/sw/privilege/error/index');
     });
 
+    // TODO: Unskip with NEXT-15489
     it.skip('@settings: read number range with ACL', () => {
         cy.loginAsUserWithPermissions([
             {
@@ -84,13 +86,15 @@ describe('Number Range: Test acl privileges', () => {
 
         cy.get('input[name=sw-field--numberRange-name]').type('Name e2e');
         cy.get('input[name=sw-field--numberRange-description]').type('description e2e');
-        cy.wait('@searchNumberRangeType').then(({ response }) => {
-            const { attributes } = response.body.data[0];
-            cy.get('#numberRangeTypes')
-                .typeSingleSelectAndCheck(
-                    attributes.typeName,
-                    '#numberRangeTypes'
-                );
+
+        cy.get('#numberRangeTypes')
+            .typeSingleSelectAndCheck(
+                'Cancellation',
+                '#numberRangeTypes'
+            );
+
+        cy.wait('@searchNumberRangeType').then((xhr) => {
+            expect(xhr).to.have.property('status', 200);
         });
         cy.wait('@searchSalesChannel').then(({ response }) => {
             const { attributes } = response.body.data[0];
@@ -112,6 +116,7 @@ describe('Number Range: Test acl privileges', () => {
             .contains('Name e2e');
     });
 
+    // TODO: Unskip with NEXT-15489
     it.skip('@settings: can edit number range with ACL', () => {
         cy.loginAsUserWithPermissions([
             {
@@ -162,6 +167,7 @@ describe('Number Range: Test acl privileges', () => {
             .contains('Cancellations update');
     });
 
+    // TODO: Unskip with NEXT-15489
     it.skip('@settings: can delete number range with ACL', () => {
         cy.loginAsUserWithPermissions([
             {

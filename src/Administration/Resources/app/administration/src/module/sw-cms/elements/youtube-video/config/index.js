@@ -6,16 +6,16 @@ const { Component, Mixin } = Shopware;
 Component.register('sw-cms-el-config-youtube-video', {
     template,
 
-    mixins: [
-        Mixin.getByName('cms-element')
-    ],
-
     inject: ['repositoryFactory'],
+
+    mixins: [
+        Mixin.getByName('cms-element'),
+    ],
 
     data() {
         return {
             mediaModalIsOpen: false,
-            initialFolderId: null
+            initialFolderId: null,
         };
     },
 
@@ -35,7 +35,7 @@ Component.register('sw-cms-el-config-youtube-video', {
 
             set(link) {
                 this.element.config.videoID.value = this.shortenLink(link);
-            }
+            },
         },
 
         mediaRepository() {
@@ -52,7 +52,7 @@ Component.register('sw-cms-el-config-youtube-video', {
             }
 
             return this.element.config.previewMedia.value;
-        }
+        },
     },
 
     created() {
@@ -166,7 +166,7 @@ Component.register('sw-cms-el-config-youtube-video', {
         },
 
         async onImageUpload({ targetId }) {
-            const mediaEntity = await this.mediaRepository.get(targetId, Shopware.Context.api);
+            const mediaEntity = await this.mediaRepository.get(targetId);
 
             this.element.config.previewMedia.value = mediaEntity.id;
 
@@ -203,6 +203,6 @@ Component.register('sw-cms-el-config-youtube-video', {
 
         onOpenMediaModal() {
             this.mediaModalIsOpen = true;
-        }
-    }
+        },
+    },
 });

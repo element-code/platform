@@ -1,6 +1,20 @@
 framework:
     test: true
     session:
-        storage_id: session.storage.mock_file
+        storage_factory_id: session.storage.factory.mock_file
     profiler:
         collect: false
+    cache:
+        app: cache.adapter.array
+        system: cache.adapter.array
+        pools:
+            serializer:
+                adapter: cache.adapter.array
+            annotations:
+                adapter: cache.adapter.array
+            property_info:
+                adapter: cache.adapter.array
+            messenger:
+                adapter: cache.adapter.array
+            property_access:
+                adapter: cache.adapter.array

@@ -19,7 +19,7 @@ Component.register('sw-promotion-detail', {
     mixins: [
         Mixin.getByName('notification'),
         Mixin.getByName('placeholder'),
-        Mixin.getByName('discard-detail-page-changes')('promotion')
+        Mixin.getByName('discard-detail-page-changes')('promotion'),
     ],
 
     shortcuts: {
@@ -27,29 +27,29 @@ Component.register('sw-promotion-detail', {
             active() {
                 return this.acl.can('promotion.editor');
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     props: {
         promotionId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     data() {
         return {
             isSaveSuccessful: false,
-            saveCallbacks: []
+            saveCallbacks: [],
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -75,7 +75,7 @@ Component.register('sw-promotion-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.acl.can('category.editor'),
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -83,13 +83,13 @@ Component.register('sw-promotion-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
@@ -99,7 +99,7 @@ Component.register('sw-promotion-detail', {
             },
             set(promotion) {
                 Shopware.State.commit('swPromotionDetail/setPromotion', promotion);
-            }
+            },
         },
 
         isLoading: {
@@ -108,7 +108,7 @@ Component.register('sw-promotion-detail', {
             },
             set(isLoading) {
                 Shopware.State.commit('swPromotionDetail/setIsLoading', isLoading);
-            }
+            },
         },
 
         discounts() {
@@ -127,8 +127,14 @@ Component.register('sw-promotion-detail', {
             return Shopware.State.get('swPromotionDetail').setGroupIdsDelete;
         },
 
-        ...mapPageErrors(errorConfig)
+        ...mapPageErrors(errorConfig),
 
+    },
+
+    watch: {
+        promotionId() {
+            this.createdComponent();
+        },
     },
 
     beforeCreate() {
@@ -143,12 +149,6 @@ Component.register('sw-promotion-detail', {
         Shopware.State.unregisterModule('swPromotionDetail');
     },
 
-    watch: {
-        promotionId() {
-            this.createdComponent();
-        }
-    },
-
     methods: {
         createdComponent() {
             this.isLoading = true;
@@ -157,7 +157,7 @@ Component.register('sw-promotion-detail', {
                 Shopware.State.commit('context/resetLanguageToDefault');
                 Shopware.State.commit('shopwareApps/setSelectedIds', []);
 
-                this.promotion = this.promotionRepository.create(Shopware.Context.api);
+                this.promotion = this.promotionRepository.create();
                 // hydrate and extend promotion with additional data
                 entityHydrator.hydrate(this.promotion);
                 this.isLoading = false;
@@ -192,7 +192,7 @@ Component.register('sw-promotion-detail', {
             if (this.discounts !== null) {
                 const discountRepository = this.repositoryFactory.create(
                     this.discounts.entity,
-                    this.discounts.source
+                    this.discounts.source,
                 );
 
                 return this.discounts.some((discount) => {
@@ -251,7 +251,7 @@ Component.register('sw-promotion-detail', {
                     const generator = new IndividualCodeGenerator(
                         this.promotion.id,
                         this.repositoryIndividualCodes,
-                        Shopware.Context.api
+                        Shopware.Context.api,
                     );
 
                     await generator.removeExistingCodes();
@@ -264,8 +264,8 @@ Component.register('sw-promotion-detail', {
                 this.isLoading = false;
                 this.createNotificationError({
                     message: this.$tc(
-                        'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid'
-                    )
+                        'global.notification.notificationSaveErrorMessageRequiredFieldsInvalid',
+                    ),
                 });
                 throw error;
             }
@@ -273,14 +273,14 @@ Component.register('sw-promotion-detail', {
             const discounts = this.discounts;
             const discountRepository = this.repositoryFactory.create(
                 discounts.entity,
-                discounts.source
+                discounts.source,
             );
 
             return this.savePromotionAssociations().then(() => {
                 // first save our discounts
                 return discountRepository.sync(discounts, discounts.context).then(() => {
                     // finally save our promotion
-                    return this.promotionRepository.save(this.promotion, Shopware.Context.api)
+                    return this.promotionRepository.save(this.promotion)
                         .then(() => {
                             this.isSaveSuccessful = true;
                             const criteria = new Criteria(1, 1);
@@ -288,7 +288,7 @@ Component.register('sw-promotion-detail', {
 
                             return this.promotionRepository.get(
                                 this.promotion.id,
-                                Shopware.Context.api, criteria
+                                Shopware.Context.api, criteria,
                             ).then((promotion) => {
                                 this.promotion = promotion;
                                 // hydrate and extend promotion with additional data
@@ -302,8 +302,8 @@ Component.register('sw-promotion-detail', {
                                 message: this.$tc(
                                     'global.notification.unspecifiedSaveErrorMessage',
                                     0,
-                                    { entityName: this.promotion.name }
-                                )
+                                    { entityName: this.promotion.name },
+                                ),
                             });
                             throw error;
                         });
@@ -316,7 +316,7 @@ Component.register('sw-promotion-detail', {
         async savePromotionAssociations() {
             const customerPersonaRepository = this.repositoryFactory.create(
                 this.promotion.personaCustomers.entity,
-                this.promotion.personaCustomers.source
+                this.promotion.personaCustomers.source,
             );
 
             if (this.personaCustomerIdsDelete !== null) {
@@ -334,7 +334,7 @@ Component.register('sw-promotion-detail', {
             // remove deleted groups. UPSERT will be done automatically
             if (this.setGroupIdsDelete !== null) {
                 await this.setGroupIdsDelete.forEach((groupId) => {
-                    this.promotionGroupRepository.delete(groupId, Shopware.Context.api);
+                    this.promotionGroupRepository.delete(groupId);
                 });
             }
 
@@ -346,6 +346,6 @@ Component.register('sw-promotion-detail', {
 
         onCancel() {
             this.$router.push({ name: 'sw.promotion.index' });
-        }
-    }
+        },
+    },
 });

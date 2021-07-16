@@ -6,12 +6,14 @@ use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\FetchMode;
+use Shopware\Core\DevOps\Environment\EnvironmentHelper;
 use Shopware\Core\Framework\Api\Controller\FallbackController;
 use Shopware\Core\Framework\Migration\MigrationStep;
 use Shopware\Core\Framework\Plugin\KernelPluginLoader\KernelPluginLoader;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\HttpKernel\Bundle\BundleInterface;
 use Symfony\Component\HttpKernel\Kernel as HttpKernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 use Symfony\Component\Routing\Route;
@@ -19,6 +21,13 @@ use Symfony\Component\Routing\Route;
 class Kernel extends HttpKernel
 {
     use MicroKernelTrait;
+
+    /**
+     * @internal
+     *
+     * @deprecated tag:v6.5.0 The connection requirements should be fixed
+     */
+    public const PLACEHOLDER_DATABASE_URL = 'mysql://_placeholder.test';
 
     public const CONFIG_EXTS = '.{php,xml,yaml,yml}';
 
@@ -38,7 +47,7 @@ class Kernel extends HttpKernel
     protected static $connection;
 
     /**
-     * @var KernelPluginLoader|null
+     * @var KernelPluginLoader
      */
     protected $pluginLoader;
 
@@ -57,15 +66,9 @@ class Kernel extends HttpKernel
      */
     protected $projectDir;
 
-    /**
-     * @var bool
-     */
-    private $rebooting = false;
+    private bool $rebooting = false;
 
-    /**
-     * @var string
-     */
-    private $cacheId;
+    private string $cacheId;
 
     /**
      * {@inheritdoc}
@@ -91,7 +94,12 @@ class Kernel extends HttpKernel
         $this->projectDir = $projectDir;
     }
 
-    public function registerBundles()
+    /**
+     * @return \Generator<BundleInterface>
+     *
+     * @deprecated tag:v6.5.0 The return type will be native
+     */
+    public function registerBundles()/*: \Generator*/
     {
         /** @var array $bundles */
         $bundles = require $this->getProjectDir() . '/config/bundles.php';
@@ -110,10 +118,29 @@ class Kernel extends HttpKernel
         yield from $this->pluginLoader->getBundles($this->getKernelParameters(), $instanciatedBundleNames);
     }
 
-    public function getProjectDir()
+    /**
+     * @return string
+     *
+     * @deprecated tag:v6.5.0 The return type will be native
+     */
+    public function getProjectDir()/*: string*/
     {
         if ($this->projectDir === null) {
-            $this->projectDir = parent::getProjectDir();
+            $r = new \ReflectionObject($this);
+
+            $dir = (string) $r->getFileName();
+            if (!file_exists($dir)) {
+                throw new \LogicException(sprintf('Cannot auto-detect project dir for kernel of class "%s".', $r->name));
+            }
+
+            $dir = $rootDir = \dirname($dir);
+            while (!file_exists($dir . '/vendor')) {
+                if ($dir === \dirname($dir)) {
+                    return $this->projectDir = $rootDir;
+                }
+                $dir = \dirname($dir);
+            }
+            $this->projectDir = $dir;
         }
 
         return $this->projectDir;
@@ -133,13 +160,19 @@ class Kernel extends HttpKernel
             $this->startTime = microtime(true);
         }
 
-        if ($this->debug && !isset($_ENV['SHELL_VERBOSITY']) && !isset($_SERVER['SHELL_VERBOSITY'])) {
+        if ($this->debug && !EnvironmentHelper::hasVariable('SHELL_VERBOSITY')) {
             putenv('SHELL_VERBOSITY=3');
             $_ENV['SHELL_VERBOSITY'] = 3;
             $_SERVER['SHELL_VERBOSITY'] = 3;
         }
 
-        $this->pluginLoader->initializePlugins($this->getProjectDir());
+        try {
+            $this->pluginLoader->initializePlugins($this->getProjectDir());
+        } catch (\Throwable $e) {
+            if (\defined('\STDERR')) {
+                fwrite(\STDERR, 'Warning: Failed to load plugins. Message: ' . $e->getMessage() . \PHP_EOL);
+            }
+        }
 
         // init bundles
         $this->initializeBundles();
@@ -160,13 +193,27 @@ class Kernel extends HttpKernel
     public static function getConnection(): Connection
     {
         if (!self::$connection) {
-            $url = $_ENV['DATABASE_URL']
-                ?? $_SERVER['DATABASE_URL']
-                ?? getenv('DATABASE_URL');
+            $url = EnvironmentHelper::getVariable('DATABASE_URL', getenv('DATABASE_URL'));
             $parameters = [
                 'url' => $url,
                 'charset' => 'utf8mb4',
             ];
+
+            if ($sslCa = EnvironmentHelper::getVariable('DATABASE_SSL_CA')) {
+                $parameters['driverOptions'][\PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+            }
+
+            if ($sslCert = EnvironmentHelper::getVariable('DATABASE_SSL_CERT')) {
+                $parameters['driverOptions'][\PDO::MYSQL_ATTR_SSL_CERT] = $sslCert;
+            }
+
+            if ($sslCertKey = EnvironmentHelper::getVariable('DATABASE_SSL_KEY')) {
+                $parameters['driverOptions'][\PDO::MYSQL_ATTR_SSL_KEY] = $sslCertKey;
+            }
+
+            if (EnvironmentHelper::getVariable('DATABASE_SSL_DONT_VERIFY_SERVER_CERT')) {
+                $parameters['driverOptions'][\PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+            }
 
             self::$connection = DriverManager::getConnection($parameters, new Configuration());
         }
@@ -304,6 +351,7 @@ class Kernel extends HttpKernel
             $this->cacheId,
             mb_substr((string) $this->shopwareVersionRevision, 0, 8),
             mb_substr($pluginHash, 0, 8),
+            EnvironmentHelper::getVariable('DATABASE_URL', ''),
         ]));
     }
 
@@ -311,35 +359,38 @@ class Kernel extends HttpKernel
     {
         $connection = self::getConnection();
 
-        $nonDestructiveMigrations = $connection->executeQuery('
+        try {
+            $nonDestructiveMigrations = $connection->executeQuery('
             SELECT `creation_timestamp`
             FROM `migration`
             WHERE `update` IS NOT NULL AND `update_destructive` IS NULL
         ')->fetchAll(FetchMode::COLUMN);
 
-        $activeMigrations = $this->container->getParameter('migration.active');
+            $activeMigrations = $this->container->getParameter('migration.active');
 
-        $activeNonDestructiveMigrations = array_intersect($activeMigrations, $nonDestructiveMigrations);
+            $activeNonDestructiveMigrations = array_intersect($activeMigrations, $nonDestructiveMigrations);
 
-        $setSessionVariables = $_SERVER['SQL_SET_DEFAULT_SESSION_VARIABLES'] ?? true;
-        $connectionVariables = [];
+            $setSessionVariables = (bool) EnvironmentHelper::getVariable('SQL_SET_DEFAULT_SESSION_VARIABLES', true);
+            $connectionVariables = [];
 
-        if ($setSessionVariables) {
-            $connectionVariables[] = 'SET @@group_concat_max_len = CAST(IF(@@group_concat_max_len > 320000, @@group_concat_max_len, 320000) AS UNSIGNED)';
-            $connectionVariables[] = "SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))";
+            if ($setSessionVariables) {
+                $connectionVariables[] = 'SET @@group_concat_max_len = CAST(IF(@@group_concat_max_len > 320000, @@group_concat_max_len, 320000) AS UNSIGNED)';
+                $connectionVariables[] = "SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))";
+            }
+
+            foreach ($activeNonDestructiveMigrations as $migration) {
+                $connectionVariables[] = sprintf(
+                    'SET %s = TRUE',
+                    sprintf(MigrationStep::MIGRATION_VARIABLE_FORMAT, $migration)
+                );
+            }
+
+            if (empty($connectionVariables)) {
+                return;
+            }
+            $connection->executeQuery(implode(';', $connectionVariables));
+        } catch (\Throwable $_) {
         }
-
-        foreach ($activeNonDestructiveMigrations as $migration) {
-            $connectionVariables[] = sprintf(
-                'SET %s = TRUE',
-                sprintf(MigrationStep::MIGRATION_VARIABLE_FORMAT, $migration)
-            );
-        }
-
-        if (empty($connectionVariables)) {
-            return;
-        }
-        $connection->executeQuery(implode(';', $connectionVariables));
     }
 
     private function addApiRoutes(RoutingConfigurator $routes): void

@@ -9,21 +9,21 @@ const { mapPropertyErrors } = Shopware.Component.getComponentHelper();
 Component.register('sw-mail-template-detail', {
     template,
 
+    inject: ['mailService', 'entityMappingService', 'repositoryFactory', 'acl', 'feature'],
+
     mixins: [
         Mixin.getByName('placeholder'),
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
-
-    inject: ['mailService', 'entityMappingService', 'repositoryFactory', 'acl', 'feature'],
 
     shortcuts: {
         'SYSTEMKEY+S': {
             active() {
                 return this.allowSave;
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     data() {
@@ -31,31 +31,43 @@ Component.register('sw-mail-template-detail', {
             mailTemplate: false,
             testerMail: '',
             mailTemplateId: null,
+            mailPreview: null,
             isLoading: false,
             isSaveSuccessful: false,
             mailTemplateType: {},
             selectedType: {},
             editorConfig: {
-                enableBasicAutocompletion: true
+                enableBasicAutocompletion: true,
             },
             mailTemplateMedia: null,
             mailTemplateMediaSelected: {},
             fileAccept: 'application/pdf, image/*',
-            testMailSalesChannelId: null
+            testMailSalesChannelId: null,
+            availableVariables: {},
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
     computed: {
         ...mapPropertyErrors('mailTemplate', [
             'mailTemplateTypeId',
-            'subject'
+            'subject',
         ]),
+
+        loadedAvailableVariables() {
+            if (!this.mailTemplateType || !this.mailTemplateType.templateData) {
+                return [];
+            }
+            if (Object.values(this.availableVariables).length === 0) {
+                this.loadInitialAvailableVariables();
+            }
+            return Object.values(this.availableVariables);
+        },
 
         identifier() {
             return this.placeholder(this.mailTemplateType, 'name');
@@ -79,11 +91,11 @@ Component.register('sw-mail-template-detail', {
                     const properties = [];
                     Object.keys(
                         entityMappingService.getEntityMapping(
-                            prefix, innerMailTemplateType.availableEntities
-                        )
+                            prefix, innerMailTemplateType.availableEntities,
+                        ),
                     ).forEach((val) => {
                         properties.push({
-                            value: val
+                            value: val,
                         });
                     });
                     return properties;
@@ -98,10 +110,10 @@ Component.register('sw-mail-template-detail', {
 
         testMailRequirementsMet() {
             return this.testerMail &&
-                this.mailTemplate.subject &&
-                this.mailTemplate.contentPlain &&
-                this.mailTemplate.contentHtml &&
-                this.mailTemplate.senderName;
+                (this.mailTemplate.subject || this.mailTemplate.translated?.subject) &&
+                (this.mailTemplate.contentPlain || this.mailTemplate.translated?.contentPlain) &&
+                (this.mailTemplate.contentHtml || this.mailTemplate.translated?.contentHtml) &&
+                (this.mailTemplate.senderName || this.mailTemplate.translated?.senderName);
         },
 
         mediaColumns() {
@@ -119,7 +131,7 @@ Component.register('sw-mail-template-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.allowSave,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -127,19 +139,30 @@ Component.register('sw-mail-template-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
-        }
-    },
+        },
 
-    created() {
-        this.createdComponent();
+        showPreview() {
+            if (
+                this.mailTemplate.contentHtml === undefined ||
+                this.mailTemplate.mailTemplateTypeId === undefined ||
+                this.mailTemplate.contentHtml === ''
+            ) {
+                return true;
+            }
+            return false;
+        },
     },
 
     watch: {
         '$route.params.id'() {
             this.createdComponent();
-        }
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -164,16 +187,15 @@ Component.register('sw-mail-template-detail', {
         },
 
         getMailTemplateType() {
-            if (this.mailTemplate.mailTemplateTypeId) {
-                this.mailTemplateTypeRepository.get(
-                    this.mailTemplate.mailTemplateTypeId,
-                    Shopware.Context.api
-                ).then((item) => {
-                    this.mailTemplateType = item;
-                    this.$refs.htmlEditor.defineAutocompletion(this.outerCompleterFunction);
-                    this.$refs.plainEditor.defineAutocompletion(this.outerCompleterFunction);
-                });
+            if (!this.mailTemplate.mailTemplateTypeId) {
+                return Promise.resolve();
             }
+
+            return this.mailTemplateTypeRepository.get(this.mailTemplate.mailTemplateTypeId).then((item) => {
+                this.mailTemplateType = item;
+                this.$refs.htmlEditor.defineAutocompletion(this.outerCompleterFunction);
+                this.$refs.plainEditor.defineAutocompletion(this.outerCompleterFunction);
+            });
         },
 
         createMediaCollection() {
@@ -198,7 +220,8 @@ Component.register('sw-mail-template-detail', {
             return this.onSave();
         },
 
-        onChangeLanguage() {
+        onChangeLanguage(languageId) {
+            Shopware.State.commit('context/setApiLanguageId', languageId);
             this.loadEntityData();
         },
 
@@ -217,7 +240,7 @@ Component.register('sw-mail-template-detail', {
             this.isSaveSuccessful = false;
             this.isLoading = true;
 
-            updatePromises.push(this.mailTemplateRepository.save(this.mailTemplate, Shopware.Context.api).then(() => {
+            updatePromises.push(this.mailTemplateRepository.save(this.mailTemplate).then(() => {
                 Promise.all(updatePromises).then(() => {
                     this.loadEntityData();
                     this.saveFinish();
@@ -235,23 +258,25 @@ Component.register('sw-mail-template-detail', {
                     message: this.$tc(
                         'sw-mail-template.detail.messageSaveError',
                         0,
-                        { subject: mailTemplateSubject }
-                    ) + errormsg
+                        { subject: mailTemplateSubject },
+                    ) + errormsg,
                 });
             }));
+
+            return Promise.all(updatePromises);
         },
 
         onClickTestMailTemplate() {
             const notificationTestMailSuccess = {
-                message: this.$tc('sw-mail-template.general.notificationTestMailSuccessMessage')
+                message: this.$tc('sw-mail-template.general.notificationTestMailSuccessMessage'),
             };
 
             const notificationTestMailError = {
-                message: this.$tc('sw-mail-template.general.notificationTestMailErrorMessage')
+                message: this.$tc('sw-mail-template.general.notificationTestMailErrorMessage'),
             };
 
             const notificationTestMailErrorSalesChannel = {
-                message: this.$tc('sw-mail-template.general.notificationTestMailSalesChannelErrorMessage')
+                message: this.$tc('sw-mail-template.general.notificationTestMailSalesChannelErrorMessage'),
             };
 
             if (!this.testMailSalesChannelId) {
@@ -263,7 +288,7 @@ Component.register('sw-mail-template-detail', {
                 this.testerMail,
                 this.mailTemplate,
                 this.mailTemplateMedia,
-                this.testMailSalesChannelId
+                this.testMailSalesChannelId,
             ).then(() => {
                 this.createNotificationSuccess(notificationTestMailSuccess);
             }).catch((exception) => {
@@ -272,25 +297,67 @@ Component.register('sw-mail-template-detail', {
             });
         },
 
-        onChangeType(id) {
+        onClickShowPreview() {
+            this.isLoading = true;
+            this.mailPreview = this.mailService.buildRenderPreview(
+                this.mailTemplateType,
+                this.mailTemplate,
+            ).then((response) => {
+                this.mailPreview = response;
+            }).finally(() => {
+                this.isLoading = false;
+            });
+        },
+
+        onCancelShowPreview() {
+            this.mailPreview = null;
+        },
+
+        onCopyVariable(variable) {
+            navigator.clipboard.writeText(variable).catch((error) => {
+                let errormsg = '';
+                if (error.response.data.errors.length > 0) {
+                    const errorDetailMsg = error.response.data.errors[0].detail;
+                    errormsg = `<br/> ${this.$tc('sw-mail-template.detail.textErrorMessage')}: "${errorDetailMsg}"`;
+                }
+
+                this.createNotificationError({
+                    message: errormsg,
+                });
+            });
+        },
+
+        async onChangeType(id) {
             if (!id) {
                 this.selectedType = {};
                 return;
             }
             this.isLoading = true;
-            this.getMailTemplateType();
-            this.mailTemplateTypeRepository.get(id, Shopware.Context.api).then((item) => {
-                this.selectedType = item;
 
+            try {
+                await this.getMailTemplateType();
+                this.selectedType = await this.mailTemplateTypeRepository.get(id);
+                this.loadInitialAvailableVariables();
+                this.outerCompleterFunction();
+            } catch (e) {
+                let errormsg = '';
+                if (e.response.data.errors.length > 0) {
+                    const errorDetailMsg = e.response.data.errors[0].detail;
+                    errormsg = `<br/> ${this.$tc('sw-mail-template.detail.textErrorMessage')}: "${errorDetailMsg}"`;
+                }
+
+                this.createNotificationError({
+                    message: errormsg,
+                });
+            } finally {
                 this.isLoading = false;
-            });
-            this.outerCompleterFunction();
+            }
         },
 
         getMediaColumns() {
             return [{
                 property: 'fileName',
-                label: 'sw-mail-template.list.columnFilename'
+                label: 'sw-mail-template.list.columnFilename',
             }];
         },
 
@@ -299,7 +366,7 @@ Component.register('sw-mail-template-detail', {
                 return;
             }
 
-            this.mediaRepository.get(targetId, Shopware.Context.api).then((mediaItem) => {
+            this.mediaRepository.get(targetId).then((mediaItem) => {
                 this.createMailTemplateMediaAssoc(mediaItem);
             });
         },
@@ -309,7 +376,7 @@ Component.register('sw-mail-template-detail', {
         },
 
         createMailTemplateMediaAssoc(mediaItem) {
-            const mailTemplateMedia = this.mailTemplateMediaRepository.create(Shopware.Context.api);
+            const mailTemplateMedia = this.mailTemplateMediaRepository.create();
             mailTemplateMedia.mailTemplateId = this.mailTemplateId;
             mailTemplateMedia.languageId = Shopware.Context.api.languageId;
             mailTemplateMedia.mediaId = mediaItem.id;
@@ -355,13 +422,71 @@ Component.register('sw-mail-template-detail', {
         onAddItemToAttachment(mediaItem) {
             if (this._checkIfMediaIsAlreadyUsed(mediaItem.id)) {
                 this.createNotificationInfo({
-                    message: this.$tc('sw-mail-template.list.errorMediaItemDuplicated')
+                    message: this.$tc('sw-mail-template.list.errorMediaItemDuplicated'),
                 });
                 return false;
             }
 
             this.createMailTemplateMediaAssoc(mediaItem);
             return true;
-        }
-    }
+        },
+
+        loadAvailableVariables(variable) {
+            if (!this.mailTemplateType || !this.mailTemplateType.availableEntities) {
+                return [];
+            }
+
+            const variablePath = variable.concat('.');
+
+            const foundVariables = Object.keys(Shopware.Utils.get(this.mailTemplateType.templateData, variable));
+
+            const keys = foundVariables.map((val) => {
+                const availableVariable = Shopware.Utils.get(this.mailTemplateType.templateData, variablePath.concat(val));
+                const isObject = typeof availableVariable === 'object' && availableVariable !== null;
+                const length = isObject ? Object.values(availableVariable).length : 0;
+
+                return {
+                    id: variablePath + val,
+                    name: val,
+                    childCount: length,
+                    parentId: variable,
+                    afterId: null,
+                };
+            });
+
+
+            this.addVariables(keys);
+
+            return true;
+        },
+
+        onGetTreeItems(parent) {
+            this.loadAvailableVariables(parent);
+        },
+
+        addVariables(variables) {
+            variables.forEach((variable) => {
+                this.$set(this.availableVariables, variable.id, variable);
+            });
+        },
+
+        loadInitialAvailableVariables() {
+            this.availableVariables = {};
+            Object.keys(this.mailTemplateType.templateData).forEach(variable => {
+                const availableVariable = Shopware.Utils.get(this.mailTemplateType.templateData, variable);
+                let length = 0;
+                if (typeof availableVariable === 'object' && availableVariable !== null) {
+                    length = Object.values(availableVariable).length;
+                }
+
+                this.addVariables([{
+                    id: variable,
+                    name: variable,
+                    childCount: length,
+                    parentId: null,
+                    afterId: null,
+                }]);
+            });
+        },
+    },
 });

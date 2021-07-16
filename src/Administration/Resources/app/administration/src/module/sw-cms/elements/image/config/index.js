@@ -6,16 +6,16 @@ const { Component, Mixin } = Shopware;
 Component.register('sw-cms-el-config-image', {
     template,
 
-    mixins: [
-        Mixin.getByName('cms-element')
-    ],
-
     inject: ['repositoryFactory'],
+
+    mixins: [
+        Mixin.getByName('cms-element'),
+    ],
 
     data() {
         return {
             mediaModalIsOpen: false,
-            initialFolderId: null
+            initialFolderId: null,
         };
     },
 
@@ -34,7 +34,7 @@ Component.register('sw-cms-el-config-image', {
             }
 
             return this.element.config.media.value;
-        }
+        },
     },
 
     created() {
@@ -47,7 +47,7 @@ Component.register('sw-cms-el-config-image', {
         },
 
         async onImageUpload({ targetId }) {
-            const mediaEntity = await this.mediaRepository.get(targetId, Shopware.Context.api);
+            const mediaEntity = await this.mediaRepository.get(targetId);
 
             this.element.config.media.value = mediaEntity.id;
 
@@ -105,6 +105,6 @@ Component.register('sw-cms-el-config-image', {
             }
 
             this.$emit('element-update', this.element);
-        }
-    }
+        },
+    },
 });

@@ -9,7 +9,7 @@ Mixin.register('remove-api-error', {
 
     $apiErrorHandler($vm) {
         let property = 'value';
-        if ($vm.$options.model && $vm.$options.model.prop) {
+        if ($vm.$options.model?.prop) {
             property = $vm.$options.model.prop;
         }
 
@@ -20,10 +20,10 @@ Mixin.register('remove-api-error', {
                 if (this.$attrs.error && this.$attrs.error.selfLink) {
                     Shopware.State.dispatch(
                         'error/removeApiError',
-                        { expression: this.$attrs.error.selfLink }
+                        { expression: this.$attrs.error.selfLink },
                     );
                 }
-            }
+            },
         );
-    }
+    },
 });

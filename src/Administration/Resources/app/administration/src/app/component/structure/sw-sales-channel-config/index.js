@@ -12,31 +12,47 @@ Component.register('sw-sales-channel-config', {
         domain: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
+        // FIXME: add default value
+        // eslint-disable-next-line vue/require-default-prop
         value: {
             type: Object,
-            required: false
+            required: false,
         },
         criteria: {
             type: Object,
             required: false,
             default: () => {
                 return new Criteria();
-            }
-        }
+            },
+        },
     },
 
     data() {
         return {
             allConfigs: {},
             selectedSalesChannelId: null,
-            salesChannel: []
+            salesChannel: [],
         };
     },
 
-    created() {
-        this.createdComponent();
+    computed: {
+        actualConfigData: {
+            get() {
+                return this.allConfigs[this.selectedSalesChannelId];
+            },
+            set(config) {
+                this.allConfigs = {
+                    ...this.allConfigs,
+                    [this.selectedSalesChannelId]: config,
+                };
+            },
+        },
+
+        salesChannelRepository() {
+            return this.repositoryFactory.create('sales_channel');
+        },
     },
 
     watch: {
@@ -48,26 +64,12 @@ Component.register('sw-sales-channel-config', {
 
                 this.$emit('input', configData);
             },
-            deep: true
-        }
+            deep: true,
+        },
     },
 
-    computed: {
-        actualConfigData: {
-            get() {
-                return this.allConfigs[this.selectedSalesChannelId];
-            },
-            set(config) {
-                this.allConfigs = {
-                    ...this.allConfigs,
-                    [this.selectedSalesChannelId]: config
-                };
-            }
-        },
-
-        salesChannelRepository() {
-            return this.repositoryFactory.create('sales_channel');
-        }
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -77,8 +79,8 @@ Component.register('sw-sales-channel-config', {
                     res.add({
                         id: null,
                         translated: {
-                            name: this.$tc('sw-sales-channel-switch.labelDefaultOption')
-                        }
+                            name: this.$tc('sw-sales-channel-switch.labelDefaultOption'),
+                        },
                     });
 
                     this.salesChannel = res;
@@ -112,6 +114,6 @@ Component.register('sw-sales-channel-config', {
             }
 
             return Promise.resolve(this.allConfigs);
-        }
-    }
+        },
+    },
 });

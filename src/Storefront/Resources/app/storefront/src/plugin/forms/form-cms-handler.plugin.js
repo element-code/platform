@@ -8,7 +8,7 @@ export default class FormCmsHandler extends Plugin {
         hiddenSubmitSelector: '.submit--hidden',
         formContentSelector: '.form-content',
         cmsBlock: '.cms-block',
-        contentType:  'application/x-www-form-urlencoded'
+        contentType: 'application/x-www-form-urlencoded',
     };
 
     init() {
@@ -18,6 +18,13 @@ export default class FormCmsHandler extends Plugin {
         this._registerEvents();
         this._getCmsBlock();
         this._getConfirmationText();
+    }
+
+    sendAjaxFormSubmit() {
+        const { _client, el, options } = this;
+        const _data = new FormData(el);
+
+        _client.post(el.action, _data, this._handleResponse.bind(this), options.contentType);
     }
 
     _registerEvents() {
@@ -31,7 +38,7 @@ export default class FormCmsHandler extends Plugin {
 
     _getConfirmationText() {
         const input = this.el.querySelector('input[name="confirmationText"]');
-        if(input) {
+        if (input) {
             this._confirmationText = input.value;
         }
     }
@@ -63,23 +70,23 @@ export default class FormCmsHandler extends Plugin {
     }
 
     _submitForm() {
-        const { _client, el, options } = this;
-        const _data = new FormData(el);
+        this.$emitter.publish('beforeSubmit');
 
-        _client.post(el.action, _data, this._handleResponse.bind(this), options.contentType);
+        this.sendAjaxFormSubmit();
     }
 
     _handleResponse(res) {
         const response = JSON.parse(res);
+        this.$emitter.publish('onFormResponse', res);
 
-        if(response.length > 0) {
+        if (response.length > 0) {
             let changeContent = true;
             let content = '';
-            for (let i = 0; i < response.length; i++) {
-                if (response[i]['type'] === 'danger') {
+            for (let i = 0; i < response.length; i += 1) {
+                if (response[i].type === 'danger') {
                     changeContent = false;
                 }
-                content += response[i]['alert'];
+                content += response[i].alert;
             }
 
             this._createResponse(changeContent, content);
@@ -89,23 +96,23 @@ export default class FormCmsHandler extends Plugin {
     }
 
     _createResponse(changeContent, content) {
-        if(changeContent) {
-            if(this._confirmationText) {
+        if (changeContent) {
+            if (this._confirmationText) {
                 content = this._confirmationText;
             }
-            this._block.innerHTML = '<div class="confirm-message">' + content + '</div>';
+            this._block.innerHTML = `<div class="confirm-message">${content}</div>`;
         } else {
             const confirmDiv = this._block.querySelector('.confirm-alert');
-            if(confirmDiv) {
+            if (confirmDiv) {
                 confirmDiv.remove();
             }
-            const html = '<div class="confirm-alert">' + content + '</div>';
+            const html = `<div class="confirm-alert">${content}</div>`;
             this._block.insertAdjacentHTML('beforeend', html);
         }
 
         this._block.scrollIntoView({
             behavior: 'smooth',
-            block: 'end'
+            block: 'end',
         });
     }
 }

@@ -6,19 +6,22 @@ use Shopware\Core\Framework\Api\Acl\Role\AclRoleEntity;
 use Shopware\Core\Framework\App\Aggregate\ActionButton\ActionButtonCollection;
 use Shopware\Core\Framework\App\Aggregate\AppPaymentMethod\AppPaymentMethodCollection;
 use Shopware\Core\Framework\App\Aggregate\AppTranslation\AppTranslationCollection;
+use Shopware\Core\Framework\App\Aggregate\CmsBlock\AppCmsBlockCollection;
 use Shopware\Core\Framework\App\Template\TemplateCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityCustomFieldsTrait;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityIdTrait;
 use Shopware\Core\Framework\Webhook\WebhookCollection;
 use Shopware\Core\System\CustomField\Aggregate\CustomFieldSet\CustomFieldSetCollection;
 use Shopware\Core\System\Integration\IntegrationEntity;
 
 /**
- * @internal only for use by the app-system, will be considered internal from v6.4.0 onward
+ * @internal
  */
 class AppEntity extends Entity
 {
     use EntityIdTrait;
+    use EntityCustomFieldsTrait;
 
     /**
      * @var string
@@ -106,11 +109,6 @@ class AppEntity extends Entity
     protected $privacyPolicyExtensions;
 
     /**
-     * @var array|null
-     */
-    protected $customFields;
-
-    /**
      * @var string|null
      */
     protected $appSecret;
@@ -169,6 +167,13 @@ class AppEntity extends Entity
      * @var AppPaymentMethodCollection|null
      */
     protected $paymentMethods;
+
+    /**
+     * @internal (flag:FEATURE_NEXT_14408)
+     *
+     * @var AppCmsBlockCollection|null
+     */
+    protected $cmsBlocks;
 
     public function getId(): string
     {
@@ -333,16 +338,6 @@ class AppEntity extends Entity
         $this->description = $description;
     }
 
-    public function getCustomFields(): ?array
-    {
-        return $this->customFields;
-    }
-
-    public function setCustomFields(?array $customFields): void
-    {
-        $this->customFields = $customFields;
-    }
-
     public function getIntegrationId(): string
     {
         return $this->integrationId;
@@ -471,5 +466,21 @@ class AppEntity extends Entity
     public function setPaymentMethods(AppPaymentMethodCollection $paymentMethods): void
     {
         $this->paymentMethods = $paymentMethods;
+    }
+
+    /**
+     * @internal (flag:FEATURE_NEXT_14408)
+     */
+    public function getCmsBlocks(): ?AppCmsBlockCollection
+    {
+        return $this->cmsBlocks;
+    }
+
+    /**
+     * @internal (flag:FEATURE_NEXT_14408)
+     */
+    public function setCmsBlocks(AppCmsBlockCollection $cmsBlocks): void
+    {
+        $this->cmsBlocks = $cmsBlocks;
     }
 }

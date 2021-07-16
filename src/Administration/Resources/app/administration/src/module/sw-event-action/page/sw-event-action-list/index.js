@@ -9,18 +9,12 @@ Component.register('sw-event-action-list', {
 
     inject: [
         'repositoryFactory',
-        'acl'
+        'acl',
     ],
 
     mixins: [
-        Mixin.getByName('listing')
+        Mixin.getByName('listing'),
     ],
-
-    metaInfo() {
-        return {
-            title: this.$createTitle()
-        };
-    },
 
     data() {
         return {
@@ -29,7 +23,13 @@ Component.register('sw-event-action-list', {
             sortDirection: 'ASC',
             isLoading: false,
             mailTemplates: null,
-            total: 0
+            total: 0,
+        };
+    },
+
+    metaInfo() {
+        return {
+            title: this.$createTitle(),
         };
     },
 
@@ -71,7 +71,7 @@ Component.register('sw-event-action-list', {
             criteria.addSorting(Criteria.sort(this.sortBy, this.sortDirection));
             criteria.addFilter(Criteria.equals('actionName', 'action.mail.send'));
             criteria.addFilter(Criteria.not('and', [
-                Criteria.equals('config.mail_template_id', null)
+                Criteria.equals('config.mail_template_id', null),
             ]));
 
             return criteria;
@@ -85,49 +85,48 @@ Component.register('sw-event-action-list', {
                 routerLink: 'sw.event.action.detail',
                 multiLine: true,
                 allowResize: true,
-                primary: true
+                primary: true,
             }, {
                 property: 'title',
                 dataIndex: 'title',
                 label: 'sw-event-action.list.columnTitle',
                 routerLink: 'sw.event.action.detail',
                 multiLine: true,
-                allowResize: true
+                allowResize: true,
             }, {
                 property: 'salesChannels',
                 dataIndex: 'salesChannels',
                 label: 'sw-event-action.list.columnSalesChannel',
                 sortable: false,
                 allowResize: true,
-                multiLine: true
+                multiLine: true,
             }, {
                 property: 'rules',
                 dataIndex: 'rules',
                 label: 'sw-event-action.list.columnRules',
                 sortable: false,
                 allowResize: true,
-                multiLine: true
+                multiLine: true,
             }, {
                 property: 'mailTemplate',
                 label: 'sw-event-action.list.columnMailTemplate',
                 multiLine: true,
-                sortable: false
+                sortable: false,
             }, {
                 property: 'active',
                 dataIndex: 'active',
                 label: 'sw-event-action.list.columnActive',
                 align: 'center',
-                allowResize: true
+                allowResize: true,
             }];
-        }
+        },
     },
 
     methods: {
         getList() {
             this.isLoading = true;
 
-            return this.eventActionRepository
-                .search(this.eventActionCriteria, Shopware.Context.api)
+            return this.eventActionRepository.search(this.eventActionCriteria)
                 .then((response) => {
                     this.items = response;
                     this.total = response.total;
@@ -144,8 +143,7 @@ Component.register('sw-event-action-list', {
 
             this.mailTemplateCriteria.setIds(mailTemplateIds);
 
-            return this.mailTemplateRepository
-                .search(this.mailTemplateCriteria, Shopware.Context.api)
+            return this.mailTemplateRepository.search(this.mailTemplateCriteria)
                 .then((mailTemplates) => {
                     this.mailTemplates = mailTemplates;
                     this.isLoading = false;
@@ -182,6 +180,6 @@ Component.register('sw-event-action-list', {
 
         snakeCaseEventName(value) {
             return snakeCase(value);
-        }
-    }
+        },
+    },
 });

@@ -3,13 +3,15 @@
     "visibility": {
       "textHeadline": "Sichtbarkeit je Verkaufskanal festlegen",
       "placeholderVisibility": "Weise Verkaufskanäle zu ...",
-      "columnAll": "Überall",
-      "columnSearchOnly": "Nur in der Suche sichtbar",
-      "columnLinkOnly": "Versteckt",
-      "linkAdvancedVisibility": "Erweitere Sichtbarkeit konfigurieren",
+      "columnAll": "Sichtbar",
+      "columnSearchOnly": "In Produktlisten ausblenden",
+      "columnLinkOnly": "In Produktlisten und der Suche ausblenden",
+      "visibilityModalDescription": "Mit der Option “In Produktlisten ausblenden” wird das Produkt von Übersichtslisten, sowie Produkt-Slidern und Cross Sellings ausgeblendet. Mit der Option “In Produktlisten und der Suche ausblenden” wird das Produkt auch über die Suche nicht mehr angezeigt. Augeblendete Produkte können immer noch über die URL erreicht werden.",
+      "linkAdvancedVisibility": "Sichtbarkeit für ausgewählte Verkaufskanäle einstellen",
       "labelVisibility": "Sichtbarkeit",
       "closeModal": "Übernehmen",
-      "bodyVisibility": "Füge Verkaufskanäle hinzu, die dieses Produkt anzeigen. Über den unten stehenden Link kannst Du die Sichtbarkeit des Produktes in Deinen Storefront-Verkausfkanälen weiter beeinflussen."
+      "bodyVisibility": "Füge Verkaufskanäle hinzu, die dieses Produkt anzeigen. Über den unten stehenden Link kannst Du die Sichtbarkeit des Produktes in Deinen Storefront-Verkausfkanälen weiter beeinflussen.",
+      "errorMessage": "Die Standardkonfiguration des Verkaufskanals konnte nicht geladen werden."
     },
     "general": {
       "mainMenuItemGeneral": "Produkte",
@@ -297,7 +299,23 @@
       "linkPropertiesOfParent": "Zeige die Eigenschaften des Hauptprodukts",
       "inheritSwitchLabel": "Nutze die Eigenschaften des Hauptprodukts",
       "propertiesNotInherited": "Du kannst jetzt benutzerdefinierte Eigenschaften für diese Variante verwenden.",
-      "propertiesNotExisting": "Diesem Produkt sind noch keine Eigenschaften zugewiesen."
+      "propertiesNotExisting": "Diesem Produkt sind noch keine Eigenschaften zugewiesen.",
+      "cardTitle": "Eigenschaften",
+      "buttonAddProperty": "Eigenschaft konfigurieren",
+      "buttonAddProperties": "Eigenschaften konfigurieren",
+      "titleEmptyState": "Diesem Produkt sind noch keine Eigenschaften zugewiesen worden.",
+      "titleEmptyStateList": "Keine passenden Eigenschaften gefunden.",
+      "columnProperty": "Eigenschaft",
+      "columnValue": "Eigenschaftsausprägung",
+      "placeholderSearchAddedProperties": "Hinzugefügte Eigenschaften durchsuchen ...",
+      "placeholderSearchProperties": "Eigenschaften durchsuchen ...",
+      "addPropertiesModal": {
+        "title": "Eigenschaften hinzufügen",
+        "titleEmptyState": "Du musst zuerst Eigenschaften und deren Ausprägungen erstellen, um diese hier zuordnen zu können.",
+        "selectedProperties": "{count} Ausprägung gewählt | {count} Ausprägungen gewählt",
+        "titleEmptyPropertyValues": "Keine Eigenschaftsausprägungen verfügbar.",
+        "titleNoPropertySelected": "Keine Eigenschaft ausgewählt."
+      }
     },
     "variations": {
       "emptyStateDescription": "Dieses Produkt hat noch keine Varianten.",
@@ -391,6 +409,7 @@
     "crossselling": {
       "cardTitleCrossSelling": "Cross Selling",
       "buttonAddCrossSelling": "Neues Cross Selling hinzufügen",
+      "buttonAddCrossSellingLanguageWarning": "Du kannst neue Cross-Sellings nur in Deiner Standardsprache erstellen",
       "buttonDeleteCrossSelling": "Löschen",
       "inputCrossSellingTitle": "Titel",
       "inputCrossSellingActive": "Aktiv",

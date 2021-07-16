@@ -47,6 +47,15 @@
             <helpText lang="de-DE">Aktiviert Double-Opt-In für Gast-Bestellungen.</helpText>
         </input-field>
 
+        <input-field type="text">
+            <name>confirmationUrl</name>
+            <label>Confirmation url for double opt-in registration</label>
+            <label lang="de-DE">Bestätigungsurl für Double Opt-In Registrierung</label>
+            <placeholder><![CDATA[/registration/confirm?em=%%HASHEDEMAIL%%&hash=%%SUBSCRIBEHASH%%]]></placeholder>
+            <helpText><![CDATA[Also the url for the double opt-in guest order.<br/>Available placeholders: <br/>%%HASHEDEMAIL%%<br/>%%SUBSCRIBEHASH%%]]></helpText>
+            <helpText><![CDATA[Ebenfalls die url für die Double-Opt-In für Gast-Bestellungen.<br/>Verfügbare Platzhalter: <br/>%%HASHEDEMAIL%%<br/>%%SUBSCRIBEHASH%%]]></helpText>
+        </input-field>
+
         <input-field type="bool">
             <name>requirePasswordConfirmation</name>
             <label>Password must be entered twice</label>
@@ -64,7 +73,7 @@
         <input-field type="bool">
             <name>phoneNumberFieldRequired</name>
             <label>Phone number field required</label>
-            <label lang="de-DE">Telefonnummer als Pflichtfeld behandeln</label>
+            <label lang="de-DE">Telefonnummer ist Pflichtfeld</label>
         </input-field>
 
         <input-field type="bool">
@@ -76,7 +85,7 @@
         <input-field type="bool">
             <name>birthdayFieldRequired</name>
             <label>Birthday field required</label>
-            <label lang="de-DE">Geburtstag als Pflichtfeld behandeln</label>
+            <label lang="de-DE">Geburtstag ist Pflichtfeld</label>
         </input-field>
 
         <input-field type="bool">
@@ -94,7 +103,7 @@
         <input-field type="bool">
             <name>additionalAddressField1Required</name>
             <label>Additional address 1 field required</label>
-            <label lang="de-DE">Adresszusatzzeile 1 als Pflichtfeld behandeln</label>
+            <label lang="de-DE">Adresszusatzzeile 1 ist Pflichtfeld</label>
         </input-field>
 
         <input-field type="bool">
@@ -106,7 +115,7 @@
         <input-field type="bool">
             <name>additionalAddressField2Required</name>
             <label>Additional address 2 field required</label>
-            <label lang="de-DE">Adresszusatzzeile 2 als Pflichtfeld behandeln</label>
+            <label lang="de-DE">Adresszusatzzeile 2 ist Pflichtfeld</label>
         </input-field>
 
         <input-field type="bool">
@@ -120,7 +129,7 @@
         <input-field type="bool">
             <name>allowCustomerDeletion</name>
             <label>Allow customer deletion</label>
-            <label lang="de-DE">Löschen des Kunden zulassen</label>
+            <label lang="de-DE">Löschen von Kunden zulassen</label>
         </input-field>
 
         <input-field type="bool">
@@ -133,7 +142,27 @@
         <input-field type="bool">
             <name>vatIdFieldRequired</name>
             <label>VAT Reg.No. required</label>
-            <label lang="de-DE">Umsatzsteuer-ID als Pflichtfeld behandeln</label>
+            <label lang="de-DE">Umsatzsteuer-ID ist Pflichtfeld</label>
+            <helpText>Please keep in mind there are similar switches for every individual country. (Settings > Countries).</helpText>
+            <helpText lang="de-DE">Bitte beachte, dass es die gleichen Schalter auch für jedes individuelle Land gibt.(Einstellungen > Länder).</helpText>
+        </input-field>
+
+        <input-field type="text">
+            <name>pwdRecoverUrl</name>
+            <label>Password Recover Url</label>
+            <label lang="de-DE">Passwort Wiederherstellungs-Url</label>
+            <placeholder><![CDATA[/account/recover/password?hash=%%RECOVERHASH%%]]></placeholder>
+            <helpText><![CDATA[Available placeholders: <br/>%%RECOVERHASH%%]]></helpText>
+            <helpText><![CDATA[Verfügbare Platzhalter: <br/>%%RECOVERHASH%%]]></helpText>
+        </input-field>
+
+        <input-field type="text">
+            <name>doubleOptInDomain</name>
+            <label>Double Opt-In Domain</label>
+            <label lang="de-DE">Double Opt-In Domain</label>
+            <placeholder><![CDATA[https://localhost]]></placeholder>
+            <helpText>Leave empty to use saleschannel domain.</helpText>
+            <helpText lang="de-DE">Leer lassen um die Domain des Saleschannels zu nutzen.</helpText>
         </input-field>
     </card>
 </config>

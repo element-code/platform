@@ -6,9 +6,12 @@ use PHPUnit\Framework\TestCase;
 use Shopware\Core\Checkout\Cart\Exception\OrderPaidException;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionDefinition;
 use Shopware\Core\Checkout\Order\OrderEntity;
+use Shopware\Core\Checkout\Payment\PaymentMethodEntity;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\Test\TestCaseBase\IntegrationTestBehaviour;
+use Shopware\Core\Framework\Uuid\Uuid;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Shopware\Core\System\StateMachine\Aggregation\StateMachineTransition\StateMachineTransitionActions;
 use Shopware\Core\System\StateMachine\StateMachineRegistry;
@@ -39,7 +42,49 @@ class EditOrderPageTest extends TestCase
 
         static::assertInstanceOf(AccountEditOrderPage::class, $page);
         self::assertPageEvent(AccountEditOrderPageLoadedEvent::class, $event, $context, $request, $page);
+
         static::assertSame($orderId, $page->getOrder()->getId());
+    }
+
+    public function testEditOrderPageCorrectPayment(): void
+    {
+        $request = new Request();
+        $context = $this->createSalesChannelContextWithLoggedInCustomerAndWithNavigation();
+        $orderId = $this->placeRandomOrder($context);
+
+        /** @var AccountEditOrderPageLoader $event */
+        $event = null;
+        $this->catchEvent(AccountEditOrderPageLoadedEvent::class, $event);
+
+        $request->request->set('orderId', $orderId);
+        $page = $this->getPageLoader()->load($request, $context);
+
+        static::assertInstanceOf(AccountEditOrderPage::class, $page);
+        self::assertPageEvent(AccountEditOrderPageLoadedEvent::class, $event, $context, $request, $page);
+
+        static::assertCount(1, $page->getPaymentMethods());
+
+        // set Payment active to false and assert it will not be loaded
+        /** @var EntityRepositoryInterface $paymentMethodRepository */
+        $paymentMethodRepository = $this->getContainer()->get('payment_method.repository');
+        $criteria = (new Criteria())->addFilter(new EqualsFilter('active', true));
+        /** @var PaymentMethodEntity $paymentMethod */
+        $paymentMethod = $paymentMethodRepository->search($criteria, $context->getContext())->first();
+
+        $paymentMethodRepository->update(
+            [
+                ['id' => $paymentMethod->getId(), 'active' => false],
+            ],
+            $context->getContext()
+        );
+
+        $request->request->set('orderId', $orderId);
+        $page = $this->getPageLoader()->load($request, $context);
+
+        static::assertInstanceOf(AccountEditOrderPage::class, $page);
+        self::assertPageEvent(AccountEditOrderPageLoadedEvent::class, $event, $context, $request, $page);
+
+        static::assertCount(0, $page->getPaymentMethods());
     }
 
     public function testEditPageNotAvailableOrderIsPaid(): void
@@ -57,6 +102,32 @@ class EditOrderPageTest extends TestCase
 
         $request->request->set('orderId', $orderId);
         $this->getPageLoader()->load($request, $context);
+    }
+
+    public function testShouldOnlyShowAvailablePaymentsForOrder(): void
+    {
+        $request = new Request();
+        $context = $this->createSalesChannelContextWithLoggedInCustomerAndWithNavigation();
+        $orderId = $this->placeRandomOrder($context);
+
+        // Get customer from USA rule
+        $ruleCriteria = new Criteria();
+        $ruleCriteria->addFilter(new EqualsFilter('name', 'Customers from USA'));
+
+        $ruleRepository = $this->getContainer()->get('rule.repository');
+
+        $ruleId = $ruleRepository->search($ruleCriteria, $context->getContext())->first()->getId();
+
+        $this->createCustomPaymentWithRule($context, $ruleId);
+
+        // Fake context rules for USA customers
+        $context->setRuleIds(array_merge($context->getRuleIds(), [$ruleId]));
+
+        $page = $this->getPageLoader()->load($request, $context);
+
+        static::assertInstanceOf(AccountEditOrderPage::class, $page);
+        static::assertSame($orderId, $page->getOrder()->getId());
+        static::assertCount(1, $page->getPaymentMethods());
     }
 
     protected function getPageLoader(): AccountEditOrderPageLoader
@@ -88,7 +159,29 @@ class EditOrderPageTest extends TestCase
         $criteria = new Criteria([$orderId]);
         $criteria->addAssociation('transactions');
 
-        /* @var OrderEntity $order */
         return $orderRepository->search($criteria, $context->getContext())->first();
+    }
+
+    private function createCustomPaymentWithRule(SalesChannelContext $context, string $ruleId): string
+    {
+        $paymentId = Uuid::randomHex();
+
+        $this->getContainer()->get('payment_method.repository')->create([
+            [
+                'id' => $paymentId,
+                'name' => 'Test Payment with Rule',
+                'description' => 'Payment rule test',
+                'active' => true,
+                'afterOrderEnabled' => true,
+                'availabilityRuleId' => $ruleId,
+                'salesChannels' => [
+                    [
+                        'id' => $context->getSalesChannelId(),
+                    ],
+                ],
+            ],
+        ], $context->getContext());
+
+        return $paymentId;
     }
 }

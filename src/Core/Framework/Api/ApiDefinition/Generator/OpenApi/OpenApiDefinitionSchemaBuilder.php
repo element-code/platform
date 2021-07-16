@@ -4,6 +4,7 @@ namespace Shopware\Core\Framework\Api\ApiDefinition\Generator\OpenApi;
 
 use OpenApi\Annotations\Property;
 use OpenApi\Annotations\Schema;
+use Shopware\Core\Framework\Api\ApiDefinition\DefinitionService;
 use Shopware\Core\Framework\Api\Context\AdminApiSource;
 use Shopware\Core\Framework\Api\Context\SalesChannelApiSource;
 use Shopware\Core\Framework\Context;
@@ -38,14 +39,19 @@ class OpenApiDefinitionSchemaBuilder
     /**
      * @return Schema[]
      */
-    public function getSchemaByDefinition(EntityDefinition $definition, string $path, bool $forSalesChannel, bool $onlyFlat = false): array
-    {
+    public function getSchemaByDefinition(
+        EntityDefinition $definition,
+        string $path,
+        bool $forSalesChannel,
+        bool $onlyFlat = false,
+        string $apiType = DefinitionService::TypeJsonApi
+    ): array {
         $attributes = [];
         $requiredAttributes = [];
         $relationships = [];
 
         $uuid = Uuid::randomHex();
-        $schemaName = $definition->getEntityName();
+        $schemaName = $this->snakeCaseToCamelCase($definition->getEntityName());
         $exampleDetailPath = $path . '/' . $uuid;
 
         $extensions = [];
@@ -80,6 +86,10 @@ class OpenApiDefinitionSchemaBuilder
 
             if ($field instanceof TranslatedField && $definition->getTranslationDefinition()) {
                 $field = $definition->getTranslationDefinition()->getFields()->get($field->getPropertyName());
+            }
+
+            if ($field === null) {
+                continue;
             }
 
             if ($field instanceof JsonField) {
@@ -130,12 +140,11 @@ class OpenApiDefinitionSchemaBuilder
             }
         }
 
-        $attributes = array_merge([new Property(['property' => 'id', 'type' => 'string', 'format' => 'uuid'])], $attributes);
+        $attributes = array_merge([new Property(['property' => 'id', 'type' => 'string', 'pattern' => '^[0-9a-f]{32}$'])], $attributes);
 
-        if (!$onlyFlat) {
-            /* @var Schema[] $schema */
-            $schema[$schemaName] = new Schema([
-                'schema' => $schemaName,
+        if (!$onlyFlat && $apiType === 'jsonapi') {
+            $schema[$schemaName . 'JsonApi'] = new Schema([
+                'schema' => $schemaName . 'JsonApi',
                 'allOf' => [
                     new Schema(['ref' => '#/components/schemas/resource']),
                     new Schema([
@@ -148,7 +157,7 @@ class OpenApiDefinitionSchemaBuilder
             ]);
 
             if (\count($relationships)) {
-                $schema[$schemaName]->allOf[1]->properties[] = new Property([
+                $schema[$schemaName . 'JsonApi']->allOf[1]->properties[] = new Property([
                     'property' => 'relationships',
                     'properties' => $relationships,
                 ]);
@@ -157,14 +166,16 @@ class OpenApiDefinitionSchemaBuilder
 
         foreach ($relationships as $relationship) {
             $entity = $this->getRelationShipEntity($relationship);
-            $attributes[] = new Property(['property' => $relationship->property, 'ref' => '#/components/schemas/' . $entity . '_flat']);
+            $entityName = $this->snakeCaseToCamelCase($entity);
+            $attributes[] = new Property(['property' => $relationship->property, 'ref' => '#/components/schemas/' . $entityName]);
         }
 
         if (!empty($extensionRelationships)) {
             $attributes['extensions'] = clone $attributes['extensions'];
             foreach ($extensionRelationships as $property => $relationship) {
                 $entity = $this->getRelationShipEntity($relationship);
-                $attributes['extensions']->properties[$property] = new Property(['ref' => '#/components/schemas/' . $entity . '_flat']);
+                $entityName = $this->snakeCaseToCamelCase($entity);
+                $attributes['extensions']->properties[$property] = new Property(['ref' => '#/components/schemas/' . $entityName]);
             }
         }
 
@@ -173,15 +184,20 @@ class OpenApiDefinitionSchemaBuilder
             return [];
         }
 
-        $schema[$schemaName . '_flat'] = new Schema([
+        $schema[$schemaName] = new Schema([
             'type' => 'object',
-            'schema' => $schemaName . '_flat',
+            'schema' => $schemaName,
             'properties' => $attributes,
             'required' => array_unique($requiredAttributes),
             'description' => 'Added since version: ' . $definition->since(),
         ]);
 
         return $schema;
+    }
+
+    private function snakeCaseToCamelCase(string $input): string
+    {
+        return str_replace('_', '', ucwords($input, '_'));
     }
 
     private function shouldFieldBeIncluded(Field $field, bool $forSalesChannel): bool
@@ -233,7 +249,7 @@ class OpenApiDefinitionSchemaBuilder
                         ],
                         'id' => [
                             'type' => 'string',
-                            'format' => 'uuid',
+                            'pattern' => '^[0-9a-f]{32}$',
                             'example' => Uuid::randomHex(),
                         ],
                     ],
@@ -398,10 +414,9 @@ class OpenApiDefinitionSchemaBuilder
         }
         if (is_a($fieldClass, IdField::class, true) || is_a($fieldClass, FkField::class, true)) {
             $property->type = 'string';
-            $property->format = 'uuid';
+            $property->pattern = '^[0-9a-f]{32}$';
         }
 
-        /* @var Since|null $flag */
         $flag = $field->getFlag(Since::class);
         if ($flag instanceof Since) {
             $property->description = 'Added since version: ' . $flag->getSince();
@@ -432,7 +447,7 @@ class OpenApiDefinitionSchemaBuilder
         }
         if (is_a($fieldClass, IdField::class, true) || is_a($fieldClass, FkField::class, true)) {
             $property->type = 'string';
-            $property->format = 'uuid';
+            $property->pattern = '^[0-9a-f]{32}$';
         }
 
         return $property;

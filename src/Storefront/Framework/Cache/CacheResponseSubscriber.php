@@ -9,6 +9,7 @@ use Shopware\Core\PlatformRequest;
 use Shopware\Core\System\SalesChannel\Context\SalesChannelContextService;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Shopware\Storefront\Framework\Cache\Annotation\HttpCache;
+use Shopware\Storefront\Framework\Routing\MaintenanceModeResolver;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Request;
@@ -26,26 +27,24 @@ class CacheResponseSubscriber implements EventSubscriberInterface
     public const SYSTEM_STATE_COOKIE = 'sw-states';
     public const INVALIDATION_STATES_HEADER = 'sw-invalidation-states';
 
-    /**
-     * @var CartService
-     */
-    private $cartService;
+    private CartService $cartService;
 
-    /**
-     * @var int
-     */
-    private $defaultTtl;
+    private int $defaultTtl;
 
-    /**
-     * @var bool
-     */
-    private $httpCacheEnabled;
+    private bool $httpCacheEnabled;
 
-    public function __construct(CartService $cartService, int $defaultTtl, bool $httpCacheEnabled)
-    {
+    private MaintenanceModeResolver $maintenanceResolver;
+
+    public function __construct(
+        CartService $cartService,
+        int $defaultTtl,
+        bool $httpCacheEnabled,
+        MaintenanceModeResolver $maintenanceModeResolver
+    ) {
         $this->cartService = $cartService;
         $this->defaultTtl = $defaultTtl;
         $this->httpCacheEnabled = $httpCacheEnabled;
+        $this->maintenanceResolver = $maintenanceModeResolver;
     }
 
     public static function getSubscribedEvents()
@@ -67,6 +66,10 @@ class CacheResponseSubscriber implements EventSubscriberInterface
 
         $request = $event->getRequest();
 
+        if ($this->maintenanceResolver->isMaintenanceRequest($request)) {
+            return;
+        }
+
         $context = $request->attributes->get(PlatformRequest::ATTRIBUTE_SALES_CHANNEL_CONTEXT_OBJECT);
 
         if (!$context instanceof SalesChannelContext) {
@@ -80,7 +83,6 @@ class CacheResponseSubscriber implements EventSubscriberInterface
 
         $cart = $this->cartService->getCart($context->getToken(), $context);
 
-        /* @var SalesChannelContext $context */
         $states = $this->updateSystemState($cart, $context, $request, $response);
 
         if ($request->getMethod() !== Request::METHOD_GET) {
@@ -110,7 +112,6 @@ class CacheResponseSubscriber implements EventSubscriberInterface
         }
 
         $maxAge = $cache->getMaxAge() ?? $this->defaultTtl;
-        $maxAge = $maxAge ?? 3600;
 
         $response->setSharedMaxAge($maxAge);
         $response->headers->addCacheControlDirective('must-revalidate');
@@ -166,7 +167,7 @@ class CacheResponseSubscriber implements EventSubscriberInterface
     private function getSystemStates(Request $request, SalesChannelContext $context, Cart $cart): array
     {
         $states = [];
-        $swStates = $request->cookies->get(self::SYSTEM_STATE_COOKIE);
+        $swStates = (string) $request->cookies->get(self::SYSTEM_STATE_COOKIE);
         if ($swStates !== null) {
             $states = explode(',', $swStates);
             $states = array_flip($states);

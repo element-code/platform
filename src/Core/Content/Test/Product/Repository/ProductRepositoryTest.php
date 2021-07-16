@@ -14,6 +14,7 @@ use Shopware\Core\Content\Product\DataAbstractionLayer\SearchKeywordUpdater;
 use Shopware\Core\Content\Product\Exception\DuplicateProductNumberException;
 use Shopware\Core\Content\Product\ProductCollection;
 use Shopware\Core\Content\Product\ProductEntity;
+use Shopware\Core\Content\Test\Product\ProductBuilder;
 use Shopware\Core\Defaults;
 use Shopware\Core\Framework\Api\Context\SystemSource;
 use Shopware\Core\Framework\Context;
@@ -471,7 +472,6 @@ class ProductRepositoryTest extends TestCase
 
         $product = $products->get($ids[0]);
 
-        /* @var ProductEntity $product */
         static::assertInstanceOf(ProductEntity::class, $product);
         static::assertInstanceOf(TaxEntity::class, $product->getTax());
         static::assertSame('without id', $product->getTax()->getName());
@@ -554,7 +554,6 @@ class ProductRepositoryTest extends TestCase
 
         $product = $products->get($ids[0]);
 
-        /* @var ProductEntity $product */
         static::assertInstanceOf(ProductEntity::class, $product);
         static::assertInstanceOf(ProductManufacturerEntity::class, $product->getManufacturer());
         static::assertSame('without id', $product->getManufacturer()->getName());
@@ -684,7 +683,6 @@ class ProductRepositoryTest extends TestCase
 
         $product = $products->get($id);
 
-        /* @var ProductEntity $product */
         static::assertSame($id, $product->getId());
 
         static::assertEquals(new Price(Defaults::CURRENCY, 10, 15, false), $product->getCurrencyPrice(Defaults::CURRENCY));
@@ -1005,7 +1003,6 @@ class ProductRepositoryTest extends TestCase
         $products = $this->repository->search($criteria, Context::createDefaultContext());
         $product = $products->get($child);
 
-        /* @var ProductEntity $product */
         static::assertSame('Child transformed to parent', $product->getName());
         static::assertSame(13.0, $product->getCurrencyPrice(Defaults::CURRENCY)->getGross());
         static::assertSame('test3', $product->getManufacturer()->getName());
@@ -1103,7 +1100,6 @@ class ProductRepositoryTest extends TestCase
         $products = $this->repository->search($criteria, Context::createDefaultContext());
         $product = $products->get($child);
 
-        /* @var ProductEntity $product */
         static::assertSame('Child transformed to parent', $product->getName());
         static::assertSame(13.0, $product->getCurrencyPrice(Defaults::CURRENCY)->getGross());
         static::assertSame('test3', $product->getManufacturer()->getName());
@@ -2392,6 +2388,76 @@ class ProductRepositoryTest extends TestCase
         );
     }
 
+    public function testPriceSortingWithDifferentCurrencyNoFallback(): void
+    {
+        $ids = new TestDataCollection();
+        $isoCode = 'DEM';
+        $currencyFactor = 0.5;
+        $ids->create($isoCode);
+
+        $this->getContainer()->get('currency.repository')->create(
+            [
+                [
+                    'id' => $ids->get($isoCode),
+                    'factor' => $currencyFactor,
+                    'shortName' => 'test',
+                    'name' => 'name',
+                    'symbol' => 'DM',
+                    'isoCode' => $isoCode,
+                    'decimalPrecision' => 2,
+                    'itemRounding' => json_decode(json_encode(new CashRoundingConfig(2, 0.01, true)), true),
+                    'totalRounding' => json_decode(json_encode(new CashRoundingConfig(2, 0.01, true)), true),
+                ],
+            ],
+            Context::createDefaultContext()
+        );
+
+        $data = [
+            (new ProductBuilder($ids, 'a'))->price(99.94, null, 'default', 99.94)->build(),
+            (new ProductBuilder($ids, 'b'))->price(15, 10)->price(99.93, null, $isoCode, 99.93)->build(),
+            (new ProductBuilder($ids, 'c'))->price(15, 10)->price(99.97, null, $isoCode, 99.97)->build(),
+            (new ProductBuilder($ids, 'd'))->price(15, 10)->price(99.91, null, $isoCode, 99.91)->build(),
+            (new ProductBuilder($ids, 'e'))->price(15, 10)->price(99.95, null, $isoCode, 99.95)->build(),
+        ];
+
+        $this->repository->create($data, Context::createDefaultContext());
+
+        foreach (['', '.listPrice'] as $priceType) {
+            $criteria = new Criteria($ids->all());
+            $criteria->addSorting(new FieldSorting(sprintf('price.%s%s.gross', $ids->get($isoCode), $priceType)));
+
+            $result = $this->repository->searchIds($criteria, Context::createDefaultContext());
+
+            static::assertEquals(
+                array_values($ids->getList(['a', 'd', 'b', 'e', 'c'])),
+                $result->getIds()
+            );
+
+            $criteria = new Criteria($ids->all());
+            $criteria->addSorting(new FieldSorting(sprintf('price.%s%s.gross', $ids->get($isoCode), $priceType), 'DESC'));
+
+            $result = $this->repository->searchIds($criteria, Context::createDefaultContext());
+
+            static::assertEquals(
+                array_values($ids->getList(['c', 'e', 'b', 'd', 'a'])),
+                $result->getIds()
+            );
+        }
+
+        // test context with currency id
+        $context = new Context(new SystemSource(), [], $ids->get($isoCode), [Defaults::LANGUAGE_SYSTEM], Defaults::LIVE_VERSION, $currencyFactor);
+
+        $criteria = new Criteria($ids->all());
+        $criteria->addSorting(new FieldSorting('price'));
+
+        $result = $this->repository->searchIds($criteria, $context);
+
+        static::assertEquals(
+            array_values($ids->getList(['a', 'd', 'b', 'e', 'c'])),
+            $result->getIds()
+        );
+    }
+
     public function customFieldVariantsProvider(): array
     {
         return [
@@ -2901,7 +2967,6 @@ class ProductRepositoryTest extends TestCase
 
     private function createLanguage(string $id, ?string $parentId = Defaults::LANGUAGE_SYSTEM): void
     {
-        /* @var EntityRepositoryInterface $languageRepository */
         $languageRepository = $this->getContainer()->get('language.repository');
 
         $languageRepository->upsert(

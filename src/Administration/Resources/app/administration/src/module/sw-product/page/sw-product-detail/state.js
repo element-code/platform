@@ -23,7 +23,7 @@ export default {
                 rules: false,
                 variants: false,
                 defaultFeatureSet: false,
-                advancedMode: false
+                advancedMode: false,
             },
             localMode: false,
             advancedModeSetting: {},
@@ -37,8 +37,8 @@ export default {
                 'measures_packaging',
                 'properties',
                 'essential_characteristics',
-                'custom_fields'
-            ]
+                'custom_fields',
+            ],
         };
     },
 
@@ -103,14 +103,14 @@ export default {
         },
 
         isChild(state) {
-            if (state.product && state.product.parentId) {
+            if (state.product?.parentId) {
                 return !!state.product.parentId;
             }
             return false;
         },
 
         showModeSetting(state) {
-            if (state.product && state.product.parentId) {
+            if (state.product?.parentId) {
                 return true;
             }
 
@@ -119,7 +119,7 @@ export default {
 
         showProductCard(state, getters) {
             return (key) => {
-                if (state.product && state.product.parentId) {
+                if (state.product?.parentId) {
                     return true;
                 }
 
@@ -135,7 +135,7 @@ export default {
 
         advanceModeEnabled(state) {
             return state.advancedModeSetting.value.advancedMode.enabled;
-        }
+        },
     },
 
     mutations: {
@@ -214,6 +214,6 @@ export default {
 
         setModeSettings(state, newModeSettings) {
             state.modeSettings = newModeSettings;
-        }
-    }
+        },
+    },
 };

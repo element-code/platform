@@ -32,38 +32,25 @@ Component.register('sw-step-display', {
     props: {
         itemIndex: {
             type: Number,
-            required: true
+            required: true,
         },
         itemVariant: {
             type: String,
-            required: true
+            required: true,
         },
         initialItemVariants: {
             type: Array,
             default() {
                 return [];
             },
-            required: false
-        }
+            required: false,
+        },
     },
 
     data() {
         return {
-            items: []
+            items: [],
         };
-    },
-
-    mounted() {
-        // read child step items
-        this.$children.forEach((child) => {
-            if (child.$options._componentTag === 'sw-step-item') {
-                this.items.push(child);
-            }
-        });
-
-        this.setItemVariants(this.initialItemVariants);
-        this.setItemActive(this.itemIndex, true);
-        this.setVariantForCurrentItem(this.itemVariant);
     },
 
     watch: {
@@ -79,8 +66,21 @@ Component.register('sw-step-display', {
             deep: true,
             handler(newItemVariants) {
                 this.setItemVariants(newItemVariants);
+            },
+        },
+    },
+
+    mounted() {
+        // read child step items
+        this.$children.forEach((child) => {
+            if (child.$options._componentTag === 'sw-step-item') {
+                this.items.push(child);
             }
-        }
+        });
+
+        this.setItemVariants(this.initialItemVariants);
+        this.setItemActive(this.itemIndex, true);
+        this.setVariantForCurrentItem(this.itemVariant);
     },
 
     methods: {
@@ -105,6 +105,6 @@ Component.register('sw-step-display', {
             }
 
             this.items[index].setActive(active);
-        }
-    }
+        },
+    },
 });

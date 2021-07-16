@@ -77,7 +77,7 @@ describe('Minimal install', () => {
         cy.get('#c_database_user').clear().type(Cypress.env('dbUser'));
         cy.get('#c_database_password').clear().type(Cypress.env('dbPassword'));
 
-        cy.get('.custom-checkbox').click();
+        cy.get('.c_create_database').click();
 
         cy.get('#c_database_schema_new').clear().type(Cypress.env('dbName'));
         cy.get('.btn.btn-primary').contains('Start installation').click();
@@ -192,12 +192,15 @@ describe('Minimal install', () => {
         // @frw: skip store page
         cy.get('.sw-modal.sw-first-run-wizard-modal').should('be.visible');
         cy.get('.sw-step-display').should('be.visible');
+        cy.get('.sw-first-run-wizard-store').should('be.visible');
         cy.get('.sw-step-display .sw-step-item.sw-step-item--active span').contains('Shopware Store');
+        cy.get('.sw-button').should('not.be.disabled');
         cy.get('.sw-button span').contains('Skip').click();
 
         // @frw: finish
         cy.get('.sw-modal.sw-first-run-wizard-modal').should('be.visible');
         cy.get('.sw-step-display').should('be.visible');
+        cy.get('.sw-first-run-wizard-finish').should('be.visible');
         cy.get('.sw-step-display .sw-step-item.sw-step-item--success span').contains('Shopware Store');
 
         cy.server();

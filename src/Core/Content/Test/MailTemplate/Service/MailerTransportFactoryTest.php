@@ -18,11 +18,17 @@ class MailerTransportFactoryTest extends TestCase
 
         $factory = $this->getContainer()->get('mailer.transport_factory');
 
+        $before = $_SERVER['MAILER_URL'] ?? 'null://localhost';
+
+        $_SERVER['MAILER_URL'] = 'smtp://example.com:1025';
+
         $mailer = $factory->create(
             new ConfigService([
                 'core.mailerSettings.emailAgent' => null,
             ])
         );
+
+        $_SERVER['MAILER_URL'] = $before;
 
         static::assertEquals(\get_class($original), \get_class($mailer));
     }

@@ -8,18 +8,18 @@ const Criteria = Shopware.Data.Criteria;
 Component.register('sw-cms-el-config-image-slider', {
     template,
 
-    mixins: [
-        Mixin.getByName('cms-element')
-    ],
-
     inject: ['repositoryFactory'],
+
+    mixins: [
+        Mixin.getByName('cms-element'),
+    ],
 
     data() {
         return {
             mediaModalIsOpen: false,
             initialFolderId: null,
             entity: this.element,
-            mediaItems: []
+            mediaItems: [],
         };
     },
 
@@ -42,7 +42,7 @@ Component.register('sw-cms-el-config-image-slider', {
             }
 
             return [];
-        }
+        },
     },
 
     created() {
@@ -61,7 +61,7 @@ Component.register('sw-cms-el-config-image-slider', {
                 const criteria = new Criteria();
                 criteria.setIds(mediaIds);
 
-                const searchResult = await this.mediaRepository.search(criteria, Shopware.Context.api);
+                const searchResult = await this.mediaRepository.search(criteria);
                 this.mediaItems = mediaIds.map((mediaId) => {
                     return searchResult.get(mediaId);
                 });
@@ -73,7 +73,7 @@ Component.register('sw-cms-el-config-image-slider', {
                 mediaUrl: mediaItem.url,
                 mediaId: mediaItem.id,
                 url: null,
-                newTab: false
+                newTab: false,
             });
 
             this.mediaItems.push(mediaItem);
@@ -89,13 +89,13 @@ Component.register('sw-cms-el-config-image-slider', {
             this.element.config.sliderItems.value = value.filter(
                 (item, i) => {
                     return (item.mediaId !== key || i !== index);
-                }
+                },
             );
 
             this.mediaItems = this.mediaItems.filter(
                 (item, i) => {
                     return (item.id !== key || i !== index);
-                }
+                },
             );
 
             this.updateMediaDataValue();
@@ -112,7 +112,7 @@ Component.register('sw-cms-el-config-image-slider', {
                     mediaUrl: item.url,
                     mediaId: item.id,
                     url: null,
-                    newTab: false
+                    newTab: false,
                 });
             });
 
@@ -158,6 +158,6 @@ Component.register('sw-cms-el-config-image-slider', {
 
         emitUpdateEl() {
             this.$emit('element-update', this.element);
-        }
-    }
+        },
+    },
 });

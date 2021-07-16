@@ -34,6 +34,9 @@ class CachedCountryRoute extends AbstractCountryRoute
 
     private EntityCacheKeyGenerator $generator;
 
+    /**
+     * @var AbstractCacheTracer<CountryRouteResponse>
+     */
     private AbstractCacheTracer $tracer;
 
     private array $states;
@@ -42,6 +45,9 @@ class CachedCountryRoute extends AbstractCountryRoute
 
     private LoggerInterface $logger;
 
+    /**
+     * @param AbstractCacheTracer<CountryRouteResponse> $tracer
+     */
     public function __construct(
         AbstractCountryRoute $decorated,
         TagAwareAdapterInterface $cache,
@@ -74,20 +80,27 @@ class CachedCountryRoute extends AbstractCountryRoute
      * @Since("6.3.0.0")
      * @OA\Post(
      *      path="/country",
-     *      summary="Loads all available countries",
+     *      summary="Fetch countries",
+     *      description="Perform a filtered search for countries",
      *      operationId="readCountry",
-     *      tags={"Store API", "Country"},
+     *      tags={"Store API", "System & Context"},
      *      @OA\Parameter(name="Api-Basic-Parameters"),
-     *      @OA\RequestBody(
-     *          required=true,
-     *          @OA\JsonContent(
-     *              @OA\Property(property="onlyAvailable", description="Lists only available countries", type="integer")
-     *          )
-     *      ),
      *      @OA\Response(
      *          response="200",
-     *          description="All available countries",
-     *          @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/country_flat"))
+     *          description="Entity search result containing countries.",
+     *          @OA\JsonContent(
+     *              type="object",
+     *              allOf={
+     *                  @OA\Schema(ref="#/components/schemas/EntitySearchResult"),
+     *                  @OA\Schema(type="object",
+     *                      @OA\Property(
+     *                          type="array",
+     *                          property="elements",
+     *                          @OA\Items(ref="#/components/schemas/Country")
+     *                      )
+     *                  )
+     *              }
+     *          )
      *     )
      * )
      * @Entity("country")

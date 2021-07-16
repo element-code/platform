@@ -5,6 +5,8 @@ namespace Shopware\Core\Content\Product\DataAbstractionLayer;
 use Doctrine\DBAL\Connection;
 use Shopware\Core\Content\Product\Events\ProductIndexerEvent;
 use Shopware\Core\Content\Product\ProductDefinition;
+use Shopware\Core\Defaults;
+use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IterableQuery;
 use Shopware\Core\Framework\DataAbstractionLayer\Dbal\Common\IteratorFactory;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWrittenContainerEvent;
@@ -13,75 +15,48 @@ use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexer;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexingMessage;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\InheritanceUpdater;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\ManyToManyIdFieldUpdater;
+use Shopware\Core\Framework\Plugin\Exception\DecorationPatternException;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 class ProductIndexer extends EntityIndexer
 {
-    /**
-     * @var IteratorFactory
-     */
-    private $iteratorFactory;
+    public const INHERITANCE_UPDATER = 'product.inheritance';
+    public const STOCK_UPDATER = 'product.stock';
+    public const VARIANT_LISTING_UPDATER = 'product.variant-listing';
+    public const CHILD_COUNT_UPDATER = 'product.child-count';
+    public const MANY_TO_MANY_ID_FIELD_UPDATER = 'product.many-to-many-id-field';
+    public const CATEGORY_DENORMALIZER_UPDATER = 'product.category-denormalizer';
+    public const CHEAPEST_PRICE_UPDATER = 'product.cheapest-price';
+    public const RATING_AVERAGE_UPDATER = 'product.rating-average';
+    public const STREAM_UPDATER = 'product.stream';
+    public const SEARCH_KEYWORD_UPDATER = 'product.search-keyword';
 
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $repository;
+    private IteratorFactory $iteratorFactory;
 
-    /**
-     * @var Connection
-     */
-    private $connection;
+    private EntityRepositoryInterface $repository;
 
-    /**
-     * @var VariantListingUpdater
-     */
-    private $variantListingUpdater;
+    private Connection $connection;
 
-    /**
-     * @var ProductCategoryDenormalizer
-     */
-    private $categoryDenormalizer;
+    private VariantListingUpdater $variantListingUpdater;
 
-    /**
-     * @var CheapestPriceUpdater
-     */
-    private $cheapestPriceUpdater;
+    private ProductCategoryDenormalizer $categoryDenormalizer;
 
-    /**
-     * @var SearchKeywordUpdater
-     */
-    private $searchKeywordUpdater;
+    private CheapestPriceUpdater $cheapestPriceUpdater;
 
-    /**
-     * @var InheritanceUpdater
-     */
-    private $inheritanceUpdater;
+    private SearchKeywordUpdater $searchKeywordUpdater;
 
-    /**
-     * @var RatingAverageUpdater
-     */
-    private $ratingAverageUpdater;
+    private InheritanceUpdater $inheritanceUpdater;
 
-    /**
-     * @var ChildCountUpdater
-     */
-    private $childCountUpdater;
+    private RatingAverageUpdater $ratingAverageUpdater;
 
-    /**
-     * @var ManyToManyIdFieldUpdater
-     */
-    private $manyToManyIdFieldUpdater;
+    private ChildCountUpdater $childCountUpdater;
 
-    /**
-     * @var StockUpdater
-     */
-    private $stockUpdater;
+    private ManyToManyIdFieldUpdater $manyToManyIdFieldUpdater;
 
-    /**
-     * @var EventDispatcherInterface
-     */
-    private $eventDispatcher;
+    private StockUpdater $stockUpdater;
+
+    private EventDispatcherInterface $eventDispatcher;
 
     private ProductStreamUpdater $streamUpdater;
 
@@ -122,9 +97,14 @@ class ProductIndexer extends EntityIndexer
         return 'product.indexer';
     }
 
-    public function iterate($offset): ?EntityIndexingMessage
+    /**
+     * @param array|null $offset
+     *
+     * @deprecated tag:v6.5.0 The parameter $offset will be native typed
+     */
+    public function iterate(/*?array */$offset): ?EntityIndexingMessage
     {
-        $iterator = $this->iteratorFactory->createIterator($this->repository->getDefinition(), $offset);
+        $iterator = $this->getIterator($offset);
 
         $ids = $iterator->fetch();
 
@@ -150,6 +130,16 @@ class ProductIndexer extends EntityIndexer
         return new ProductIndexingMessage(array_values($updates), null, $event->getContext());
     }
 
+    public function getTotal(): int
+    {
+        return $this->getIterator(null)->fetchCount();
+    }
+
+    public function getDecorated(): EntityIndexer
+    {
+        throw new DecorationPatternException(self::class);
+    }
+
     public function handle(EntityIndexingMessage $message): void
     {
         $ids = $message->getData();
@@ -167,29 +157,57 @@ class ProductIndexer extends EntityIndexer
 
         $this->connection->beginTransaction();
 
-        $this->inheritanceUpdater->update(ProductDefinition::ENTITY_NAME, array_merge($ids, $parentIds, $childrenIds), $context);
+        $all = array_filter(array_unique(array_merge($ids, $parentIds, $childrenIds)));
 
-        $this->stockUpdater->update($ids, $context);
+        if ($message->allow(self::INHERITANCE_UPDATER)) {
+            $this->inheritanceUpdater->update(ProductDefinition::ENTITY_NAME, $all, $context);
+        }
 
-        $this->variantListingUpdater->update($parentIds, $context);
+        if ($message->allow(self::STOCK_UPDATER)) {
+            $this->stockUpdater->update($ids, $context);
+        }
 
-        $this->childCountUpdater->update(ProductDefinition::ENTITY_NAME, $parentIds, $context);
+        if ($message->allow(self::VARIANT_LISTING_UPDATER)) {
+            $this->variantListingUpdater->update($parentIds, $context);
+        }
 
-        $this->manyToManyIdFieldUpdater->update(ProductDefinition::ENTITY_NAME, $ids, $context);
+        if ($message->allow(self::CHILD_COUNT_UPDATER)) {
+            $this->childCountUpdater->update(ProductDefinition::ENTITY_NAME, $parentIds, $context);
+        }
 
-        $this->categoryDenormalizer->update($ids, $context);
+        if ($message->allow(self::MANY_TO_MANY_ID_FIELD_UPDATER)) {
+            $this->manyToManyIdFieldUpdater->update(ProductDefinition::ENTITY_NAME, $ids, $context);
+        }
 
-        $this->cheapestPriceUpdater->update($parentIds, $context);
+        if ($message->allow(self::CATEGORY_DENORMALIZER_UPDATER)) {
+            $this->categoryDenormalizer->update($ids, $context);
+        }
 
-        $this->ratingAverageUpdater->update($parentIds, $context);
+        if ($message->allow(self::CHEAPEST_PRICE_UPDATER)) {
+            $this->cheapestPriceUpdater->update($parentIds, $context);
+        }
 
-        $this->streamUpdater->updateProducts(array_merge($ids, $parentIds, $childrenIds), $context);
+        if ($message->allow(self::RATING_AVERAGE_UPDATER)) {
+            $this->ratingAverageUpdater->update($parentIds, $context);
+        }
 
-        $this->searchKeywordUpdater->update(array_merge($ids, $childrenIds), $context);
+        if ($message->allow(self::STREAM_UPDATER)) {
+            $this->streamUpdater->updateProducts($all, $context);
+        }
+
+        if ($message->allow(self::SEARCH_KEYWORD_UPDATER)) {
+            $this->searchKeywordUpdater->update(array_merge($ids, $childrenIds), $context);
+        }
+
+        $this->connection->executeStatement(
+            'UPDATE product SET updated_at = :now WHERE id IN (:ids)',
+            ['ids' => Uuid::fromHexToBytesList($all), 'now' => (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT)],
+            ['ids' => Connection::PARAM_STR_ARRAY]
+        );
 
         $this->connection->commit();
 
-        $this->eventDispatcher->dispatch(new ProductIndexerEvent($ids, $childrenIds, $parentIds, $context));
+        $this->eventDispatcher->dispatch(new ProductIndexerEvent($ids, $childrenIds, $parentIds, $context, $message->getSkip()));
     }
 
     private function getChildrenIds(array $ids): array
@@ -215,5 +233,10 @@ class ProductIndexer extends EntityIndexer
         );
 
         return array_unique(array_filter(array_column($parentIds, 'id')));
+    }
+
+    private function getIterator(?array $offset): IterableQuery
+    {
+        return $this->iteratorFactory->createIterator($this->repository->getDefinition(), $offset);
     }
 }

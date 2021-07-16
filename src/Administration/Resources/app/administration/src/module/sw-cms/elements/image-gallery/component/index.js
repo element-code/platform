@@ -1,19 +1,19 @@
 import template from './sw-cms-el-image-gallery.html.twig';
 import './sw-cms-el-image-gallery.scss';
 
-const { Component, Mixin, Utils, Filter } = Shopware;
+const { Component, Mixin, Filter } = Shopware;
 
 Component.register('sw-cms-el-image-gallery', {
     template,
 
     mixins: [
-        Mixin.getByName('cms-element')
+        Mixin.getByName('cms-element'),
     ],
 
     data() {
         return {
             galleryLimit: 3,
-            activeMedia: null
+            activeMedia: null,
         };
     },
 
@@ -43,20 +43,20 @@ Component.register('sw-cms-el-image-gallery', {
         },
 
         mediaUrls() {
-            if (Utils.get(this.element, 'config.sliderItems.source') === 'mapped') {
+            if (this.element?.config?.sliderItems?.source === 'mapped') {
                 return this.getDemoValue(this.element.config.sliderItems.value) || [];
             }
 
-            return Utils.get(this.element, 'data.sliderItems') || [];
+            return this.element?.data?.sliderItems || [];
         },
 
         isProductPage() {
-            return Utils.get(this.cmsPageState, 'currentPage.type', '') === 'product_detail';
+            return (this.cmsPageState?.currentPage?.type ?? '') === 'product_detail';
         },
 
         assetFilter() {
             return Filter.getByName('asset');
-        }
+        },
     },
 
     watch: {
@@ -77,7 +77,7 @@ Component.register('sw-cms-el-image-gallery', {
                 this.$nextTick(() => {
                     this.setGalleryLimit();
                 });
-            }
+            },
         },
 
         'element.config.sliderItems.value': {
@@ -90,8 +90,8 @@ Component.register('sw-cms-el-image-gallery', {
                 this.$nextTick(() => {
                     this.setGalleryLimit();
                 });
-            }
-        }
+            },
+        },
     },
 
     created() {
@@ -108,8 +108,8 @@ Component.register('sw-cms-el-image-gallery', {
             this.initElementData('image-gallery');
 
             if (!this.isProductPage
-                || Utils.get(this.element, 'translated.config')
-                || Utils.get(this.element, 'data.sliderItems')) {
+                || this.element?.translated?.config
+                || this.element?.data?.sliderItems) {
                 return;
             }
 
@@ -130,7 +130,7 @@ Component.register('sw-cms-el-image-gallery', {
             return [
                 { url: this.assetFilter('administration/static/img/cms/preview_mountain_large.jpg') },
                 { url: this.assetFilter('administration/static/img/cms/preview_glasses_large.jpg') },
-                { url: this.assetFilter('administration/static/img/cms/preview_plant_large.jpg') }
+                { url: this.assetFilter('administration/static/img/cms/preview_plant_large.jpg') },
             ];
         },
 
@@ -145,7 +145,7 @@ Component.register('sw-cms-el-image-gallery', {
             }
 
             return {
-                'is--active': mediaItem.id === this.activeMedia.id
+                'is--active': mediaItem.id === this.activeMedia.id,
             };
         },
 
@@ -168,6 +168,6 @@ Component.register('sw-cms-el-image-gallery', {
             }
 
             this.galleryLimit = Math.floor(boxSpace / (elSpace + elGap));
-        }
-    }
+        },
+    },
 });

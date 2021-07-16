@@ -9,7 +9,10 @@ const codes = {
     7: 'messageServerError',
     8: 'messageInvalidRefreshToken',
     9: 'messageAccessDenied',
-    10: 'messageInvalidGrant'
+    // Error code 10 technically means invalid grant,
+    // but this error is returned for invalid credentials
+    // see https://github.com/thephpleague/oauth2-server/pull/967
+    10: 'messageInvalidCredentials',
 };
 
 /**
@@ -22,6 +25,6 @@ const codes = {
 export default function getErrorCode(code, prefix = 'sw-login.index.') {
     return {
         message: codes[code] ? `${prefix}${codes[code]}` : '',
-        title
+        title,
     };
 }

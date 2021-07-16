@@ -11,8 +11,14 @@ Component.register('sw-settings-tax-rule-type-individual-states', {
     props: {
         taxRule: {
             type: Object,
-            required: true
-        }
+            required: true,
+        },
+    },
+
+    data() {
+        return {
+            individualStates: null,
+        };
     },
 
     computed: {
@@ -24,13 +30,7 @@ Component.register('sw-settings-tax-rule-type-individual-states', {
         },
         stateRepository() {
             return this.repositoryFactory.create('country_state');
-        }
-    },
-
-    data() {
-        return {
-            individualStates: null
-        };
+        },
     },
 
     created() {
@@ -47,7 +47,7 @@ Component.register('sw-settings-tax-rule-type-individual-states', {
                 this.individualStates = new EntityCollection(
                     this.stateRepository.route,
                     this.stateRepository.entityName,
-                    Context.api
+                    Context.api,
                 );
             } else {
                 const criteria = new Criteria();
@@ -62,6 +62,6 @@ Component.register('sw-settings-tax-rule-type-individual-states', {
         onChange(collection) {
             this.individualStates = collection;
             this.taxRule.data.states = collection.getIds();
-        }
-    }
+        },
+    },
 });

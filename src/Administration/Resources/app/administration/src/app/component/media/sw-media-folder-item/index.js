@@ -6,20 +6,20 @@ const { Component, Application, Mixin, Context } = Shopware;
 Component.register('sw-media-folder-item', {
     template,
 
-    inject: ['repositoryFactory'],
-
     inheritAttrs: false,
 
+    inject: ['repositoryFactory'],
+
     mixins: [
-        Mixin.getByName('notification')
+        Mixin.getByName('notification'),
     ],
 
     props: {
         isParent: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
     },
 
     data() {
@@ -31,8 +31,8 @@ Component.register('sw-media-folder-item', {
             lastDefaultFolderId: null,
             iconConfig: {
                 name: '',
-                color: 'inherit'
-            }
+                color: 'inherit',
+            },
         };
     },
 
@@ -68,7 +68,7 @@ Component.register('sw-media-folder-item', {
                 default:
                     return 'multicolor-folder-thumbnail';
             }
-        }
+        },
     },
 
     created() {
@@ -151,7 +151,7 @@ Component.register('sw-media-folder-item', {
 
                 this.createNotificationError({
                     title: title,
-                    message: message
+                    message: message,
                 });
             }
 
@@ -165,8 +165,8 @@ Component.register('sw-media-folder-item', {
             this.$router.push({
                 name: 'sw.media.index',
                 params: {
-                    folderId: id
-                }
+                    folderId: id,
+                },
             });
         },
 
@@ -229,6 +229,6 @@ Component.register('sw-media-folder-item', {
         async refreshIconConfig() {
             await this.getIconConfigFromFolder();
             this.closeSettings();
-        }
-    }
+        },
+    },
 });

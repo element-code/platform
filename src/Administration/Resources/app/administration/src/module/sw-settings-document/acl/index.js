@@ -11,35 +11,38 @@ Shopware.Service('privileges')
                     'document_base_config_sales_channel:read',
                     'sales_channel:read',
                     'order:read',
-                    'currency:read'
+                    'currency:read',
+                    'custom_field_set:read',
+                    'custom_field:read',
+                    'custom_field_set_relation:read',
                 ],
-                dependencies: []
+                dependencies: [],
             },
             editor: {
                 privileges: [
-                    'document_base_config:update'
+                    'document_base_config:update',
                 ],
                 dependencies: [
-                    'document.viewer'
-                ]
+                    'document.viewer',
+                ],
             },
             creator: {
                 privileges: [
                     'document_base_config:create',
-                    'document_base_config_sales_channel:create'
+                    'document_base_config_sales_channel:create',
                 ],
                 dependencies: [
                     'document.viewer',
-                    'document.editor'
-                ]
+                    'document.editor',
+                ],
             },
             deleter: {
                 privileges: [
-                    'document_base_config:delete'
+                    'document_base_config:delete',
                 ],
                 dependencies: [
-                    'document.viewer'
-                ]
-            }
-        }
+                    'document.viewer',
+                ],
+            },
+        },
     });

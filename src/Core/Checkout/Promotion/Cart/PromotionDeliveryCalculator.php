@@ -36,20 +36,11 @@ class PromotionDeliveryCalculator
 {
     use PromotionCartInformationTrait;
 
-    /**
-     * @var QuantityPriceCalculator
-     */
-    private $quantityPriceCalculator;
+    private QuantityPriceCalculator $quantityPriceCalculator;
 
-    /**
-     * @var PercentagePriceCalculator
-     */
-    private $percentagePriceCalculator;
+    private PercentagePriceCalculator $percentagePriceCalculator;
 
-    /**
-     * @var PromotionItemBuilder
-     */
-    private $builder;
+    private PromotionItemBuilder $builder;
 
     public function __construct(QuantityPriceCalculator $quantityPriceCalculator, PercentagePriceCalculator $percentagePriceCalculator, PromotionItemBuilder $builder)
     {
@@ -80,7 +71,6 @@ class PromotionDeliveryCalculator
 
         $exclusions = $this->buildExclusions($checkedDiscountLineItems);
 
-        /* @var LineItem $discountLineItem */
         foreach ($checkedDiscountLineItems as $discountItem) {
             if ($notDiscountedDeliveriesValue <= 0.0) {
                 continue;
@@ -97,7 +87,7 @@ class PromotionDeliveryCalculator
             if (!$this->isRequirementValid($discountItem, $toCalculate, $context)) {
                 // hide the notEligibleErrors on automatic discounts
                 if (!$this->isAutomaticDisount($discountItem)) {
-                    $this->addPromotionNotEligibleError($discountItem->getLabel(), $toCalculate);
+                    $this->addPromotionNotEligibleError($discountItem->getLabel() ?? $discountItem->getId(), $toCalculate);
                 }
 
                 continue;
@@ -111,7 +101,7 @@ class PromotionDeliveryCalculator
             $promotionId = $discountItem->getPayloadValue('promotionId');
 
             if (\array_key_exists($promotionId, $exclusions)) {
-                $toCalculate->addErrors(new PromotionNotEligibleError($discountItem->getDescription()));
+                $toCalculate->addErrors(new PromotionNotEligibleError($discountItem->getDescription() ?? $discountItem->getId()));
 
                 continue;
             }
@@ -139,7 +129,6 @@ class PromotionDeliveryCalculator
         // if a promotion has exclusions they are added on the stack
         $exclusions = [];
 
-        /* @var LineItem $discountLineItem */
         foreach ($discountLineItems as $discountItem) {
             // if we dont have a scope
             // then skip it, it might not belong to us

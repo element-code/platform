@@ -7,11 +7,11 @@ const { Criteria } = Shopware.Data;
 Component.register('sw-settings-language-detail', {
     template,
 
-    inject: ['repositoryFactory', 'acl'],
+    inject: ['repositoryFactory', 'acl', 'customFieldDataProviderService'],
 
     mixins: [
         Mixin.getByName('notification'),
-        Mixin.getByName('placeholder')
+        Mixin.getByName('placeholder'),
     ],
 
     shortcuts: {
@@ -19,17 +19,17 @@ Component.register('sw-settings-language-detail', {
             active() {
                 return this.allowSave;
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     props: {
         languageId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     data() {
@@ -38,13 +38,14 @@ Component.register('sw-settings-language-detail', {
             usedLocales: [],
             showAlertForChangeParentLanguage: false,
             isLoading: false,
-            isSaveSuccessful: false
+            isSaveSuccessful: false,
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -73,7 +74,7 @@ Component.register('sw-settings-language-detail', {
 
         usedLocaleCriteria() {
             return (new Criteria(1, 1)).addAggregation(
-                Criteria.terms('usedLocales', 'language.locale.code', null, null, null)
+                Criteria.terms('usedLocales', 'language.locale.code', null, null, null),
             );
         },
 
@@ -88,7 +89,7 @@ Component.register('sw-settings-language-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.allowSave,
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -96,14 +97,14 @@ Component.register('sw-settings-language-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
@@ -123,7 +124,11 @@ Component.register('sw-settings-language-detail', {
             }
 
             return this.$tc('sw-settings-language.detail.tooltipLanguageNotChoosable');
-        }
+        },
+
+        showCustomFields() {
+            return this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
@@ -132,7 +137,7 @@ Component.register('sw-settings-language-detail', {
             if (this.languageId === null) {
                 this.createdComponent();
             }
-        }
+        },
     },
 
     created() {
@@ -143,26 +148,30 @@ Component.register('sw-settings-language-detail', {
         createdComponent() {
             if (!this.languageId) {
                 Shopware.State.commit('context/resetLanguageToDefault');
-                this.language = this.languageRepository.create(Shopware.Context.api);
+                this.language = this.languageRepository.create();
             } else {
                 this.loadEntityData();
+                this.loadCustomFieldSets();
             }
 
-            this.languageRepository.search(
-                this.usedLocaleCriteria,
-                Shopware.Context.api
-            ).then(({ aggregations }) => {
+            this.languageRepository.search(this.usedLocaleCriteria).then(({ aggregations }) => {
                 this.usedLocales = aggregations.usedLocales.buckets;
             });
         },
 
         loadEntityData() {
             this.isLoading = true;
-            this.languageRepository.get(this.languageId, Shopware.Context.api).then((language) => {
+            this.languageRepository.get(this.languageId).then((language) => {
                 this.isLoading = false;
                 this.language = language;
             }).catch(() => {
                 this.isLoading = false;
+            });
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('language').then((sets) => {
+                this.customFieldSets = sets;
             });
         },
 
@@ -193,7 +202,7 @@ Component.register('sw-settings-language-detail', {
 
         onSave() {
             this.isLoading = true;
-            this.languageRepository.save(this.language, Shopware.Context.api).then(() => {
+            this.languageRepository.save(this.language).then(() => {
                 this.isLoading = false;
                 this.isSaveSuccessful = true;
                 if (!this.languageId) {
@@ -210,6 +219,6 @@ Component.register('sw-settings-language-detail', {
 
         onChangeLanguage() {
             this.loadEntityData();
-        }
-    }
+        },
+    },
 });

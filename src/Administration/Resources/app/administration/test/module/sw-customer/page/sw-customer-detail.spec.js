@@ -41,6 +41,7 @@ function createWrapper(privileges = []) {
             accept: jest.fn().mockResolvedValue(true),
             decline: jest.fn().mockResolvedValue(true)
         },
+        customerValidationService: {},
         systemConfigApiService: {
             getValues: () => Promise.resolve([])
         } },
@@ -113,7 +114,7 @@ describe('module/sw-customer/page/sw-customer-detail', () => {
 
         const saveButton = wrapperWithPrivileges.find('.sw-customer-detail__open-edit-mode-action');
 
-        expect(saveButton.attributes().isLoading).toBeFalsy();
+        expect(saveButton.attributes()['is-loading']).toBeFalsy();
         expect(saveButton.attributes().disabled).toBeTruthy();
     });
 

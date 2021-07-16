@@ -11,6 +11,9 @@ use Shopware\Core\Framework\Test\TestCaseBase\SalesChannelApiTestBehaviour;
 use Shopware\Core\Framework\Test\TestDataCollection;
 use Shopware\Core\System\Locale\LocaleCollection;
 
+/**
+ * @group store-api
+ */
 class LanguageRouteTest extends TestCase
 {
     use IntegrationTestBehaviour;
@@ -44,13 +47,13 @@ class LanguageRouteTest extends TestCase
                     'languageId' => $this->ids->get('language'),
                     'currencyId' => Defaults::CURRENCY,
                     'snippetSetId' => $this->getSnippetSetIdForLocale('en-GB'),
-                    'url' => 'http://localhost',
+                    'url' => 'http://example.com',
                 ],
                 [
                     'languageId' => $this->ids->get('language2'),
                     'currencyId' => Defaults::CURRENCY,
                     'snippetSetId' => $this->getSnippetSetIdForLocale('en-GB'),
-                    'url' => 'http://localhost/second',
+                    'url' => 'http://example.com/second',
                 ],
             ],
         ]);

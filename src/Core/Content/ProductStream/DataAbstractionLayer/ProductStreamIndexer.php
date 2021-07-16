@@ -22,35 +22,17 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 class ProductStreamIndexer extends EntityIndexer
 {
-    /**
-     * @var IteratorFactory
-     */
-    private $iteratorFactory;
+    private IteratorFactory $iteratorFactory;
 
-    /**
-     * @var Connection
-     */
-    private $connection;
+    private Connection $connection;
 
-    /**
-     * @var EntityRepositoryInterface
-     */
-    private $repository;
+    private EntityRepositoryInterface $repository;
 
-    /**
-     * @var Serializer
-     */
-    private $serializer;
+    private Serializer $serializer;
 
-    /**
-     * @var ProductDefinition
-     */
-    private $productDefinition;
+    private ProductDefinition $productDefinition;
 
-    /**
-     * @var EventDispatcherInterface
-     */
-    private $eventDispatcher;
+    private EventDispatcherInterface $eventDispatcher;
 
     public function __construct(
         Connection $connection,
@@ -73,7 +55,12 @@ class ProductStreamIndexer extends EntityIndexer
         return 'product_stream.indexer';
     }
 
-    public function iterate($offset): ?EntityIndexingMessage
+    /**
+     * @param array|null $offset
+     *
+     * @deprecated tag:v6.5.0 The parameter $offset will be native typed
+     */
+    public function iterate(/*?array */$offset): ?EntityIndexingMessage
     {
         $iterator = $this->iteratorFactory->createIterator($this->repository->getDefinition(), $offset);
 
@@ -126,11 +113,12 @@ class ProductStreamIndexer extends EntityIndexer
         foreach ($filters as $id => $filter) {
             $invalid = false;
 
+            $serialized = null;
+
             try {
                 $serialized = $this->buildPayload($filter);
             } catch (InvalidFilterQueryException | SearchRequestException $exception) {
                 $invalid = true;
-                $serialized = null;
             } finally {
                 $update->execute([
                     'serialized' => $serialized,
@@ -140,7 +128,7 @@ class ProductStreamIndexer extends EntityIndexer
             }
         }
 
-        $this->eventDispatcher->dispatch(new ProductStreamIndexerEvent($ids, $message->getContext()));
+        $this->eventDispatcher->dispatch(new ProductStreamIndexerEvent($ids, $message->getContext(), $message->getSkip()));
     }
 
     private function buildPayload(array $filter): string

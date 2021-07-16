@@ -9,19 +9,19 @@ const { mapPropertyErrors } = Shopware.Component.getComponentHelper();
 Component.register('sw-settings-currency-detail', {
     template,
 
-    inject: ['repositoryFactory', 'acl', 'feature'],
+    inject: ['repositoryFactory', 'acl', 'feature', 'customFieldDataProviderService'],
 
     mixins: [
         Mixin.getByName('notification'),
-        Mixin.getByName('placeholder')
+        Mixin.getByName('placeholder'),
     ],
 
     props: {
         currencyId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     shortcuts: {
@@ -29,9 +29,9 @@ Component.register('sw-settings-currency-detail', {
             active() {
                 return this.acl.can('currencies.editor');
             },
-            method: 'onSave'
+            method: 'onSave',
         },
-        ESCAPE: 'onCancel'
+        ESCAPE: 'onCancel',
     },
 
     data() {
@@ -42,13 +42,14 @@ Component.register('sw-settings-currency-detail', {
             isSaveSuccessful: false,
             currentCurrencyCountry: null,
             currencyCountryRoundings: null,
-            searchTerm: ''
+            searchTerm: '',
+            customFieldSets: null,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle(this.identifier)
+            title: this.$createTitle(this.identifier),
         };
     },
 
@@ -65,7 +66,7 @@ Component.register('sw-settings-currency-detail', {
             if (this.currency.countryRoundings) {
                 return this.repositoryFactory.create(
                     this.currency.countryRoundings.entity,
-                    this.currency.countryRoundings.source
+                    this.currency.countryRoundings.source,
                 );
             }
             return null;
@@ -76,7 +77,7 @@ Component.register('sw-settings-currency-detail', {
                 return {
                     message: this.$tc('sw-privileges.tooltip.warning'),
                     disabled: this.acl.can('currencies.editor'),
-                    showOnDisabledElements: true
+                    showOnDisabledElements: true,
                 };
             }
 
@@ -84,20 +85,20 @@ Component.register('sw-settings-currency-detail', {
 
             return {
                 message: `${systemKey} + S`,
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         tooltipCancel() {
             return {
                 message: 'ESC',
-                appearance: 'light'
+                appearance: 'light',
             };
         },
 
         ...mapPropertyErrors(
             'currency',
-            ['name', 'isoCode', 'shortName', 'symbol', 'isDefault', 'decimalPrecision', 'factor']
+            ['name', 'isoCode', 'shortName', 'symbol', 'isDefault', 'decimalPrecision', 'factor'],
         ),
 
         currencyCountryColumns() {
@@ -105,40 +106,40 @@ Component.register('sw-settings-currency-detail', {
                 {
                     property: 'country',
                     label: 'sw-settings-currency.detail.currencyCountry.countryColumn',
-                    sortable: true
+                    sortable: true,
                 },
                 {
                     property: 'itemRounding.decimals',
                     label: 'sw-settings-currency.detail.currencyCountry.itemDecimalsColumn',
-                    sortable: false
+                    sortable: false,
                 },
                 {
                     property: 'itemRounding.interval',
                     label: 'sw-settings-currency.detail.currencyCountry.itemIntervalColumn',
-                    sortable: false
+                    sortable: false,
                 },
                 {
                     property: 'itemRounding.roundForNet',
                     label: 'sw-settings-currency.detail.currencyCountry.itemNetRoundingColumn',
                     sortable: false,
-                    visible: false
+                    visible: false,
                 },
                 {
                     property: 'totalRounding.decimals',
                     label: 'sw-settings-currency.detail.currencyCountry.totalDecimalsColumn',
-                    sortable: false
+                    sortable: false,
                 },
                 {
                     property: 'totalRounding.interval',
                     label: 'sw-settings-currency.detail.currencyCountry.totalIntervalColumn',
-                    sortable: false
+                    sortable: false,
                 },
                 {
                     property: 'totalRounding.roundForNet',
                     label: 'sw-settings-currency.detail.currencyCountry.totalNetRoundingColumn',
                     sortable: false,
-                    visible: false
-                }
+                    visible: false,
+                },
             ];
         },
 
@@ -162,7 +163,11 @@ Component.register('sw-settings-currency-detail', {
             }
 
             return this.$tc('sw-settings-currency.detail.emptyCountryRoundings');
-        }
+        },
+
+        showCustomFields() {
+            return this.customFieldSets && this.customFieldSets.length > 0;
+        },
     },
 
     watch: {
@@ -170,7 +175,7 @@ Component.register('sw-settings-currency-detail', {
             if (!this.currencyId) {
                 this.createdComponent();
             }
-        }
+        },
     },
 
     created() {
@@ -181,22 +186,25 @@ Component.register('sw-settings-currency-detail', {
         createdComponent() {
             if (this.currencyId) {
                 this.currencyId = this.$route.params.id;
-                return this.loadEntityData();
+                return Promise.all([
+                    this.loadEntityData(),
+                    this.loadCustomFieldSets(),
+                ]);
             }
 
             Shopware.State.commit('context/resetLanguageToDefault');
             this.isLoading = true;
-            this.currency = this.currencyRepository.create(Shopware.Context.api);
+            this.currency = this.currencyRepository.create();
             // defaults for rounding
             this.currency.itemRounding = {
                 decimals: 2,
                 interval: 0.01,
-                roundForNet: true
+                roundForNet: true,
             };
             this.currency.totalRounding = {
                 decimals: 2,
                 interval: 0.01,
-                roundForNet: true
+                roundForNet: true,
             };
 
             this.isLoading = false;
@@ -205,7 +213,7 @@ Component.register('sw-settings-currency-detail', {
 
         loadEntityData() {
             this.isLoading = true;
-            return this.currencyRepository.get(this.currencyId, Shopware.Context.api)
+            return this.currencyRepository.get(this.currencyId)
                 .then((currency) => {
                     this.currency = currency;
                     return this.loadCurrencyCountryRoundings().then((currencyCountryRoundings) => {
@@ -218,14 +226,17 @@ Component.register('sw-settings-currency-detail', {
 
         loadCurrencyCountryRoundings() {
             this.currencyCountryLoading = true;
-            return this.currencyCountryRoundingRepository.search(
-                this.currencyCountryRoundingCriteria,
-                Shopware.Context.api
-            ).then(res => {
+            return this.currencyCountryRoundingRepository.search(this.currencyCountryRoundingCriteria).then(res => {
                 this.currencyCountryRoundings = res;
                 return res;
             }).finally(() => {
                 this.currencyCountryLoading = false;
+            });
+        },
+
+        loadCustomFieldSets() {
+            this.customFieldDataProviderService.getCustomFieldSets('currency').then((sets) => {
+                this.customFieldSets = sets;
             });
         },
 
@@ -237,19 +248,19 @@ Component.register('sw-settings-currency-detail', {
             this.isSaveSuccessful = false;
             this.isLoading = true;
 
-            return this.currencyRepository.save(this.currency, Shopware.Context.api).then(() => {
+            return this.currencyRepository.save(this.currency).then(() => {
                 this.isSaveSuccessful = true;
                 if (!this.currencyId) {
                     this.$router.push({ name: 'sw.settings.currency.detail', params: { id: this.currency.id } });
                 }
 
-                this.currencyRepository.get(this.currency.id, Shopware.Context.api).then((updatedCurrency) => {
+                this.currencyRepository.get(this.currency.id).then((updatedCurrency) => {
                     this.currency = updatedCurrency;
                     this.isLoading = false;
                 });
             }).catch(() => {
                 this.createNotificationError({
-                    message: this.$tc('sw-settings-currency.detail.notificationErrorMessage')
+                    message: this.$tc('sw-settings-currency.detail.notificationErrorMessage'),
                 });
                 this.isLoading = false;
             });
@@ -277,7 +288,7 @@ Component.register('sw-settings-currency-detail', {
         },
 
         onAddCountry() {
-            this.currentCurrencyCountry = this.currencyCountryRoundingRepository.create(Shopware.Context.api);
+            this.currentCurrencyCountry = this.currencyCountryRoundingRepository.create();
             this.currentCurrencyCountry.itemRounding = cloneDeep(this.currency.itemRounding);
             this.currentCurrencyCountry.totalRounding = cloneDeep(this.currency.totalRounding);
             this.currentCurrencyCountry.currencyId = this.currency.id;
@@ -293,21 +304,21 @@ Component.register('sw-settings-currency-detail', {
 
         onSaveCurrencyCountry() {
             this.currencyCountryLoading = true;
-            this.currencyCountryRoundingRepository.save(this.currentCurrencyCountry, Shopware.Context.api).then(() => {
+            this.currencyCountryRoundingRepository.save(this.currentCurrencyCountry).then(() => {
                 this.createNotificationSuccess({
                     title: this.$tc('global.default.success'),
-                    message: this.$tc('sw-settings-currency.detail.notificationCountrySuccessMessage')
+                    message: this.$tc('sw-settings-currency.detail.notificationCountrySuccessMessage'),
                 });
                 this.onCancelEditCountry();
                 this.loadCurrencyCountryRoundings();
             }).catch(() => {
                 this.createNotificationError({
                     title: this.$tc('global.default.error'),
-                    message: this.$tc('sw-settings-currency.detail.notificationCountryErrorMessage')
+                    message: this.$tc('sw-settings-currency.detail.notificationCountryErrorMessage'),
                 });
             }).finally(() => {
                 this.currencyCountryLoading = false;
             });
-        }
-    }
+        },
+    },
 });

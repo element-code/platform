@@ -23,6 +23,8 @@ use Shopware\Core\Framework\DataAbstractionLayer\Exception\InconsistentCriteriaI
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\MultiFilter;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Sorting\FieldSorting;
+use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Util\Random;
 use Shopware\Core\Framework\Uuid\Uuid;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -31,6 +33,11 @@ use Symfony\Component\HttpFoundation\Request;
 class DocumentService
 {
     public const VERSION_NAME = 'document';
+
+    /**
+     * @internal (flag:FEATURE_NEXT_15053) should be removed again
+     */
+    public const GENERATING_PDF_STATE = 'generating-pdf';
 
     /**
      * @var DocumentGeneratorRegistry
@@ -223,6 +230,9 @@ class DocumentService
             $config->jsonSerialize()
         );
 
+        if (!Feature::isActive('FEATURE_NEXT_15053')) {
+            $context->addState(self::GENERATING_PDF_STATE);
+        }
         $generatedDocument = new GeneratedDocument();
         $generatedDocument->setHtml($documentGenerator->generate($order, $documentConfiguration, $context));
         $generatedDocument->setFilename(
@@ -258,8 +268,8 @@ class DocumentService
 
         $mediaFile = $this->mediaService->fetchFile($uploadedFileRequest);
 
-        $fileName = $uploadedFileRequest->query->get('fileName');
-        if ($fileName === null) {
+        $fileName = (string) $uploadedFileRequest->query->get('fileName');
+        if ($fileName === '') {
             throw new DocumentGenerationException('Parameter "fileName" is missing');
         }
 
@@ -308,6 +318,8 @@ class DocumentService
 
         $criteria->addAssociation('deliveries.shippingOrderAddress.country');
         $criteria->addAssociation('orderCustomer.customer');
+        $criteria->getAssociation('lineItems')
+            ->addSorting(new FieldSorting('position'));
 
         $versionContext = $context->createWithVersionId($versionId);
 
@@ -481,6 +493,9 @@ class DocumentService
 
         $order = $this->getOrderById($document->getOrderId(), $document->getOrderVersionId(), $context);
 
+        if (!Feature::isActive('FEATURE_NEXT_15053')) {
+            $context->addState(self::GENERATING_PDF_STATE);
+        }
         $generatedDocument->setHtml($documentGenerator->generate($order, $config, $context));
         $generatedDocument->setFilename($documentGenerator->getFileName($config) . '.' . $fileGenerator->getExtension());
         $fileBlob = $fileGenerator->generate($generatedDocument);

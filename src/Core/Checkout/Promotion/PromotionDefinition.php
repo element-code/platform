@@ -17,6 +17,7 @@ use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityDefinition;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\BoolField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\DateTimeField;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\ApiAware;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\CascadeDelete;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\PrimaryKey;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\Flag\Required;
@@ -65,6 +66,7 @@ class PromotionDefinition extends EntityDefinition
             'useSetGroups' => false,
             'maxRedemptionsGlobal' => null,
             'maxRedemptionsPerCustomer' => null,
+            'preventCombination' => false,
         ];
     }
 
@@ -90,6 +92,7 @@ class PromotionDefinition extends EntityDefinition
             new StringField('individual_code_pattern', 'individualCodePattern'),
             (new BoolField('use_setgroups', 'useSetGroups'))->addFlags(new Required()),
             new BoolField('customer_restriction', 'customerRestriction'),
+            (new BoolField('prevent_combination', 'preventCombination'))->addFlags(new Required()),
 
             (new IntField('order_count', 'orderCount'))->addFlags(new WriteProtected(Context::SYSTEM_SCOPE)),
             (new JsonField('orders_per_customer_count', 'ordersPerCustomerCount'))->addFlags(new WriteProtected(Context::SYSTEM_SCOPE)),
@@ -107,6 +110,7 @@ class PromotionDefinition extends EntityDefinition
 
             (new TranslationsAssociationField(PromotionTranslationDefinition::class, 'promotion_id'))->addFlags(new Required()),
             new ListField('exclusion_ids', 'exclusionIds', IdField::class),
+            (new TranslatedField('customFields'))->addFlags(new ApiAware()),
         ]);
     }
 }

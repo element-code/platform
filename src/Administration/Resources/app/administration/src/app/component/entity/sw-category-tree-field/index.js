@@ -13,19 +13,19 @@ Component.register('sw-category-tree-field', {
     props: {
         categoriesCollection: {
             type: Array,
-            required: true
+            required: true,
         },
 
         disabled: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
 
         placeholder: {
             type: String,
-            required: true
-        }
+            required: true,
+        },
     },
 
     data() {
@@ -41,74 +41,8 @@ Component.register('sw-category-tree-field', {
             searchResultFocusItem: {},
             setInputFocusClass: null,
             removeInputFocusClass: null,
-            selectedTreeItem: ''
+            selectedTreeItem: '',
         };
-    },
-
-    watch: {
-        categoriesCollection: {
-            handler() {
-                // check if categoriesCollection is loaded
-                if (this.categoriesCollection.entity && !this.isComponentReady && !this.isFetching) {
-                    Promise.all([
-                        this.getTreeItems()
-                    ]).then(() => {
-                        this.isComponentReady = true;
-                    });
-                }
-            },
-            immediate: true
-        },
-
-        term: {
-            handler(newTerm) {
-                // when user is searching
-                if (newTerm.length > 0) {
-                    this.searchCategories(newTerm).then((response) => {
-                        this.searchResult = response;
-
-                        // set first item as focus
-                        if (this.searchResult.total > 0) {
-                            this.searchResultFocusItem = this.searchResult.first();
-                        }
-                    });
-                } else {
-                    this.$nextTick(() => {
-                        if (this.$refs.swTree) {
-                            // set first item as focus
-                            this.selectedTreeItem = this.$refs.swTree.treeItems[0];
-                        }
-                    });
-                }
-            },
-            immediate: true
-        },
-
-        selectedTreeItem(newValue) {
-            if (newValue && newValue.id) {
-                utils.debounce(() => {
-                    const newElement = this.findTreeItemVNodeById(newValue.id).$el;
-
-                    let offsetValue = 0;
-                    let foundTreeRoot = false;
-                    let actualElement = newElement;
-
-                    while (!foundTreeRoot) {
-                        if (actualElement.classList.contains('sw-tree__content')) {
-                            foundTreeRoot = true;
-                        } else {
-                            offsetValue += actualElement.offsetTop;
-                            actualElement = actualElement.offsetParent;
-                        }
-                    }
-
-                    actualElement.scrollTo({
-                        top: offsetValue - (actualElement.clientHeight / 2) - 50,
-                        behavior: 'smooth'
-                    });
-                }, 50)();
-            }
-        }
     },
 
     computed: {
@@ -142,7 +76,73 @@ Component.register('sw-category-tree-field', {
                 // add parent id to accumulator
                 return [...acc, ...pathIds];
             }, []);
-        }
+        },
+    },
+
+    watch: {
+        categoriesCollection: {
+            handler() {
+                // check if categoriesCollection is loaded
+                if (this.categoriesCollection.entity && !this.isComponentReady && !this.isFetching) {
+                    Promise.all([
+                        this.getTreeItems(),
+                    ]).then(() => {
+                        this.isComponentReady = true;
+                    });
+                }
+            },
+            immediate: true,
+        },
+
+        term: {
+            handler(newTerm) {
+                // when user is searching
+                if (newTerm.length > 0) {
+                    this.searchCategories(newTerm).then((response) => {
+                        this.searchResult = response;
+
+                        // set first item as focus
+                        if (this.searchResult.total > 0) {
+                            this.searchResultFocusItem = this.searchResult.first();
+                        }
+                    });
+                } else {
+                    this.$nextTick(() => {
+                        if (this.$refs.swTree) {
+                            // set first item as focus
+                            this.selectedTreeItem = this.$refs.swTree.treeItems[0];
+                        }
+                    });
+                }
+            },
+            immediate: true,
+        },
+
+        selectedTreeItem(newValue) {
+            if (newValue?.id) {
+                utils.debounce(() => {
+                    const newElement = this.findTreeItemVNodeById(newValue.id).$el;
+
+                    let offsetValue = 0;
+                    let foundTreeRoot = false;
+                    let actualElement = newElement;
+
+                    while (!foundTreeRoot) {
+                        if (actualElement.classList.contains('sw-tree__content')) {
+                            foundTreeRoot = true;
+                        } else {
+                            offsetValue += actualElement.offsetTop;
+                            actualElement = actualElement.offsetParent;
+                        }
+                    }
+
+                    actualElement.scrollTo({
+                        top: offsetValue - (actualElement.clientHeight / 2) - 50,
+                        behavior: 'smooth',
+                    });
+                }, 50)();
+            }
+        },
     },
 
     created() {
@@ -169,7 +169,7 @@ Component.register('sw-category-tree-field', {
 
             // create criteria
             const categoryCriteria = new Criteria(1, 500);
-            categoryCriteria.addFilter(Criteria.equals('parentId', parentId), 'AND', Criteria.equals('type', 'page'));
+            categoryCriteria.addFilter(Criteria.equals('parentId', parentId));
 
             // search for categories
             return this.globalCategoryRepository.search(categoryCriteria, Shopware.Context.api).then((searchResult) => {
@@ -195,7 +195,7 @@ Component.register('sw-category-tree-field', {
             this.onCheckItem({
                 checked: shouldBeChecked,
                 id: item.id,
-                data: item
+                data: item,
             });
         },
 
@@ -406,7 +406,7 @@ Component.register('sw-category-tree-field', {
             switch (key) {
                 case 'arrowdown': {
                     // check if actual selection was found
-                    if (actualSelection && actualSelection.item && actualSelection.item.id) {
+                    if (actualSelection?.item?.id) {
                         // when selection is open
                         if (actualSelection.opened) {
                             // get first item of child
@@ -438,7 +438,7 @@ Component.register('sw-category-tree-field', {
 
                 case 'arrowup': {
                     // check if actual selection was found
-                    if (actualSelection && actualSelection.item && actualSelection.item.id) {
+                    if (actualSelection?.item?.id) {
                         // when selection is first item in folder
                         if (actualSelection.item.data.afterCategoryId === null && actualSelection.item.parentId) {
                             // then get the parent folder
@@ -559,7 +559,7 @@ Component.register('sw-category-tree-field', {
         toggleSelectedTreeItem(shouldOpen) {
             const vnode = this.findTreeItemVNodeById();
 
-            if (vnode && vnode.openTreeItem && vnode.opened !== shouldOpen) {
+            if (vnode?.openTreeItem && vnode.opened !== shouldOpen) {
                 vnode.openTreeItem();
                 vnode.getTreeItemChildren(vnode.item);
                 return true;
@@ -573,12 +573,12 @@ Component.register('sw-category-tree-field', {
 
             if (Array.isArray(children)) {
                 found = children.find((child) => {
-                    if (child && child.item && child.item.id) {
+                    if (child?.item?.id) {
                         return child.item.id === itemId;
                     }
                     return false;
                 });
-            } else if (children && children.item && children.item.id) {
+            } else if (children?.item?.id) {
                 found = children.item.id === itemId;
             }
 
@@ -598,6 +598,6 @@ Component.register('sw-category-tree-field', {
             }
 
             return foundInChildren;
-        }
-    }
+        },
+    },
 });

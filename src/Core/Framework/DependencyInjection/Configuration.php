@@ -12,7 +12,6 @@ class Configuration implements ConfigurationInterface
     {
         $treeBuilder = new TreeBuilder('shopware');
 
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = $treeBuilder->getRootNode();
         $rootNode
             ->children()
@@ -21,6 +20,7 @@ class Configuration implements ConfigurationInterface
                 ->append($this->createApiSection())
                 ->append($this->createStoreSection())
                 ->append($this->createCartSection())
+                ->append($this->createSalesChannelContextSection())
                 ->append($this->createAdminWorkerSection())
                 ->append($this->createAutoUpdateSection())
                 ->append($this->createSitemapSection())
@@ -30,6 +30,7 @@ class Configuration implements ConfigurationInterface
                 ->append($this->createFeatureSection())
                 ->append($this->createLoggerSection())
                 ->append($this->createCacheSection())
+                ->append($this->createHtmlSanitizerSection())
             ->end();
 
         return $treeBuilder;
@@ -37,7 +38,6 @@ class Configuration implements ConfigurationInterface
 
     private function createFilesystemSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('filesystem'))->getRootNode();
         $rootNode
             ->children()
@@ -54,6 +54,7 @@ class Configuration implements ConfigurationInterface
                     ->children()
                         ->scalarNode('type')->end()
                         ->scalarNode('url')->end()
+                        ->scalarNode('visibility')->end()
                         ->variableNode('config')->end()
                     ->end()
                 ->end()
@@ -61,6 +62,7 @@ class Configuration implements ConfigurationInterface
                     ->performNoDeepMerging()
                     ->children()
                         ->scalarNode('type')->end()
+                        ->scalarNode('visibility')->end()
                         ->variableNode('config')->end()
                     ->end()
                 ->end()
@@ -69,6 +71,7 @@ class Configuration implements ConfigurationInterface
                     ->children()
                         ->scalarNode('type')->end()
                         ->scalarNode('url')->end()
+                        ->scalarNode('visibility')->end()
                         ->variableNode('config')->end()
                     ->end()
                 ->end()
@@ -77,6 +80,7 @@ class Configuration implements ConfigurationInterface
                     ->children()
                         ->scalarNode('type')->end()
                         ->scalarNode('url')->end()
+                        ->scalarNode('visibility')->end()
                         ->variableNode('config')->end()
                     ->end()
                 ->end()
@@ -85,6 +89,7 @@ class Configuration implements ConfigurationInterface
                     ->children()
                         ->scalarNode('type')->end()
                         ->scalarNode('url')->end()
+                        ->scalarNode('visibility')->end()
                         ->variableNode('config')->end()
                     ->end()
                 ->end()
@@ -98,7 +103,6 @@ class Configuration implements ConfigurationInterface
 
     private function createCdnSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('cdn'))->getRootNode();
         $rootNode
             ->children()
@@ -111,7 +115,6 @@ class Configuration implements ConfigurationInterface
 
     private function createApiSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('api'))->getRootNode();
         $rootNode
             ->children()
@@ -133,7 +136,6 @@ class Configuration implements ConfigurationInterface
 
     private function createStoreSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('store'))->getRootNode();
         $rootNode
             ->children()
@@ -145,7 +147,6 @@ class Configuration implements ConfigurationInterface
 
     private function createAdminWorkerSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('admin_worker'))->getRootNode();
         $rootNode
             ->children()
@@ -165,7 +166,6 @@ class Configuration implements ConfigurationInterface
 
     private function createAutoUpdateSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('auto_update'))->getRootNode();
         $rootNode
             ->children()
@@ -179,7 +179,6 @@ class Configuration implements ConfigurationInterface
     {
         $treeBuilder = new TreeBuilder('sitemap');
 
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = $treeBuilder->getRootNode();
         $rootNode
             ->children()
@@ -223,7 +222,6 @@ class Configuration implements ConfigurationInterface
 
     private function createDeploymentSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('deployment'))->getRootNode();
         $rootNode
             ->children()
@@ -235,7 +233,6 @@ class Configuration implements ConfigurationInterface
 
     private function createMediaSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('media'))->getRootNode();
         $rootNode
             ->children()
@@ -248,7 +245,6 @@ class Configuration implements ConfigurationInterface
 
     private function createFeatureSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('feature'))->getRootNode();
         $rootNode
             ->children()
@@ -285,7 +281,6 @@ class Configuration implements ConfigurationInterface
 
     private function createLoggerSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('logger'))->getRootNode();
         $rootNode
             ->children()
@@ -299,7 +294,6 @@ class Configuration implements ConfigurationInterface
 
     private function createCacheSection(): ArrayNodeDefinition
     {
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = (new TreeBuilder('cache'))->getRootNode();
         $rootNode
             ->children()
@@ -373,7 +367,6 @@ class Configuration implements ConfigurationInterface
     {
         $treeBuilder = new TreeBuilder('dal');
 
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = $treeBuilder->getRootNode();
         $rootNode
             ->children()
@@ -397,13 +390,83 @@ class Configuration implements ConfigurationInterface
     {
         $treeBuilder = new TreeBuilder('cart');
 
-        /** @var ArrayNodeDefinition $rootNode */
         $rootNode = $treeBuilder->getRootNode();
         $rootNode
             ->children()
                 ->integerNode('expire_days')
                     ->min(1)
                     ->defaultValue(120)
+                ->end()
+            ->end();
+
+        return $rootNode;
+    }
+
+    private function createSalesChannelContextSection(): ArrayNodeDefinition
+    {
+        $treeBuilder = new TreeBuilder('sales_channel_context');
+
+        $rootNode = $treeBuilder->getRootNode();
+        $rootNode
+            ->children()
+                ->integerNode('expire_days')
+                    ->min(1)
+                    ->defaultValue(120)
+                ->end()
+            ->end();
+
+        return $rootNode;
+    }
+
+    private function createHtmlSanitizerSection(): ArrayNodeDefinition
+    {
+        $treeBuilder = new TreeBuilder('html_sanitizer');
+
+        $rootNode = $treeBuilder->getRootNode();
+        $rootNode
+            ->children()
+                ->variableNode('cache_dir')
+                    ->defaultValue('%kernel.cache_dir%')
+                ->end()
+                ->booleanNode('cache_enabled')
+                    ->defaultTrue()
+                ->end()
+                ->arrayNode('sets')
+                    ->useAttributeAsKey('name')
+                    ->arrayPrototype()
+                        ->children()
+                            ->scalarNode('name')->end()
+                            ->arrayNode('tags')
+                                ->defaultValue([])
+                                ->scalarPrototype()->end()
+                            ->end()
+                            ->arrayNode('attributes')
+                                ->defaultValue([])
+                                ->scalarPrototype()->end()
+                            ->end()
+                            ->arrayNode('options')
+                                ->useAttributeAsKey('key')
+                                ->defaultValue([])
+                                ->arrayPrototype()
+                                    ->children()
+                                        ->scalarNode('key')->end()
+                                        ->scalarNode('value')->end()
+                                    ->end()
+                                ->end()
+                            ->end()
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode('fields')
+                    ->useAttributeAsKey('name')
+                    ->arrayPrototype()
+                        ->children()
+                            ->scalarNode('name')->end()
+                            ->arrayNode('sets')
+                                ->scalarPrototype()->end()
+                            ->end()
+                        ->end()
+                    ->end()
                 ->end()
             ->end();
 

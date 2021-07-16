@@ -9,6 +9,7 @@ use Shopware\Core\Checkout\Customer\Event\CustomerWishlistLoaderCriteriaEvent;
 use Shopware\Core\Checkout\Customer\Event\CustomerWishlistProductListingResultEvent;
 use Shopware\Core\Checkout\Customer\Exception\CustomerWishlistNotActivatedException;
 use Shopware\Core\Checkout\Customer\Exception\CustomerWishlistNotFoundException;
+use Shopware\Core\Content\Product\SalesChannel\ProductCloseoutFilter;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\EntitySearchResult;
@@ -74,13 +75,19 @@ class LoadWishlistRoute extends AbstractLoadWishlistRoute
      * @Entity("product")
      * @OA\Post(
      *      path="/customer/wishlist",
-     *      summary="Fetch customer wishlist",
+     *      summary="Fetch a wishlist",
+     *      description="Fetch a customer's wishlist. Products on the wishlist can be filtered using a criteria object.
+
+**Important constraints**
+
+* Anonymous (not logged-in) customers can not have wishlists.
+* The wishlist feature has to be activated.",
      *      operationId="readCustomerWishlist",
      *      tags={"Store API", "Wishlist"},
      *      @OA\Parameter(name="Api-Basic-Parameters"),
      *      @OA\Response(
      *          response="200",
-     *          description="Success",
+     *          description="",
      *          @OA\JsonContent(ref="#/components/schemas/WishlistLoadRouteResponse")
      *     )
      * )
@@ -131,6 +138,8 @@ class LoadWishlistRoute extends AbstractLoadWishlistRoute
             new FieldSorting('wishlists.createdAt', FieldSorting::DESCENDING)
         );
 
+        $criteria = $this->handleAvailableStock($criteria, $context);
+
         $event = new CustomerWishlistLoaderCriteriaEvent($criteria, $context);
         $this->eventDispatcher->dispatch($event);
 
@@ -140,5 +149,21 @@ class LoadWishlistRoute extends AbstractLoadWishlistRoute
         $this->eventDispatcher->dispatch($event);
 
         return $products;
+    }
+
+    private function handleAvailableStock(Criteria $criteria, SalesChannelContext $context): Criteria
+    {
+        $hide = $this->systemConfigService->getBool(
+            'core.listing.hideCloseoutProductsWhenOutOfStock',
+            $context->getSalesChannelId()
+        );
+
+        if (!$hide) {
+            return $criteria;
+        }
+
+        $criteria->addFilter(new ProductCloseoutFilter());
+
+        return $criteria;
     }
 }

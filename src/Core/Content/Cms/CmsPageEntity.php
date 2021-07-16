@@ -10,11 +10,13 @@ use Shopware\Core\Content\Media\MediaEntity;
 use Shopware\Core\Content\Product\ProductCollection;
 use Shopware\Core\Framework\DataAbstractionLayer\Entity;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityCollection;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityCustomFieldsTrait;
 use Shopware\Core\Framework\DataAbstractionLayer\EntityIdTrait;
 
 class CmsPageEntity extends Entity
 {
     use EntityIdTrait;
+    use EntityCustomFieldsTrait;
 
     /**
      * @var string|null
@@ -67,11 +69,6 @@ class CmsPageEntity extends Entity
     protected $previewMedia;
 
     /**
-     * @var array|null
-     */
-    protected $customFields;
-
-    /**
      * @var bool
      */
     protected $locked;
@@ -86,12 +83,12 @@ class CmsPageEntity extends Entity
      */
     protected $homeSalesChannels;
 
-    public function getName(): string
+    public function getName(): ?string
     {
         return $this->name;
     }
 
-    public function setName(string $name): void
+    public function setName(?string $name): void
     {
         $this->name = $name;
     }
@@ -134,16 +131,6 @@ class CmsPageEntity extends Entity
     public function setTranslations(EntityCollection $translations): void
     {
         $this->translations = $translations;
-    }
-
-    public function getCustomFields(): ?array
-    {
-        return $this->customFields;
-    }
-
-    public function setCustomFields(?array $customFields): void
-    {
-        $this->customFields = $customFields;
     }
 
     public function getCategories(): ?CategoryCollection
@@ -236,12 +223,12 @@ class CmsPageEntity extends Entity
     public function getElementsOfType(string $type): array
     {
         $elements = [];
-        if (!$this->getSections()) {
+        if ($this->getSections() === null) {
             return $elements;
         }
 
         foreach ($this->getSections()->getBlocks() as $block) {
-            if (!$block->getSlots()) {
+            if ($block->getSlots() === null) {
                 continue;
             }
 

@@ -2,46 +2,22 @@
 
 namespace Shopware\Storefront\Framework\Captcha;
 
-use Shopware\Core\PlatformRequest;
-use Shopware\Core\System\SalesChannel\SalesChannelContext;
-use Shopware\Core\System\SystemConfig\SystemConfigService;
+use GuzzleHttp\ClientInterface;
+use Psr\Http\Client\ClientExceptionInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-/**
- * @internal (flag:FEATURE_NEXT_12455)
- */
 class GoogleReCaptchaV3 extends AbstractCaptcha
 {
     public const CAPTCHA_NAME = 'googleReCaptchaV3';
+    public const CAPTCHA_REQUEST_PARAMETER = '_grecaptcha_v3';
+    private const GOOGLE_CAPTCHA_VERIFY_ENDPOINT = 'https://www.google.com/recaptcha/api/siteverify';
+    private const DEFAULT_THRESHOLD_SCORE = 0.5;
 
-    /**
-     * @var SystemConfigService
-     */
-    private $systemConfigService;
+    private ClientInterface $client;
 
-    public function __construct(SystemConfigService $systemConfigService)
+    public function __construct(ClientInterface $client)
     {
-        $this->systemConfigService = $systemConfigService;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function supports(Request $request): bool
-    {
-        /** @var SalesChannelContext|null $context */
-        $context = $request->get(PlatformRequest::ATTRIBUTE_SALES_CHANNEL_CONTEXT_OBJECT);
-
-        $salesChannelId = $context ? $context->getSalesChannelId() : null;
-
-        $activeCaptchas = $this->systemConfigService->get('core.basicInformation.activeCaptchas', $salesChannelId);
-
-        if (empty($activeCaptchas) || !\is_array($activeCaptchas)) {
-            return false;
-        }
-
-        return $request->isMethod(Request::METHOD_POST)
-            && \in_array(self::CAPTCHA_NAME, $activeCaptchas, true);
+        $this->client = $client;
     }
 
     /**
@@ -49,8 +25,36 @@ class GoogleReCaptchaV3 extends AbstractCaptcha
      */
     public function isValid(Request $request): bool
     {
-        // TODO: NEXT-14133 - Integrate Google reCaptcha v3 server side
-        return true;
+        if (!$request->get(self::CAPTCHA_REQUEST_PARAMETER)) {
+            return false;
+        }
+
+        $captchaConfig = \func_get_args()[1] ?? [];
+
+        $secretKey = !empty($captchaConfig['config']['secretKey']) ? $captchaConfig['config']['secretKey'] : null;
+
+        if (!\is_string($secretKey) || $secretKey === '') {
+            return false;
+        }
+
+        try {
+            $response = $this->client->request('POST', self::GOOGLE_CAPTCHA_VERIFY_ENDPOINT, [
+                'form_params' => [
+                    'secret' => $secretKey,
+                    'response' => $request->get(self::CAPTCHA_REQUEST_PARAMETER),
+                    'remoteip' => $request->getClientIp(),
+                ],
+            ]);
+
+            $responseRaw = $response->getBody()->getContents();
+            $response = json_decode($responseRaw, true);
+
+            $thresholdScore = !empty($captchaConfig['config']['thresholdScore']) ? (float) $captchaConfig['config']['thresholdScore'] : self::DEFAULT_THRESHOLD_SCORE;
+
+            return $response && (bool) $response['success'] && (float) $response['score'] >= $thresholdScore;
+        } catch (ClientExceptionInterface $exception) {
+            return false;
+        }
     }
 
     /**

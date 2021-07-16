@@ -22,6 +22,9 @@ use Shopware\Core\System\SalesChannel\ContextTokenResponse;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
+/**
+ * @group store-api
+ */
 class LoginRouteTest extends TestCase
 {
     use IntegrationTestBehaviour;
@@ -242,6 +245,7 @@ class LoginRouteTest extends TestCase
             'name' => $cartName,
             'cart' => serialize(new Cart($cartName, $contextToken)),
             'line_item_count' => 1,
+            'rule_ids' => json_encode([]),
             'currency_id' => Uuid::fromHexToBytes(Defaults::CURRENCY),
             'country_id' => $defaultCountry,
             'price' => 1,

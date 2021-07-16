@@ -12,7 +12,7 @@ Component.register('sw-customer-list', {
     mixins: [
         Mixin.getByName('notification'),
         Mixin.getByName('salutation'),
-        Mixin.getByName('listing')
+        Mixin.getByName('listing'),
     ],
 
     data() {
@@ -47,16 +47,16 @@ Component.register('sw-customer-list', {
                 'group-filter',
                 'billing-address-country-filter',
                 'shipping-address-country-filter',
-                'tags-filter'
+                'tags-filter',
             ],
             storeKey: 'grid.filter.customer',
-            activeFilterNumber: 0
+            activeFilterNumber: 0,
         };
     },
 
     metaInfo() {
         return {
-            title: this.$createTitle()
+            title: this.$createTitle(),
         };
     },
 
@@ -71,6 +71,7 @@ Component.register('sw-customer-list', {
 
         defaultCriteria() {
             const defaultCriteria = new Criteria(this.page, this.limit);
+            // eslint-disable-next-line vue/no-side-effects-in-computed-properties
             this.naturalSorting = this.sortBy === 'customerNumber';
 
             defaultCriteria.setTerm(this.term);
@@ -96,7 +97,7 @@ Component.register('sw-customer-list', {
             const criteria = new Criteria(1, 1);
             criteria.addFilter(Criteria.not(
                 'AND',
-                [Criteria.equals('affiliateCode', null), Criteria.equals('campaignCode', null)]
+                [Criteria.equals('affiliateCode', null), Criteria.equals('campaignCode', null)],
             ));
             criteria.addAggregation(Criteria.terms('affiliateCodes', 'affiliateCode', null, null, null));
             criteria.addAggregation(Criteria.terms('campaignCodes', 'campaignCode', null, null, null));
@@ -113,7 +114,7 @@ Component.register('sw-customer-list', {
                     placeholder: this.$tc('sw-customer.filter.affiliateCode.placeholder'),
                     valueProperty: 'key',
                     labelProperty: 'key',
-                    options: this.availableAffiliateCodes
+                    options: this.availableAffiliateCodes,
                 },
                 'campaign-code-filter': {
                     property: 'campaignCode',
@@ -122,7 +123,7 @@ Component.register('sw-customer-list', {
                     placeholder: this.$tc('sw-customer.filter.campaignCode.placeholder'),
                     valueProperty: 'key',
                     labelProperty: 'key',
-                    options: this.availableCampaignCodes
+                    options: this.availableCampaignCodes,
                 },
                 'customer-group-request-filter': {
                     property: 'requestedGroupId',
@@ -130,50 +131,46 @@ Component.register('sw-customer-list', {
                     label: this.$tc('sw-customer.filter.customerGroupRequest.label'),
                     placeholder: this.$tc('sw-customer.filter.customerGroupRequest.placeholder'),
                     optionHasCriteria: this.$tc('sw-customer.filter.customerGroupRequest.textHasCriteria'),
-                    optionNoCriteria: this.$tc('sw-customer.filter.customerGroupRequest.textNoCriteria')
+                    optionNoCriteria: this.$tc('sw-customer.filter.customerGroupRequest.textNoCriteria'),
                 },
                 'salutation-filter': {
                     property: 'salutation',
                     label: this.$tc('sw-customer.filter.salutation.label'),
                     placeholder: this.$tc('sw-customer.filter.salutation.placeholder'),
-                    labelProperty: 'displayName'
+                    labelProperty: 'displayName',
                 },
                 'account-status-filter': {
                     property: 'active',
                     label: this.$tc('sw-customer.filter.status.label'),
-                    placeholder: this.$tc('sw-customer.filter.status.placeholder')
+                    placeholder: this.$tc('sw-customer.filter.status.placeholder'),
                 },
                 'default-payment-method-filter': {
                     property: 'defaultPaymentMethod',
                     label: this.$tc('sw-customer.filter.defaultPaymentMethod.label'),
-                    placeholder: this.$tc('sw-customer.filter.defaultPaymentMethod.placeholder')
+                    placeholder: this.$tc('sw-customer.filter.defaultPaymentMethod.placeholder'),
                 },
                 'group-filter': {
                     property: 'group',
                     label: this.$tc('sw-customer.filter.customerGroup.label'),
-                    placeholder: this.$tc('sw-customer.filter.customerGroup.placeholder')
+                    placeholder: this.$tc('sw-customer.filter.customerGroup.placeholder'),
                 },
                 'billing-address-country-filter': {
                     property: 'defaultBillingAddress.country',
                     label: this.$tc('sw-customer.filter.billingCountry.label'),
-                    placeholder: this.$tc('sw-customer.filter.billingCountry.placeholder')
+                    placeholder: this.$tc('sw-customer.filter.billingCountry.placeholder'),
                 },
                 'shipping-address-country-filter': {
                     property: 'defaultShippingAddress.country',
                     label: this.$tc('sw-customer.filter.shippingCountry.label'),
-                    placeholder: this.$tc('sw-customer.filter.shippingCountry.placeholder')
+                    placeholder: this.$tc('sw-customer.filter.shippingCountry.placeholder'),
                 },
                 'tags-filter': {
                     property: 'tags',
                     label: this.$tc('sw-customer.filter.tags.label'),
-                    placeholder: this.$tc('sw-customer.filter.tags.placeholder')
-                }
+                    placeholder: this.$tc('sw-customer.filter.tags.placeholder'),
+                },
             });
-        }
-    },
-
-    created() {
-        this.createdComponent();
+        },
     },
 
     watch: {
@@ -181,8 +178,12 @@ Component.register('sw-customer-list', {
             handler() {
                 this.getList();
             },
-            deep: true
-        }
+            deep: true,
+        },
+    },
+
+    created() {
+        this.createdComponent();
     },
 
     methods: {
@@ -193,12 +194,12 @@ Component.register('sw-customer-list', {
         onInlineEditSave(promise, customer) {
             promise.then(() => {
                 this.createNotificationSuccess({
-                    message: this.$tc('sw-customer.detail.messageSaveSuccess', 0, { name: this.salutation(customer) })
+                    message: this.$tc('sw-customer.detail.messageSaveSuccess', 0, { name: this.salutation(customer) }),
                 });
             }).catch(() => {
                 this.getList();
                 this.createNotificationError({
-                    message: this.$tc('sw-customer.detail.messageSaveError')
+                    message: this.$tc('sw-customer.detail.messageSaveError'),
                 });
             });
         },
@@ -212,7 +213,7 @@ Component.register('sw-customer-list', {
             this.activeFilterNumber = criteria.filters.length;
 
             try {
-                const items = await this.customerRepository.search(this.defaultCriteria, Shopware.Context.api);
+                const items = await this.customerRepository.search(this.defaultCriteria);
 
                 this.total = items.total;
                 this.customers = items;
@@ -234,7 +235,7 @@ Component.register('sw-customer-list', {
         onConfirmDelete(id) {
             this.showDeleteModal = false;
 
-            return this.customerRepository.delete(id, Shopware.Context.api).then(() => {
+            return this.customerRepository.delete(id).then(() => {
                 this.getList();
             });
         },
@@ -249,23 +250,23 @@ Component.register('sw-customer-list', {
                 width: '250px',
                 allowResize: true,
                 primary: true,
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'defaultBillingAddress.street',
                 label: 'sw-customer.list.columnStreet',
                 allowResize: true,
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'defaultBillingAddress.zipcode',
                 label: 'sw-customer.list.columnZip',
                 align: 'right',
                 allowResize: true,
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'defaultBillingAddress.city',
                 label: 'sw-customer.list.columnCity',
                 allowResize: true,
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'customerNumber',
                 dataIndex: 'customerNumber',
@@ -274,7 +275,7 @@ Component.register('sw-customer-list', {
                 allowResize: true,
                 inlineEdit: 'string',
                 align: 'right',
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'group',
                 dataIndex: 'group',
@@ -283,33 +284,33 @@ Component.register('sw-customer-list', {
                 allowResize: true,
                 inlineEdit: 'string',
                 align: 'right',
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'email',
                 inlineEdit: 'string',
                 label: 'sw-customer.list.columnEmail',
                 allowResize: true,
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'affiliateCode',
                 inlineEdit: 'string',
                 label: 'sw-customer.list.columnAffiliateCode',
                 allowResize: true,
                 visible: false,
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'campaignCode',
                 inlineEdit: 'string',
                 label: 'sw-customer.list.columnCampaignCode',
                 allowResize: true,
                 visible: false,
-                useCustomSort: true
+                useCustomSort: true,
             }, {
                 property: 'boundSalesChannelId',
                 label: 'sw-customer.list.columnBoundSalesChannel',
                 allowResize: true,
                 visible: false,
-                useCustomSort: true
+                useCustomSort: true,
             }];
 
             return columns;
@@ -318,7 +319,7 @@ Component.register('sw-customer-list', {
         loadFilterValues() {
             this.filterLoading = true;
 
-            return this.customerRepository.search(this.filterSelectCriteria, Shopware.Context.api)
+            return this.customerRepository.search(this.filterSelectCriteria)
                 .then(({ aggregations }) => {
                     this.availableAffiliateCodes = aggregations.affiliateCodes.buckets;
                     this.availableCampaignCodes = aggregations.campaignCodes.buckets;
@@ -351,6 +352,6 @@ Component.register('sw-customer-list', {
         updateCriteria(criteria) {
             this.page = 1;
             this.filterCriteria = criteria;
-        }
-    }
+        },
+    },
 });

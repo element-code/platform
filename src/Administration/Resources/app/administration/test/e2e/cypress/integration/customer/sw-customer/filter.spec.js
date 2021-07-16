@@ -2,6 +2,7 @@
 const uuid = require('uuid/v4');
 
 describe('Customer: Test filter and reset filter', () => {
+    // eslint-disable-next-line no-undef
     before(() => {
         let countryId; let paymentMethodId; let salesChannelId; let groupId; let salutationId; let
             userId;
@@ -162,7 +163,8 @@ describe('Customer: Test filter and reset filter', () => {
         });
     });
 
-    it('@customer: check filter function and display list correctly', () => {
+    // TODO skipped due to flakiness, see NEXT-15697
+    it.skip('@customer: check filter function and display list correctly', () => {
         cy.loginViaApi();
 
         cy.openInitialPage(`${Cypress.env('admin')}#/sw/customer/index`);
@@ -184,8 +186,8 @@ describe('Customer: Test filter and reset filter', () => {
             method: 'post'
         }).as('getUserConfig');
 
-        cy.get('.sw_sidebar__navigation-list li').eq(1).click();
-        cy.get('.sw_sidebar__navigation-list li').eq(1).find('button[title="Filters"]').should('exist');
+        cy.get('.sw-sidebar-navigation-item[title="Filters"]').click();
+        cy.get('.sw-sidebar-navigation-item[title="Filters"]').should('exist');
 
         // Check if saved user filter is loaded
         cy.wait('@getUserConfig').then(() => {
@@ -199,8 +201,8 @@ describe('Customer: Test filter and reset filter', () => {
         cy.get('.sw-sidebar-item__headline a').click();
 
         // Check Reset button when filter is active
-        cy.get('.sw-filter-panel__item:nth-child(4) .sw-entity-multi-select').scrollIntoView();
-        cy.get('.sw-filter-panel__item:nth-child(4) .sw-entity-multi-select').typeMultiSelectAndCheck('Mr.', { searchTerm: 'Mr.' });
+        cy.get('#salutation-filter .sw-entity-multi-select').scrollIntoView();
+        cy.get('#salutation-filter .sw-entity-multi-select').typeMultiSelectAndCheck('Mr.', { searchTerm: 'Mr.' });
 
         cy.wait('@filterCustomer').then((xhr) => {
             expect(xhr).to.have.property('status', 200);
@@ -238,7 +240,7 @@ describe('Customer: Test filter and reset filter', () => {
         });
 
         // Combine multiple filters criteria
-        cy.get('.sw-filter-panel__item').eq(4).find('select').select('true');
+        cy.get('#account-status-filter').find('select').select('true');
         cy.wait('@filterCustomer').then((xhr) => {
             expect(xhr).to.have.property('status', 200);
         });
@@ -249,7 +251,8 @@ describe('Customer: Test filter and reset filter', () => {
         cy.get('.sw-sidebar-navigation-item[title="Filters"]').find('.notification-badge').should('have.text', '2');
     });
 
-    it('@customer: check reset filter and reset all filter', () => {
+    // TODO skipped due to flakiness, see NEXT-15697
+    it.skip('@customer: check reset filter and reset all filter', () => {
         cy.loginViaApi();
 
         cy.openInitialPage(`${Cypress.env('admin')}#/sw/customer/index`);
@@ -271,8 +274,9 @@ describe('Customer: Test filter and reset filter', () => {
             method: 'patch'
         }).as('patchUserConfig');
 
-        cy.get('.sw_sidebar__navigation-list li').eq(1).click();
-        cy.get('.sw_sidebar__navigation-list li').eq(1).find('button[title="Filters"]').should('exist');
+        cy.get('.sw-sidebar-navigation-item[title="Filters"]').click();
+        cy.get('.sw-sidebar-navigation-item[title="Filters"]').should('exist');
+
         // Check if saved user filter is loaded
         cy.wait('@getUserConfig').then(() => {
             cy.get('.sw-sidebar-navigation-item[title="Filters"]').find('.notification-badge').should('exist');
@@ -286,20 +290,20 @@ describe('Customer: Test filter and reset filter', () => {
             expect(xhr).to.have.property('status', 200);
 
             // Check Reset button when filter is active
-            cy.get('.sw-filter-panel__item:nth-child(4) .sw-entity-multi-select').scrollIntoView();
-            cy.get('.sw-filter-panel__item:nth-child(4) .sw-entity-multi-select').typeMultiSelectAndCheck('Mr.', { searchTerm: 'Mr.' });
+            cy.get('#salutation-filter .sw-entity-multi-select').scrollIntoView();
+            cy.get('#salutation-filter .sw-entity-multi-select').typeMultiSelectAndCheck('Mr.', { searchTerm: 'Mr.' });
 
-            cy.get('.sw-filter-panel__item').eq(3).find('.sw-base-filter__reset').should('exist');
+            cy.get('#salutation-filter').find('.sw-base-filter__reset').should('exist');
 
             // Click Reset button to reset filter
-            cy.get('.sw-filter-panel__item').eq(3).find('.sw-base-filter__reset').click();
+            cy.get('#salutation-filter').find('.sw-base-filter__reset').click();
 
             return cy.wait('@filterCustomer');
         }).then(() => {
-            cy.get('.sw-filter-panel__item').eq(3).find('li.sw-select-selection-list__item-holder').should('not.exist');
+            cy.get('#salutation-filter').find('li.sw-select-selection-list__item-holder').should('not.exist');
 
             // Reset All button should show up when there is active filter
-            cy.get('.sw-filter-panel__item').eq(4).find('select').select('true');
+            cy.get('#account-status-filter').find('select').select('true');
             cy.get('.sw-sidebar-item__headline a').should('exist');
 
             // Click Reset All button

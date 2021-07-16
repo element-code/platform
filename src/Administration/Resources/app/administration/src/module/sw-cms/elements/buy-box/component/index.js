@@ -1,14 +1,14 @@
 import template from './sw-cms-el-buy-box.html.twig';
 import './sw-cms-el-buy-box.scss';
 
-const { Component, Mixin, Utils } = Shopware;
+const { Component, Mixin } = Shopware;
 
 Component.register('sw-cms-el-buy-box', {
     template,
 
     mixins: [
         Mixin.getByName('cms-element'),
-        Mixin.getByName('placeholder')
+        Mixin.getByName('placeholder'),
     ],
 
     computed: {
@@ -23,19 +23,19 @@ Component.register('sw-cms-el-buy-box', {
                     productNumber: 'XXXXXX',
                     minPurchase: 1,
                     deliveryTime: {
-                        name: '1-3 days'
+                        name: '1-3 days',
                     },
                     price: [
-                        { gross: 0.00 }
-                    ]
+                        { gross: 0.00 },
+                    ],
                 };
             }
 
-            return Utils.get(this.element, 'data.product', null);
+            return this.element?.data?.product ?? null;
         },
 
         pageType() {
-            return Utils.get(this.cmsPageState, 'currentPage.type', '');
+            return this.cmsPageState?.currentPage?.type ?? '';
         },
 
         isProductPageType() {
@@ -56,13 +56,13 @@ Component.register('sw-cms-el-buy-box', {
             }
 
             return null;
-        }
+        },
     },
 
     watch: {
         pageType(newPageType) {
             this.$set(this.element, 'locked', newPageType === 'product_detail');
-        }
+        },
     },
 
     created() {
@@ -74,6 +74,6 @@ Component.register('sw-cms-el-buy-box', {
             this.initElementConfig('buy-box');
             this.initElementData('buy-box');
             this.$set(this.element, 'locked', this.isProductPageType);
-        }
-    }
+        },
+    },
 });

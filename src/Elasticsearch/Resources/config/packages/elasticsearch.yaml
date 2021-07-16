@@ -1,10 +1,17 @@
 elasticsearch:
-    enabled: "%env(bool:default:default_whitespace:SHOPWARE_ES_ENABLED)%"
-    indexing_enabled: "%env(bool:default:default_whitespace:SHOPWARE_ES_INDEXING_ENABLED)%"
-    hosts: "%env(string:default:default_whitespace:SHOPWARE_ES_HOSTS)%"
-    index_prefix: "%env(string:default:default_elasticsearch_prefix:SHOPWARE_ES_INDEX_PREFIX)%"
-    throw_exception: "%env(string:default:default_whitespace:SHOPWARE_ES_THROW_EXCEPTION)%"
+    enabled: "%env(bool:SHOPWARE_ES_ENABLED)%"
+    indexing_enabled: "%env(bool:SHOPWARE_ES_INDEXING_ENABLED)%"
+    indexing_batch_size: "%env(int:SHOPWARE_ES_INDEXING_BATCH_SIZE)%"
+    hosts: "%env(string:SHOPWARE_ES_HOSTS)%"
+    index_prefix: "%env(string:SHOPWARE_ES_INDEX_PREFIX)%"
+    throw_exception: "%env(string:SHOPWARE_ES_THROW_EXCEPTION)%"
 
 parameters:
     default_elasticsearch_prefix: "sw"
     default_whitespace: " "
+    env(SHOPWARE_ES_ENABLED): ""
+    env(SHOPWARE_ES_INDEXING_ENABLED): ""
+    env(SHOPWARE_ES_HOSTS): ""
+    env(SHOPWARE_ES_INDEX_PREFIX): "sw"
+    env(SHOPWARE_ES_THROW_EXCEPTION): ""
+    env(SHOPWARE_ES_INDEXING_BATCH_SIZE): 100

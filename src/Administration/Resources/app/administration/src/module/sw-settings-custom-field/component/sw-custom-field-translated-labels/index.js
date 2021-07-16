@@ -8,31 +8,33 @@ Component.register('sw-custom-field-translated-labels', {
 
     inject: ['acl'],
 
-    model: {
-        prop: 'config'
-    },
-
     mixins: [
-        Mixin.getByName('sw-inline-snippet')
+        Mixin.getByName('sw-inline-snippet'),
     ],
 
+    model: {
+        prop: 'config',
+    },
+
     props: {
+        // FIXME: add type to locales
+        // eslint-disable-next-line vue/require-prop-types
         locales: {
-            required: true
+            required: true,
         },
         config: {
             type: Object,
-            required: true
+            required: true,
         },
         propertyNames: {
             type: Object,
-            required: true
+            required: true,
         },
         disabled: {
             type: Boolean,
             required: false,
-            default: false
-        }
+            default: false,
+        },
     },
 
     computed: {
@@ -44,13 +46,13 @@ Component.register('sw-custom-field-translated-labels', {
         },
         localeCount() {
             return Object.keys(this.locales).length;
-        }
+        },
     },
 
     watch: {
         locales() {
             this.initializeConfiguration();
-        }
+        },
     },
 
     created() {
@@ -78,6 +80,6 @@ Component.register('sw-custom-field-translated-labels', {
             if (input === '') {
                 this.config[propertyName][locale] = null;
             }
-        }
-    }
+        },
+    },
 });

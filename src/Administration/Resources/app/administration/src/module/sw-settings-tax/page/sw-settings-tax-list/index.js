@@ -9,7 +9,7 @@ Component.register('sw-settings-tax-list', {
     inject: ['repositoryFactory', 'acl'],
 
     mixins: [
-        Mixin.getByName('listing')
+        Mixin.getByName('listing'),
     ],
 
     data() {
@@ -19,20 +19,20 @@ Component.register('sw-settings-tax-list', {
             isLoading: false,
             sortDirection: 'ASC',
             naturalSorting: false,
-            showDeleteModal: false
+            showDeleteModal: false,
+        };
+    },
+
+    metaInfo() {
+        return {
+            title: this.$createTitle(),
         };
     },
 
     computed: {
         taxRepository() {
             return this.repositoryFactory.create('tax');
-        }
-    },
-
-    metaInfo() {
-        return {
-            title: this.$createTitle()
-        };
+        },
     },
 
     methods: {
@@ -48,7 +48,7 @@ Component.register('sw-settings-tax-list', {
                 criteria.addSorting(Criteria.sort('name', 'ASC', true));
             }
 
-            this.taxRepository.search(criteria, Shopware.Context.api).then((items) => {
+            this.taxRepository.search(criteria).then((items) => {
                 this.total = items.total;
                 this.tax = items;
                 this.isLoading = false;
@@ -62,12 +62,12 @@ Component.register('sw-settings-tax-list', {
         onInlineEditSave(promise, tax) {
             promise.then(() => {
                 this.createNotificationSuccess({
-                    message: this.$tc('sw-settings-tax.detail.messageSaveSuccess', 0, { name: tax.name })
+                    message: this.$tc('sw-settings-tax.detail.messageSaveSuccess', 0, { name: tax.name }),
                 });
             }).catch(() => {
                 this.getList();
                 this.createNotificationError({
-                    message: this.$tc('sw-settings-tax.detail.messageSaveError')
+                    message: this.$tc('sw-settings-tax.detail.messageSaveError'),
                 });
             });
         },
@@ -83,7 +83,7 @@ Component.register('sw-settings-tax-list', {
         onConfirmDelete(id) {
             this.showDeleteModal = false;
 
-            return this.taxRepository.delete(id, Shopware.Context.api).then(() => {
+            return this.taxRepository.delete(id).then(() => {
                 this.getList();
             });
         },
@@ -96,11 +96,11 @@ Component.register('sw-settings-tax-list', {
                 label: 'sw-settings-tax.list.columnName',
                 routerLink: 'sw.settings.tax.detail',
                 width: '250px',
-                primary: true
+                primary: true,
             }, {
                 property: 'taxRate',
                 inlineEdit: 'number',
-                label: 'sw-settings-tax.list.columnDefaultTaxRate'
+                label: 'sw-settings-tax.list.columnDefaultTaxRate',
             }];
         },
 
@@ -110,6 +110,6 @@ Component.register('sw-settings-tax-list', {
 
         getLabel(tax) {
             return this.isShopwareDefaultTax(tax) ? this.$tc(`global.tax-rates.${tax.name}`) : tax.name;
-        }
-    }
+        },
+    },
 });

@@ -9,40 +9,41 @@ Component.register('sw-media-folder-content', {
 
     inject: [
         'filterItems',
-        'repositoryFactory'
+        'repositoryFactory',
     ],
 
     props: {
         startFolderId: {
             type: String,
-            required: false
+            required: false,
+            default: null,
         },
 
         selectedId: {
             type: String,
             required: false,
-            default: null
-        }
+            default: null,
+        },
     },
 
     data() {
         return {
             subFolders: [],
-            parentFolder: null
+            parentFolder: null,
         };
+    },
+
+    computed: {
+        mediaFolderRepository() {
+            return this.repositoryFactory.create('media_folder');
+        },
     },
 
     watch: {
         startFolderId() {
             this.getSubFolders(this.startFolderId);
             this.fetchParentFolder(this.startFolderId);
-        }
-    },
-
-    computed: {
-        mediaFolderRepository() {
-            return this.repositoryFactory.create('media_folder');
-        }
+        },
     },
 
     mounted() {
@@ -90,6 +91,6 @@ Component.register('sw-media-folder-content', {
 
         emitInput(folder) {
             this.$emit('selected', folder);
-        }
-    }
+        },
+    },
 });

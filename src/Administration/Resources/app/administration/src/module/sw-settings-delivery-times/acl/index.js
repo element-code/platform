@@ -5,34 +5,37 @@ Shopware.Service('privileges').addPrivilegeMappingEntry({
     roles: {
         viewer: {
             privileges: [
-                'delivery_time:read'
+                'delivery_time:read',
+                'custom_field_set:read',
+                'custom_field:read',
+                'custom_field_set_relation:read',
             ],
-            dependencies: []
+            dependencies: [],
         },
         editor: {
             privileges: [
-                'delivery_time:update'
-            ],
-            dependencies: [
-                'delivery_times.viewer'
-            ]
-        },
-        creator: {
-            privileges: [
-                'delivery_time:create'
+                'delivery_time:update',
             ],
             dependencies: [
                 'delivery_times.viewer',
-                'delivery_times.editor'
-            ]
+            ],
+        },
+        creator: {
+            privileges: [
+                'delivery_time:create',
+            ],
+            dependencies: [
+                'delivery_times.viewer',
+                'delivery_times.editor',
+            ],
         },
         deleter: {
             privileges: [
-                'delivery_time:delete'
+                'delivery_time:delete',
             ],
             dependencies: [
-                'delivery_times.viewer'
-            ]
-        }
-    }
+                'delivery_times.viewer',
+            ],
+        },
+    },
 });

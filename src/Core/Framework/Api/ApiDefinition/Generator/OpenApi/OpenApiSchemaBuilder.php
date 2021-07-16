@@ -6,10 +6,12 @@ use OpenApi\Annotations\Components;
 use OpenApi\Annotations\Info;
 use OpenApi\Annotations\MediaType;
 use OpenApi\Annotations\OpenApi;
+use OpenApi\Annotations\Property;
 use OpenApi\Annotations\Response as OpenApiResponse;
 use OpenApi\Annotations\Schema;
 use OpenApi\Annotations\SecurityScheme;
 use OpenApi\Annotations\Server;
+use Shopware\Core\DevOps\Environment\EnvironmentHelper;
 use Shopware\Core\Framework\Api\ApiDefinition\DefinitionService;
 use Shopware\Core\PlatformRequest;
 use Symfony\Component\HttpFoundation\Response;
@@ -60,7 +62,7 @@ class OpenApiSchemaBuilder
      */
     private function createServers(string $api): array
     {
-        $url = $_SERVER['APP_URL'] ?? '';
+        $url = (string) EnvironmentHelper::getVariable('APP_URL', '');
 
         return [
             new Server(['url' => rtrim($url, '/') . self::API[$api]['url']]),
@@ -180,6 +182,33 @@ class OpenApiSchemaBuilder
                     'meta' => ['$ref' => '#/components/schemas/meta'],
                 ],
             ]),
+            'relationshipLinks' => new Schema([
+                'schema' => 'relationshipLinks',
+                'description' => 'A resource object **MAY** contain references to other resource objects ("relationships"). Relationships may be to-one or to-many. Relationships can be specified by including a member in a resource\'s links object.',
+                'type' => 'object',
+                'additionalProperties' => true,
+                'properties' => [
+                    new Property([
+                        'property' => 'self',
+                        'allOf' => [
+                            new Schema([
+                                'description' => 'A `self` member, whose value is a URL for the relationship itself (a "relationship URL"). This URL allows the client to directly manipulate the relationship. For example, it would allow a client to remove an `author` from an `article` without deleting the people resource itself.',
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                ],
+                            ]),
+                            new Schema([
+                                'ref' => '#/components/schemas/link',
+                            ]),
+                        ],
+                    ]),
+                    new Property([
+                        'property' => 'related',
+                        'ref' => '#/components/schemas/link',
+                    ]),
+                ],
+            ]),
             'links' => new Schema([
                 'schema' => 'links',
                 'type' => 'object',
@@ -267,7 +296,7 @@ class OpenApiSchemaBuilder
                 'required' => ['type', 'id'],
                 'properties' => [
                     'type' => ['type' => 'string'],
-                    'id' => ['type' => 'string', 'format' => 'uuid'],
+                    'id' => ['type' => 'string', 'pattern' => '^[0-9a-f]{32}$'],
                     'meta' => ['$ref' => '#/components/schemas/meta'],
                 ],
                 'additionalProperties' => false,
@@ -341,22 +370,24 @@ class OpenApiSchemaBuilder
     {
         if (self::API[$api]['apiKey']) {
             return [
-                'ApiKey' => new SecurityScheme([
+                'Sales Channel Access Key' => new SecurityScheme([
                     'securityScheme' => 'ApiKey',
                     'type' => 'apiKey',
                     'in' => 'header',
                     'name' => PlatformRequest::HEADER_ACCESS_KEY,
+                    'description' => 'Identifies the sales channel you want to access the API through',
                 ]),
-                'ContextToken' => new SecurityScheme([
+                'User Context Token' => new SecurityScheme([
                     'securityScheme' => 'ContextToken',
                     'type' => 'apiKey',
                     'in' => 'header',
                     'name' => PlatformRequest::HEADER_CONTEXT_TOKEN,
+                    'description' => 'Identifies an anonymous or identified user session',
                 ]),
             ];
         }
 
-        $url = $_SERVER['APP_URL'] ?? '';
+        $url = (string) EnvironmentHelper::getVariable('APP_URL', '');
 
         return [
             'oAuth' => new SecurityScheme([
@@ -388,9 +419,10 @@ class OpenApiSchemaBuilder
     {
         return [
             Response::HTTP_NOT_FOUND => $this->createErrorResponse(Response::HTTP_NOT_FOUND, 'Not Found', 'Resource with given parameter was not found.'),
+            Response::HTTP_FORBIDDEN => $this->createErrorResponse(Response::HTTP_FORBIDDEN, 'Forbidden', 'This operation is restricted to logged in users.'),
             Response::HTTP_UNAUTHORIZED => $this->createErrorResponse(Response::HTTP_UNAUTHORIZED, 'Unauthorized', 'Authorization information is missing or invalid.'),
             Response::HTTP_BAD_REQUEST => $this->createErrorResponse(Response::HTTP_BAD_REQUEST, 'Bad Request', 'Bad parameters for this endpoint. See documentation for the correct ones.'),
-            Response::HTTP_NO_CONTENT => new OpenApiResponse(['description' => 'The resource was deleted successfully.', 'response' => Response::HTTP_NO_CONTENT]),
+            Response::HTTP_NO_CONTENT => new OpenApiResponse(['description' => 'No Content', 'response' => Response::HTTP_NO_CONTENT]),
         ];
     }
 

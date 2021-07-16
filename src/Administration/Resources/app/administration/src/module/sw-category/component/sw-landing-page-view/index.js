@@ -5,18 +5,18 @@ const { Component, Mixin } = Shopware;
 Component.register('sw-landing-page-view', {
     template,
 
-    mixins: [
-        Mixin.getByName('placeholder')
-    ],
-
     inject: ['acl'],
+
+    mixins: [
+        Mixin.getByName('placeholder'),
+    ],
 
     props: {
         isLoading: {
             type: Boolean,
             required: true,
-            default: false
-        }
+            default: false,
+        },
     },
 
     computed: {
@@ -26,6 +26,6 @@ Component.register('sw-landing-page-view', {
 
         cmsPage() {
             return Shopware.State.get('cmsPageState').currentPage;
-        }
-    }
+        },
+    },
 });

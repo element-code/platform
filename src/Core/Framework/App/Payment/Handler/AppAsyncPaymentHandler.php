@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * @internal (flag:FEATURE_NEXT_14357) only for use by the app-system
+ * @internal only for use by the app-system
  */
 class AppAsyncPaymentHandler extends AbstractAppPaymentHandler implements AsynchronousPaymentHandlerInterface
 {
@@ -43,7 +43,7 @@ class AppAsyncPaymentHandler extends AbstractAppPaymentHandler implements Asynch
         try {
             $response = $this->payloadService->request($url, $payload, $app, AsyncPayResponse::class);
         } catch (ClientExceptionInterface $exception) {
-            throw new AsyncPaymentProcessException($transaction->getOrderTransaction()->getId(), \sprintf('App error: %s', $exception->getMessage()));
+            throw new AsyncPaymentProcessException($transaction->getOrderTransaction()->getId(), sprintf('App error: %s', $exception->getMessage()));
         }
 
         if (!$response instanceof AsyncPayResponse) {
@@ -85,7 +85,7 @@ class AppAsyncPaymentHandler extends AbstractAppPaymentHandler implements Asynch
         try {
             $response = $this->payloadService->request($url, $payload, $app, AsyncFinalizeResponse::class);
         } catch (ClientExceptionInterface $exception) {
-            throw new AsyncPaymentFinalizeException($transaction->getOrderTransaction()->getId(), \sprintf('App error: %s', $exception->getMessage()));
+            throw new AsyncPaymentFinalizeException($transaction->getOrderTransaction()->getId(), sprintf('App error: %s', $exception->getMessage()));
         }
 
         if (!$response instanceof AsyncFinalizeResponse) {

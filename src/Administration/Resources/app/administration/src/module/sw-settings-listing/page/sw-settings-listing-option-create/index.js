@@ -14,7 +14,7 @@ Shopware.Component.extend('sw-settings-listing-option-create', 'sw-settings-list
 
         isNewProductSorting() {
             return !this.productSortingEntity || this.productSortingEntity._isNew;
-        }
+        },
     },
 
     created() {
@@ -30,7 +30,7 @@ Shopware.Component.extend('sw-settings-listing-option-create', 'sw-settings-list
         },
 
         createProductSortingEntity() {
-            const productSortingEntity = this.productSortingRepository.create(Shopware.Context.api);
+            const productSortingEntity = this.productSortingRepository.create();
             productSortingEntity.fields = [];
             productSortingEntity.priority = 1;
             productSortingEntity.active = false;
@@ -47,7 +47,7 @@ Shopware.Component.extend('sw-settings-listing-option-create', 'sw-settings-list
 
             this.productSortingEntity.key = kebabCase(this.productSortingEntity.label);
 
-            return this.productSortingRepository.save(this.productSortingEntity, Shopware.Context.api)
+            return this.productSortingRepository.save(this.productSortingEntity)
                 .then(response => {
                     const encodedResponse = JSON.parse(response.config.data);
 
@@ -57,7 +57,7 @@ Shopware.Component.extend('sw-settings-listing-option-create', 'sw-settings-list
                     const sortingOptionName = this.productSortingEntity.label;
 
                     this.createNotificationError({
-                        message: this.$t('sw-settings-listing.base.notification.saveError', { sortingOptionName })
+                        message: this.$t('sw-settings-listing.base.notification.saveError', { sortingOptionName }),
                     });
                 });
         },
@@ -84,6 +84,6 @@ Shopware.Component.extend('sw-settings-listing-option-create', 'sw-settings-list
 
             // close delete modal
             this.toBeDeletedCriteria = null;
-        }
-    }
+        },
+    },
 });

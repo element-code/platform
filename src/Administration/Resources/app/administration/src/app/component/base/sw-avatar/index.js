@@ -16,7 +16,7 @@ const colors = [
     '#A092F0',
     '#8475E9',
     '#57D9A3',
-    '#3CCA88'
+    '#3CCA88',
 ];
 
 /**
@@ -47,35 +47,37 @@ Component.register('sw-avatar', {
         color: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
         size: {
             type: String,
-            required: false
+            required: false,
+            default: null,
         },
         firstName: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
         lastName: {
             type: String,
             required: false,
-            default: ''
+            default: '',
         },
         imageUrl: {
             type: String,
-            required: false
+            required: false,
+            default: null,
         },
         placeholder: {
             type: Boolean,
             required: false,
-            default: false
+            default: false,
         },
         sourceContext: {
             type: Object,
             required: false,
-            default: null
+            default: null,
         },
         variant: {
             type: String,
@@ -83,23 +85,15 @@ Component.register('sw-avatar', {
             default: 'circle',
             validator: (value) => {
                 return ['circle', 'square'].includes(value);
-            }
-        }
+            },
+        },
     },
 
     data() {
         return {
             fontSize: 16,
-            lineHeight: 16
+            lineHeight: 16,
         };
-    },
-
-    watch: {
-        size() {
-            this.$nextTick(() => {
-                this.generateAvatarInitialsSize();
-            });
-        }
     },
 
     computed: {
@@ -108,7 +102,7 @@ Component.register('sw-avatar', {
 
             return {
                 width: size,
-                height: size
+                height: size,
             };
         },
 
@@ -122,7 +116,7 @@ Component.register('sw-avatar', {
         avatarInitialsSize() {
             return {
                 'font-size': `${this.fontSize}px`,
-                'line-height': `${this.lineHeight}px`
+                'line-height': `${this.lineHeight}px`,
             };
         },
 
@@ -145,7 +139,7 @@ Component.register('sw-avatar', {
         avatarColor() {
             if (this.color.length) {
                 return {
-                    'background-color': this.color
+                    'background-color': this.color,
                 };
             }
 
@@ -156,7 +150,7 @@ Component.register('sw-avatar', {
             const color = colors[nameLength % colors.length];
 
             return {
-                'background-color': color
+                'background-color': color,
             };
         },
 
@@ -170,7 +164,15 @@ Component.register('sw-avatar', {
 
         showInitials() {
             return !this.placeholder && !this.hasAvatarImage;
-        }
+        },
+    },
+
+    watch: {
+        size() {
+            this.$nextTick(() => {
+                this.generateAvatarInitialsSize();
+            });
+        },
     },
 
     mounted() {
@@ -187,6 +189,6 @@ Component.register('sw-avatar', {
 
             this.fontSize = Math.round(avatarSize * 0.4);
             this.lineHeight = Math.round(avatarSize * 0.98);
-        }
-    }
+        },
+    },
 });

@@ -1,14 +1,14 @@
 import template from './sw-cms-el-product-description-reviews.html.twig';
 import './sw-cms-el-product-description-reviews.scss';
 
-const { Component, Mixin, Utils } = Shopware;
+const { Component, Mixin } = Shopware;
 
 Component.register('sw-cms-el-product-description-reviews', {
     template,
 
     mixins: [
         Mixin.getByName('cms-element'),
-        Mixin.getByName('placeholder')
+        Mixin.getByName('placeholder'),
     ],
 
     computed: {
@@ -27,7 +27,7 @@ Component.register('sw-cms-el-product-description-reviews', {
                                   consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et
                                   dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo
                                   dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem
-                                  ipsum dolor sit amet.`
+                                  ipsum dolor sit amet.`,
                 };
             }
 
@@ -35,7 +35,7 @@ Component.register('sw-cms-el-product-description-reviews', {
         },
 
         pageType() {
-            return Utils.get(this.cmsPageState, 'currentPage.type');
+            return this.cmsPageState?.currentPage?.type;
         },
 
         isProductPageType() {
@@ -56,13 +56,13 @@ Component.register('sw-cms-el-product-description-reviews', {
             }
 
             return null;
-        }
+        },
     },
 
     watch: {
         pageType(newPageType) {
             this.$set(this.element, 'locked', (newPageType === 'product_detail'));
-        }
+        },
     },
 
     created() {
@@ -74,6 +74,6 @@ Component.register('sw-cms-el-product-description-reviews', {
             this.initElementConfig('product-description-reviews');
             this.initElementData('product-description-reviews');
             this.$set(this.element, 'locked', this.isProductPageType);
-        }
-    }
+        },
+    },
 });

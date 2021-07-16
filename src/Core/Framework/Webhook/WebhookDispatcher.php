@@ -12,13 +12,18 @@ use Shopware\Core\Framework\App\Event\AppDeletedEvent;
 use Shopware\Core\Framework\App\Exception\AppUrlChangeDetectedException;
 use Shopware\Core\Framework\App\ShopId\ShopIdProvider;
 use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\DataAbstractionLayer\EntityRepositoryInterface;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Filter\EqualsFilter;
 use Shopware\Core\Framework\Uuid\Uuid;
+use Shopware\Core\Framework\Webhook\EventLog\WebhookEventLogDefinition;
 use Shopware\Core\Framework\Webhook\Hookable\HookableEventFactory;
+use Shopware\Core\Framework\Webhook\Message\WebhookEventMessage;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 class WebhookDispatcher implements EventDispatcherInterface
 {
@@ -40,6 +45,10 @@ class WebhookDispatcher implements EventDispatcherInterface
 
     private string $shopwareVersion;
 
+    private MessageBusInterface $bus;
+
+    private bool $isAdminWorkerEnabled;
+
     /**
      * @psalm-suppress ContainerDependency
      */
@@ -50,7 +59,9 @@ class WebhookDispatcher implements EventDispatcherInterface
         string $shopUrl,
         ContainerInterface $container,
         HookableEventFactory $eventFactory,
-        string $shopwareVersion
+        string $shopwareVersion,
+        MessageBusInterface $bus,
+        bool $isAdminWorkerEnabled
     ) {
         $this->dispatcher = $dispatcher;
         $this->connection = $connection;
@@ -61,10 +72,16 @@ class WebhookDispatcher implements EventDispatcherInterface
         $this->container = $container;
         $this->eventFactory = $eventFactory;
         $this->shopwareVersion = $shopwareVersion;
+        $this->bus = $bus;
+        $this->isAdminWorkerEnabled = $isAdminWorkerEnabled;
     }
 
     /**
-     * @param object $event
+     * @template TEvent of object
+     *
+     * @param TEvent $event
+     *
+     * @return TEvent
      */
     public function dispatch($event, ?string $eventName = null): object
     {
@@ -157,17 +174,15 @@ class WebhookDispatcher implements EventDispatcherInterface
         $requests = [];
 
         foreach ($webhooksForEvent as $webhook) {
-            if ($webhook->getApp()) {
-                if (!$this->isEventDispatchingAllowed($webhook->getApp(), $event, $affectedRoleIds)) {
-                    continue;
-                }
+            if ($webhook->getApp() !== null && !$this->isEventDispatchingAllowed($webhook->getApp(), $event, $affectedRoleIds)) {
+                continue;
             }
 
             $payload = ['data' => ['payload' => $payload]];
             $payload['source']['url'] = $this->shopUrl;
             $payload['data']['event'] = $eventName;
 
-            if ($webhook->getApp()) {
+            if ($webhook->getApp() !== null) {
                 $payload['source']['appVersion'] = $webhook->getApp()->getVersion();
                 $shopIdProvider = $this->getShopIdProvider();
 
@@ -179,31 +194,62 @@ class WebhookDispatcher implements EventDispatcherInterface
                 $payload['source']['shopId'] = $shopId;
             }
 
-            /** @var string $jsonPayload */
-            $jsonPayload = json_encode($payload);
+            if ($this->isAdminWorkerEnabled) {
+                /** @var string $jsonPayload */
+                $jsonPayload = json_encode($payload);
 
-            $request = new Request(
-                'POST',
-                $webhook->getUrl(),
-                [
-                    'Content-Type' => 'application/json',
-                    'sw-version' => $this->shopwareVersion,
-                ],
-                $jsonPayload
-            );
-
-            if ($webhook->getApp() && $webhook->getApp()->getAppSecret()) {
-                $request = $request->withHeader(
-                    'shopware-shop-signature',
-                    hash_hmac('sha256', $jsonPayload, $webhook->getApp()->getAppSecret())
+                $request = new Request(
+                    'POST',
+                    $webhook->getUrl(),
+                    [
+                        'Content-Type' => 'application/json',
+                        'sw-version' => $this->shopwareVersion,
+                    ],
+                    $jsonPayload
                 );
-            }
 
-            $requests[] = $request;
+                if ($webhook->getApp() !== null && $webhook->getApp()->getAppSecret() !== null) {
+                    $request = $request->withHeader(
+                        'shopware-shop-signature',
+                        hash_hmac('sha256', $jsonPayload, $webhook->getApp()->getAppSecret())
+                    );
+                }
+
+                $requests[] = $request;
+            } else {
+                $webhookEventId = Uuid::randomHex();
+
+                $appId = $webhook->getApp() !== null ? $webhook->getApp()->getId() : null;
+                $webhookEventMessage = new WebhookEventMessage($webhookEventId, $payload, $appId, $webhook->getId(), $this->shopwareVersion, $webhook->getUrl());
+
+                if (!$this->container->has('webhook_event_log.repository')) {
+                    throw new ServiceNotFoundException('webhook_event_log.repository');
+                }
+
+                /** @var EntityRepositoryInterface $webhookEventLogRepository */
+                $webhookEventLogRepository = $this->container->get('webhook_event_log.repository');
+
+                $webhookEventLogRepository->create([
+                    [
+                        'id' => $webhookEventId,
+                        'appName' => $webhook->getApp() !== null ? $webhook->getApp()->getName() : null,
+                        'deliveryStatus' => WebhookEventLogDefinition::STATUS_QUEUED,
+                        'webhookName' => $webhook->getName(),
+                        'eventName' => $webhook->getEventName(),
+                        'appVersion' => $webhook->getApp() !== null ? $webhook->getApp()->getVersion() : null,
+                        'url' => $webhook->getUrl(),
+                        'serializedWebhookMessage' => serialize($webhookEventMessage),
+                    ],
+                ], Context::createDefaultContext());
+
+                $this->bus->dispatch($webhookEventMessage);
+            }
         }
 
-        $pool = new Pool($this->guzzle, $requests);
-        $pool->promise()->wait();
+        if ($this->isAdminWorkerEnabled) {
+            $pool = new Pool($this->guzzle, $requests);
+            $pool->promise()->wait();
+        }
     }
 
     private function getWebhooks(): WebhookCollection
@@ -213,6 +259,7 @@ class WebhookDispatcher implements EventDispatcherInterface
         }
 
         $criteria = new Criteria();
+        $criteria->addFilter(new EqualsFilter('active', true));
         $criteria->addAssociation('app');
 
         if (!$this->container->has('webhook.repository')) {
